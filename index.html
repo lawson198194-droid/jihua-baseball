@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JIHUA · 香港棒垒球管理系统</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI','Noto Sans SC',Arial,sans-serif; }
+  body { background:#0a1628; color:white; min-height:100vh; display:flex; align-items:center; justify-content:center; }
+  
+  .container { text-align:center; max-width:800px; padding:40px; }
+  .logo { width:80px; height:80px; background:linear-gradient(135deg,#E67E22,#f4a261); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:36px; font-weight:bold; margin:0 auto 24px; box-shadow:0 8px 32px rgba(230,126,34,0.4); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.05);} }
+  
+  h1 { font-size:48px; font-weight:800; margin-bottom:8px; background:linear-gradient(135deg,#fff,#E67E22); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .subtitle { font-size:18px; color:rgba(255,255,255,0.6); margin-bottom:48px; }
+  
+  .modules { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:40px; }
+  .module {
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+    border-radius:16px; padding:24px 16px; cursor:pointer; transition:all 0.3s;
+    text-decoration:none; color:white;
+  }
+  .module:hover { background:rgba(255,255,255,0.1); border-color:#E67E22; transform:translateY(-4px); box-shadow:0 8px 24px rgba(230,126,34,0.3); }
+  .module-icon { font-size:32px; margin-bottom:12px; }
+  .module-name { font-size:14px; font-weight:700; margin-bottom:4px; }
+  .module-desc { font-size:11px; color:rgba(255,255,255,0.5); }
+  .module-badge { display:inline-block; background:#E67E22; color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; margin-top:8px; }
+  
+  .ai-module {
+    background:linear-gradient(135deg,rgba(26,82,118,0.3),rgba(26,82,118,0.1));
+    border-color:#1A5276; grid-column:span 3;
+  }
+  .ai-module:hover { background:linear-gradient(135deg,rgba(26,82,118,0.4),rgba(26,82,118,0.2)); border-color:#3498DB; }
+  .ai-module .module-icon { font-size:48px; }
+  .ai-module .module-name { font-size:20px; }
+  .ai-module .module-desc { font-size:13px; }
+  
+  .footer { font-size:12px; color:rgba(255,255,255,0.3); margin-top:40px; }
+  
+  @media (max-width:768px) {
+    .modules { grid-template-columns:1fr; }
+    .ai-module { grid-column:span 1; }
+    h1 { font-size:32px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="logo">⚾</div>
+  <h1>JIHUA</h1>
+  <p class="subtitle">香港棒垒球管理系统 · Hong Kong Baseball & Softball Association</p>
+  
+  <div class="modules">
+    <a href="01_球员资料库.html" class="module">
+      <div class="module-icon">👥</div>
+      <div class="module-name">模块 1</div>
+      <div class="module-desc">球员资料库</div>
+    </a>
+    
+    <a href="02_球队梯队管理.html" class="module">
+      <div class="module-icon">🏆</div>
+      <div class="module-name">模块 2</div>
+      <div class="module-desc">球队 & 梯队管理</div>
+    </a>
+    
+    <a href="03_赛事管理与记分.html" class="module">
+      <div class="module-icon">📊</div>
+      <div class="module-name">模块 3</div>
+      <div class="module-desc">赛事管理与记分</div>
+    </a>
+    
+    <a href="04_球员技术档案.html" class="module">
+      <div class="module-icon">📈</div>
+      <div class="module-name">模块 4</div>
+      <div class="module-desc">球员技术档案</div>
+    </a>
+    
+    <a href="05_权限与后台管理.html" class="module">
+      <div class="module-icon">⚙️</div>
+      <div class="module-name">模块 5</div>
+      <div class="module-desc">权限与后台管理</div>
+    </a>
+    
+    <a href="06_AI_运动分析_专属教练.html" class="module ai-module">
+      <div class="module-icon">🤖</div>
+      <div class="module-name">模块 6 · AI 专属教练</div>
+      <div class="module-desc">AI 挥棒分析 · AI 投手分析 · 个性化训练计划</div>
+      <span class="module-badge">✨ 新功能</span>
+    </a>
+  </div>
+  
+  <div class="footer">
+    JIHUA 香港棒垒球管理系统 · Powered by AI · © 2026
+  </div>
+</div>
+
+</body>
+</html>
