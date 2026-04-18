@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块2：球队 & 梯队管理 — 香港棒垒球总会官方系统</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; background: #f0f2f5; color: #1a1a2e; font-size: 13px; }
+
+  /* Header */
+  .topbar { background: linear-gradient(135deg, #1a3a5c, #2e6fa3); color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar .logo { font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+  .topbar .logo span { color: #f7c35a; }
+  .topbar .subtitle { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+  .topbar .role-badge { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 4px 12px; font-size: 11px; display: flex; align-items: center; gap: 6px; }
+  .role-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .topbar-date { font-size: 11px; opacity: 0.7; }
+
+  /* Nav tabs */
+  .nav-tabs { background: white; border-bottom: 2px solid #e8e8e8; display: flex; padding: 0 24px; }
+  .nav-tab { padding: 12px 20px; font-size: 13px; color: #666; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+  .nav-tab:hover { color: #2e6fa3; }
+  .nav-tab.active { color: #2e6fa3; border-bottom-color: #2e6fa3; font-weight: 600; }
+  .nav-tab.done::after { content: '✓'; color: #4ade80; font-size: 10px; margin-left: 2px; }
+  .nav-tab.current::before { content: '▶'; color: #f7c35a; font-size: 10px; margin-right: 4px; }
+
+  /* Main container */
+  .main-container { max-width: 1400px; margin: 0 auto; padding: 20px 24px; }
+
+  /* Module header */
+  .module-header { background: linear-gradient(135deg, #2e6fa3, #1a3a5c); color: white; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
+  .module-header h1 { font-size: 18px; font-weight: 700; }
+  .module-header h1 small { display: block; font-size: 12px; font-weight: 400; opacity: 0.8; margin-top: 4px; }
+  .module-badge { background: #f7c35a; color: #1a3a5c; border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 700; }
+  .module-header-right { text-align: right; font-size: 11px; opacity: 0.8; }
+
+  /* Cards */
+  .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+  .card-header { padding: 14px 20px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; background: #fafbfc; }
+  .card-title { font-size: 14px; font-weight: 700; color: #1a3a5c; display: flex; align-items: center; gap: 8px; }
+  .card-title .icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .card-body { padding: 20px; }
+
+  /* Stats row */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .stat-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid #ddd; }
+  .stat-card.u8 { border-left-color: #60a5fa; }
+  .stat-card.u10 { border-left-color: #34d399; }
+  .stat-card.u12 { border-left-color: #fbbf24; }
+  .stat-card.u15 { border-left-color: #f97316; }
+  .stat-card.u18 { border-left-color: #ef4444; }
+  .stat-card.total { border-left-color: #8b5cf6; }
+  .stat-num { font-size: 28px; font-weight: 800; color: #1a3a5c; }
+  .stat-label { font-size: 11px; color: #888; margin-top: 4px; }
+  .stat-sub { font-size: 10px; color: #aaa; margin-top: 2px; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f5f7fa; padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #eef0f4; white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  tr:hover td { background: #f8fafc; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Tags */
+  .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .tag-u8 { background: #dbeafe; color: #1d4ed8; }
+  .tag-u10 { background: #d1fae5; color: #065f46; }
+  .tag-u12 { background: #fef3c7; color: #92400e; }
+  .tag-u15 { background: #fed7aa; color: #c2410c; }
+  .tag-u18 { background: #fee2e2; color: #b91c1c; }
+  .tag-club { background: #ede9fe; color: #6d28d9; }
+  .tag-school { background: #fce7f3; color: #9d174d; }
+  .tag-district { background: #e0f2fe; color: #0369a1; }
+  .tag-active { background: #d1fae5; color: #065f46; }
+  .tag-pending { background: #fef9c3; color: #854d0e; }
+  .tag-suspended { background: #f3f4f6; color: #6b7280; }
+  .tag-retired { background: #fee2e2; color: #991b1b; }
+  .tag-captain { background: #2e6fa3; color: white; }
+  .tag-vice { background: #64748b; color: white; }
+  .tag-official { background: #f7c35a; color: #1a3a5c; }
+
+  /* Buttons */
+  .btn { padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 5px; }
+  .btn-primary { background: #2e6fa3; color: white; }
+  .btn-primary:hover { background: #1a4f8a; }
+  .btn-secondary { background: #f1f5f9; color: #475569; }
+  .btn-secondary:hover { background: #e2e8f0; }
+  .btn-success { background: #059669; color: white; }
+  .btn-danger { background: #dc2626; color: white; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Action bar */
+  .action-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .search-box { flex: 1; min-width: 200px; position: relative; }
+  .search-box input { width: 100%; padding: 8px 12px 8px 34px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; transition: border 0.2s; }
+  .search-box input:focus { border-color: #2e6fa3; }
+  .search-box::before { content: '🔍'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; }
+  .filter-select { padding: 7px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; background: white; outline: none; color: #475569; }
+  .filter-select:focus { border-color: #2e6fa3; }
+
+  /* Row selection */
+  .row-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #2e6fa3; }
+  .selected-bar { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 16px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #1e40af; }
+  .selected-bar .sel-count { font-weight: 700; }
+  .selected-bar .sel-actions { display: flex; gap: 8px; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: white; border-radius: 16px; width: 700px; max-width: 95vw; max-height: 90vh; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.3); }
+  .modal-header { padding: 18px 24px; background: linear-gradient(135deg, #1a3a5c, #2e6fa3); color: white; display: flex; align-items: center; justify-content: space-between; }
+  .modal-header h3 { font-size: 16px; font-weight: 700; }
+  .modal-close { background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 4px; line-height: 1; opacity: 0.8; }
+  .modal-close:hover { opacity: 1; }
+  .modal-body { padding: 24px; overflow-y: auto; max-height: calc(90vh - 130px); }
+  .modal-footer { padding: 14px 24px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 10px; }
+
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: span 2; }
+  .form-label { font-size: 12px; font-weight: 600; color: #374151; }
+  .form-label .req { color: #ef4444; margin-left: 2px; }
+  .form-label .hint { font-weight: 400; color: #9ca3af; font-size: 11px; }
+  .form-input, .form-select, .form-textarea { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; transition: border 0.2s; width: 100%; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: #2e6fa3; box-shadow: 0 0 0 3px rgba(46,111,163,0.1); }
+  .form-textarea { resize: vertical; min-height: 70px; }
+  .form-row { display: flex; gap: 10px; }
+  .form-row .form-group { flex: 1; }
+  .form-section { font-size: 13px; font-weight: 700; color: #1a3a5c; padding: 10px 0 8px; border-bottom: 2px solid #eef0f4; margin-bottom: 12px; }
+  .radio-group { display: flex; gap: 12px; flex-wrap: wrap; }
+  .radio-item { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px; }
+  .radio-item input { accent-color: #2e6fa3; }
+  .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 6px; }
+  .checkbox-item { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px; padding: 5px 8px; border: 1px solid #e2e8f0; border-radius: 6px; transition: all 0.15s; }
+  .checkbox-item:hover { background: #f0f7ff; border-color: #2e6fa3; }
+  .checkbox-item.checked { background: #eff6ff; border-color: #2e6fa3; color: #1e40af; }
+  .checkbox-item input { display: none; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: white; border-radius: 12px; padding: 12px 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; z-index: 2000; transform: translateY(100px); opacity: 0; transition: all 0.3s; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-left: 4px solid #059669; }
+  .toast.error { border-left: 4px solid #dc2626; }
+  .toast-icon { font-size: 20px; }
+
+  /* Step indicator */
+  .steps { display: flex; align-items: center; gap: 0; margin-bottom: 24px; }
+  .step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; }
+  .step::before { content: ''; position: absolute; top: 16px; left: 50%; width: 100%; height: 2px; background: #e2e8f0; z-index: 0; }
+  .step:last-child::before { display: none; }
+  .step-num { width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0; color: #9ca3af; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; z-index: 1; }
+  .step.done .step-num { background: #059669; color: white; }
+  .step.active .step-num { background: #2e6fa3; color: white; }
+  .step-label { font-size: 11px; color: #9ca3af; text-align: center; font-weight: 600; }
+  .step.active .step-label, .step.done .step-label { color: #374151; }
+
+  /* Team cards */
+  .team-card { border: 2px solid #e2e8f0; border-radius: 12px; padding: 16px; transition: all 0.2s; cursor: pointer; }
+  .team-card:hover { border-color: #2e6fa3; box-shadow: 0 4px 12px rgba(46,111,163,0.1); }
+  .team-card.selected { border-color: #2e6fa3; background: #f0f7ff; }
+  .team-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .team-name { font-size: 15px; font-weight: 700; color: #1a3a5c; }
+  .team-type { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+  .team-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 11px; color: #666; }
+  .team-meta-item { display: flex; align-items: center; gap: 4px; }
+  .team-members { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .member-chip { background: #f1f5f9; border-radius: 20px; padding: 2px 8px; font-size: 10px; color: #475569; }
+  .member-chip.captain { background: #2e6fa3; color: white; }
+  .member-chip.vice { background: #64748b; color: white; }
+
+  /* Roster panel */
+  .roster-panel { background: white; border-radius: 12px; border: 2px solid #e2e8f0; overflow: hidden; }
+  .roster-header { padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 700; color: #1a3a5c; }
+  .roster-body { max-height: 400px; overflow-y: auto; }
+  .roster-player { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #f5f5f5; transition: background 0.15s; }
+  .roster-player:hover { background: #f8fafc; }
+  .roster-player:last-child { border-bottom: none; }
+  .roster-avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #2e6fa3, #1a3a5c); color: white; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .roster-info { flex: 1; min-width: 0; }
+  .roster-name { font-size: 13px; font-weight: 600; color: #1a3a5c; display: flex; align-items: center; gap: 6px; }
+  .roster-pos { font-size: 11px; color: #888; }
+  .roster-remove { color: #ef4444; background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px; opacity: 0.6; }
+  .roster-remove:hover { opacity: 1; }
+  .roster-empty { padding: 40px; text-align: center; color: #aaa; font-size: 13px; }
+
+  /* Player picker */
+  .player-picker { border: 1px solid #e2e8f0; border-radius: 8px; max-height: 200px; overflow-y: auto; }
+  .player-picker-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f5f5f5; font-size: 12px; transition: background 0.15s; }
+  .player-picker-item:hover { background: #f0f7ff; }
+  .player-picker-item:last-child { border-bottom: none; }
+  .player-picker-item input { accent-color: #2e6fa3; }
+  .player-picker-item .pname { font-weight: 600; color: #1a3a5c; }
+  .player-picker-item .ppos { color: #888; font-size: 11px; }
+
+  /* Info box */
+  .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; font-size: 12px; color: #1e40af; line-height: 1.6; }
+  .info-box strong { font-weight: 700; }
+
+  /* Divider */
+  .divider { border: none; border-top: 1px solid #f0f0f0; margin: 20px 0; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: span 1; }
+    .nav-tabs { overflow-x: auto; }
+    .stats-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  /* Age-group selector for team */
+  .age-check { display: flex; gap: 8px; flex-wrap: wrap; }
+  .age-check label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 20px; transition: all 0.15s; }
+  .age-check label:hover { background: #f0f7ff; }
+  .age-check label input { accent-color: #2e6fa3; }
+  .age-check label.active { background: #eff6ff; border-color: #2e6fa3; color: #1e40af; }
+
+  /* History timeline */
+  .history-item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px dashed #f0f0f0; font-size: 12px; }
+  .history-item:last-child { border-bottom: none; }
+  .history-year { font-weight: 700; color: #2e6fa3; min-width: 60px; }
+  .history-text { color: #475569; }
+
+  /* Bulk action area */
+  .bulk-area { border: 2px dashed #e2e8f0; border-radius: 12px; padding: 24px; text-align: center; color: #9ca3af; font-size: 13px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div>
+    <div class="logo"><span>JIHUA</span> 棒垒球数字化管理系统</div>
+    <div class="subtitle">香港棒垒球总会官方平台 · 球员与梯队管理系统</div>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-date" id="topbarDate"></div>
+    <div class="role-badge">
+      <div class="role-dot"></div>
+      <span>香港棒垒球总会 · 管理员</span>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav-tabs">
+  <div class="nav-tab" onclick="switchTab('teams')"><span>🏠</span> 球队管理</div>
+  <div class="nav-tab done" onclick="switchTab('roster')"><span>👥</span> 球员名单</div>
+  <div class="nav-tab" onclick="switchTab('squad')"><span>📊</span> 梯队架构</div>
+  <div class="nav-tab" onclick="switchTab('coaches')"><span>👨‍🏫</span> 教练组</div>
+  <div class="nav-tab" onclick="switchTab('history')"><span>📜</span> 球队历史</div>
+  <div class="nav-tab current" onclick="switchTab('teams')"><span>📋</span> 模块2</div>
+</div>
+
+<!-- MAIN -->
+<div class="main-container">
+
+  <!-- Module Header -->
+  <div class="module-header">
+    <div>
+      <h1>模块2：球队 & 梯队管理 <small>香港棒垒球青少年球队注册与梯队架构系统</small></h1>
+    </div>
+    <div class="module-badge">✅ 直接可用</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid" id="statsGrid"></div>
+
+  <!-- TAB: 球队管理 -->
+  <div id="tab-teams">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="icon" style="background:#eff6ff; color:#2e6fa3">⚾</div>
+          球队列表
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn btn-secondary btn-sm" onclick="exportTeams()">📤 导出</button>
+          <button class="btn btn-secondary btn-sm" onclick="downloadTeamTemplate()">📥 下载模板</button>
+          <button class="btn btn-primary btn-sm" onclick="openTeamModal()">＋ 新增球队</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="info-box">
+          <strong>ℹ️ 球队管理说明：</strong>球队按组别注册（U8/U10/U12/U15/U18），每支球队可报名参加对应组别赛事。梯队球队（香港棒总直辖）跨多个组别选拔优秀球员。
+        </div>
+
+        <div class="action-bar">
+          <div class="search-box">
+            <input type="text" id="teamSearch" placeholder="搜索球队名称 / 俱乐部 / 区队..." oninput="renderTeams()">
+          </div>
+          <select class="filter-select" id="filterType" onchange="renderTeams()">
+            <option value="">全部类型</option>
+            <option value="club">🏢 俱乐部</option>
+            <option value="school">🏫 学校</option>
+            <option value="district">🏙️ 区队</option>
+            <option value="squad">⭐ 梯队</option>
+          </select>
+          <select class="filter-select" id="filterAge" onchange="renderTeams()">
+            <option value="">全部组别</option>
+            <option value="U8">U8</option>
+            <option value="U10">U10</option>
+            <option value="U12">U12</option>
+            <option value="U15">U15</option>
+            <option value="U18">U18</option>
+          </select>
+          <select class="filter-select" id="filterStatus" onchange="renderTeams()">
+            <option value="">全部状态</option>
+            <option value="active">✅ 活跃</option>
+            <option value="pending">⏳ 待审核</option>
+            <option value="inactive">❌ 已停用</option>
+          </select>
+        </div>
+
+        <div class="selected-bar" id="teamSelectBar" style="display:none">
+          <span>已选 <span class="sel-count" id="teamSelCount">0</span> 支球队</span>
+          <div class="sel-actions">
+            <button class="btn btn-success btn-sm" onclick="bulkApproveTeams()">✅ 批量审核通过</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearTeamSelection()">取消选择</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:40px"><input type="checkbox" class="row-checkbox" id="selectAllTeams" onchange="toggleAllTeams(this)"></th>
+                <th>球队名称</th>
+                <th>类型</th>
+                <th>参赛组别</th>
+                <th>球员人数</th>
+                <th>教练</th>
+                <th>所属机构</th>
+                <th>状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="teamsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: 球员名单 -->
+  <div id="tab-roster" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="icon" style="background:#f0fdf4; color:#059669">👥</div>
+          球队球员名单
+        </div>
+        <div>
+          <select class="filter-select" id="rosterTeamSelect" onchange="renderRoster()">
+            <option value="">— 选择球队查看 —</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="roster-panel" id="rosterPanel">
+          <div class="roster-header">
+            <span id="rosterTeamName">请选择球队</span>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-secondary btn-sm" onclick="openAddPlayerModal()" id="addPlayerBtn" disabled>＋ 添加球员</button>
+              <button class="btn btn-primary btn-sm" onclick="openRosterImportModal()" id="rosterImportBtn" disabled>📥 批量导入</button>
+            </div>
+          </div>
+          <div class="roster-body" id="rosterBody">
+            <div class="roster-empty">👆 请从上方选择一支球队，查看其完整球员名单</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 梯队架构 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="icon" style="background:#fef3c7; color:#d97706">⭐</div>
+          香港棒总梯队架构（跨组别选拔）
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="downloadSquadTemplate()">📥 下载梯队选拔模板</button>
+          <button class="btn btn-primary btn-sm" onclick="openSquadModal()">＋ 新增梯队球队</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="info-box" style="background:#fffbeb; border-color:#fcd34d; color:#92400e;">
+          <strong>⭐ 梯队说明：</strong>梯队球队由香港棒垒球总会直辖，跨 U8/U10/U12/U15/U18 多个组别选拔优秀球员，组成香港代表队。梯队球员可同时保留原俱乐部/球队身份。
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>梯队名称</th>
+                <th>选拔组别</th>
+                <th>球员人数</th>
+                <th>主教练</th>
+                <th>成立时间</th>
+                <th>战绩</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="squadTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: 梯队架构 -->
+  <div id="tab-squad" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="icon" style="background:#fef3c7; color:#d97706">📊</div>
+          全港梯队架构总览
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="steps" id="squadSteps"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>梯队级别</th>
+                <th>年龄区间</th>
+                <th>代表组别</th>
+                <th>目标人数</th>
+                <th>当前人数</th>
+                <th>选拔来源</th>
+                <th>进度</th>
+              </tr>
+            </thead>
+            <tbody id="squadOverviewBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: 教练组 -->
+  <div id="tab-coaches" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="icon" style="background:#ede9fe; color:#6d28d9">👨‍🏫</div>
+          教练 & 工作人员管理
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openCoachModal()">＋ 新增教练</button>
+      </div>
+      <div class="card-body">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>职位</th>
+                <th>资质证书</th>
+                <th>执教球队</th>
+                <th>电话</th>
+                <th>状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+           tbody id="coachesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: 球队历史 -->
+  <div id="tab-history" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="icon" style="background:#fce7f3; color:#9d174d">🏆</div>
+          球队历史 & 荣誉
+        </div>
+        <div>
+          <select class="filter-select" id="historyTeamSelect" onchange="renderTeamHistory()">
+            <option value="">— 选择球队 —</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-body" id="historyBody">
+        <div class="roster-empty">请选择球队查看历史记录</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======= MODAL: 新增/编辑球队 ======= -->
+<div class="modal-overlay" id="teamModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="teamModalTitle">新增球队</h3>
+      <button class="modal-close" onclick="closeTeamModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="teamEditId">
+
+      <div class="form-section">📋 基本信息</div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">球队名称 <span class="req">*</span></label>
+          <input class="form-input" id="tmName" placeholder="例如：香港老虎U12队">
+        </div>
+        <div class="form-group">
+          <label class="form-label">球队类型 <span class="req">*</span></label>
+          <select class="form-select" id="tmType" onchange="onTeamTypeChange()">
+            <option value="club">🏢 俱乐部球队</option>
+            <option value="school">🏫 学校球队</option>
+            <option value="district">🏙️ 区队</option>
+            <option value="squad">⭐ 梯队（棒总直辖）</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">参赛组别 <span class="req">*</span></label>
+          <div class="age-check" id="tmAgeGroup">
+            <label><input type="checkbox" value="U8"> U8</label>
+            <label><input type="checkbox" value="U10"> U10</label>
+            <label><input type="checkbox" value="U12"> U12</label>
+            <label><input type="checkbox" value="U15"> U15</label>
+            <label><input type="checkbox" value="U18"> U18</label>
+          </div>
+        </div>
+        <div class="form-group full" id="tmOrgGroup">
+          <label class="form-label">所属机构 / 俱乐部</label>
+          <input class="form-input" id="tmOrg" placeholder="例如：香港青苗棒球俱乐部">
+        </div>
+        <div class="form-group">
+          <label class="form-label">主教练姓名</label>
+          <input class="form-input" id="tmCoach" placeholder="主教练姓名">
+        </div>
+        <div class="form-group">
+          <label class="form-label">主教练电话</label>
+          <input class="form-input" id="tmCoachTel" placeholder="+852 XXXX XXXX">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">主场场地</label>
+          <input class="form-input" id="tmVenue" placeholder="例如：香港仔运动场">
+        </div>
+        <div class="form-group">
+          <label class="form-label">成立年份</label>
+          <input class="form-input" id="tmYear" type="number" placeholder="2020" min="2000" max="2026">
+        </div>
+        <div class="form-group">
+          <label class="form-label">注册状态</label>
+          <select class="form-select" id="tmStatus">
+            <option value="active">✅ 活跃</option>
+            <option value="pending">⏳ 待审核</option>
+            <option value="inactive">❌ 已停用</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">备注</label>
+          <textarea class="form-textarea" id="tmNote" placeholder="补充说明..."></textarea>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="form-section">👥 初始球员名单 <span style="font-weight:400; color:#9ca3af; font-size:11px;">（可在球员资料库中单独添加）</span></div>
+      <div class="info-box" style="margin-bottom:12px;">球队创建后，可在「球员名单」页面为球队添加或移除球员。</div>
+      <div class="form-group full">
+        <label class="form-label">说明</label>
+        <div style="font-size:12px; color:#888; padding:8px 0;">球队建立后，通过球员资料库中的「分配球队」功能，将已注册的球员归属到本球队。</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeTeamModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveTeam()">💾 保存球队</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= MODAL: 球员名单 ======= -->
+<div class="modal-overlay" id="rosterModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="rosterModalTitle">管理球员名单</h3>
+      <button class="modal-close" onclick="closeRosterModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="rosterTeamId">
+      <div class="info-box">勾选已注册球员，将其加入本球队名单（来自球员资料库）。</div>
+      <div class="form-group full">
+        <label class="form-label">从球员资料库中选择球员</label>
+        <div class="player-picker" id="playerPicker">
+          <div class="roster-empty">暂无待分配的球员</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeRosterModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveRoster()">💾 确认添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= MODAL: 梯队球队 ======= -->
+<div class="modal-overlay" id="squadModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="squadModalTitle">新增梯队球队</h3>
+      <button class="modal-close" onclick="closeSquadModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="squadEditId">
+      <div class="info-box" style="background:#fffbeb; border-color:#fcd34d; color:#92400e;">
+        <strong>⭐ 梯队球队说明：</strong>梯队由香港棒垒球总会直辖，跨组别选拔优秀球员。梯队球员可同时保留原俱乐部/学校身份。
+      </div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">梯队名称 <span class="req">*</span></label>
+          <input class="form-input" id="sqName" placeholder="例如：香港青少棒U15代表队">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">选拔年龄段（可多选） <span class="req">*</span></label>
+          <div class="age-check" id="sqAgeGroup">
+            <label><input type="checkbox" value="U8"> U8</label>
+            <label><input type="checkbox" value="U10"> U10</label>
+            <label><input type="checkbox" value="U12"> U12</label>
+            <label><input type="checkbox" value="U15"> U15</label>
+            <label><input type="checkbox" value="U18"> U18</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">主教练</label>
+          <input class="form-input" id="sqCoach" placeholder="主教练姓名">
+        </div>
+        <div class="form-group">
+          <label class="form-label">目标人数</label>
+          <input class="form-input" id="sqTarget" type="number" placeholder="15" min="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">成立年份</label>
+          <input class="form-input" id="sqYear" type="number" placeholder="2024" min="2000" max="2026">
+        </div>
+        <div class="form-group">
+          <label class="form-label">历史最佳成绩</label>
+          <input class="form-input" id="sqBest" placeholder="例如：2023年港深联赛冠军">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">备注 / 选拔说明</label>
+          <textarea class="form-textarea" id="sqNote" placeholder="梯队选拔标准或补充说明..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeSquadModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveSquad()">💾 保存梯队</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= MODAL: 教练 ======= -->
+<div class="modal-overlay" id="coachModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="coachModalTitle">新增教练</h3>
+      <button class="modal-close" onclick="closeCoachModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="coachEditId">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">姓名 <span class="req">*</span></label>
+          <input class="form-input" id="chName" placeholder="教练姓名">
+        </div>
+        <div class="form-group">
+          <label class="form-label">职位</label>
+          <select class="form-select" id="chRole">
+            <option value="head">主教练</option>
+            <option value="assistant">助理教练</option>
+            <option value="pitch">投手教练</option>
+            <option value="batting">打击教练</option>
+            <option value="fitness">体能教练</option>
+            <option value="analyst">数据分析师</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">执教组别</label>
+          <div class="age-check" id="chAgeGroup">
+            <label><input type="checkbox" value="U8"> U8</label>
+            <label><input type="checkbox" value="U10"> U10</label>
+            <label><input type="checkbox" value="U12"> U12</label>
+            <label><input type="checkbox" value="U15"> U15</label>
+            <label><input type="checkbox" value="U18"> U18</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">资质证书</label>
+          <input class="form-input" id="chCert" placeholder="例如：香港棒总一级教练">
+        </div>
+        <div class="form-group">
+          <label class="form-label">联系电话</label>
+          <input class="form-input" id="chTel" placeholder="+852 XXXX XXXX">
+        </div>
+        <div class="form-group">
+          <label class="form-label">执教球队</label>
+          <select class="form-select" id="chTeam">
+            <option value="">— 关联球队 —</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">备注</label>
+          <textarea class="form-textarea" id="chNote" placeholder="教练资历、执教经历..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeCoachModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveCoach()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <div class="toast-icon" id="toastIcon"></div>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+// ==================== DATA ====================
+const STORAGE_KEY_TEAMS = 'jihua_teams_v2';
+const STORAGE_KEY_PLAYERS = 'jihua_players_v2';
+const STORAGE_KEY_ROSTER = 'jihua_roster_v2';
+const STORAGE_KEY_SQUAD = 'jihua_squad_v2';
+const STORAGE_KEY_COACHES = 'jihua_coaches_v2';
+
+function load(key, fallback) {
+  try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : fallback; } catch { return fallback; }
+}
+function save(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+function ageGroupTag(g) {
+  const m = {'U8':'tag-u8','U10':'tag-u10','U12':'tag-u12','U15':'tag-u15','U18':'tag-u18'};
+  return `<span class="tag ${m[g]||''}">${g}</span>`;
+}
+function typeLabel(t) {
+  return {club:'🏢 俱乐部', school:'🏫 学校', district:'🏙️ 区队', squad:'⭐ 梯队'}[t]||t;
+}
+function statusTag(s) {
+  return {active:'✅ 活跃', pending:'⏳ 待审核', inactive:'❌ 已停用'}[s]||s;
+}
+function statusClass(s) {
+  return {active:'tag-active', pending:'tag-pending', inactive:'tag-suspended'}[s]||'tag-pending';
+}
+function roleTag(r) {
+  const m = {head:'主教练', assistant:'助理教练', pitch:'投手教练', batting:'打击教练', fitness:'体能教练', analyst:'数据分析师'};
+  return m[r]||r;
+}
+function avatarColor(name) {
+  const colors = ['#2e6fa3','#059669','#d97706','#7c3aed','#dc2626','#0891b2','#65a30d'];
+  let h = 0; for(let c of name) h = h*31 + c.charCodeAt(0);
+  return colors[h % colors.length];
+}
+function initials(name) {
+  return name.slice(0,2);
+}
+
+// ==================== INIT SAMPLE DATA ====================
+function initSampleData() {
+  const players = [
+    {id:'p001', name:'陈俊轩', enName:'CHAN Chun Hin', gender:'M', dob:'2018-03-15', idType:'hkid', idNum:'Z1234567', throwing:'右投', batting:'右打', primaryPos:'P', altPos:['CF'], status:'active', teamId:'t01', teamName:'香港老虎U8队', isCaptain:false, regStatus:'approved'},
+    {id:'p002', name:'林可晴', enName:'LAM Ho Ching', gender:'F', dob:'2017-08-22', idType:'hkid', idNum:'Z2345678', throwing:'右投', batting:'右打', primaryPos:'C', altPos:['1B'], status:'active', teamId:'t02', teamName:'香港天使U10队', isCaptain:true, regStatus:'approved'},
+    {id:'p003', name:'张浩然', enName:'CHEUNG Ho Yin', gender:'M', dob:'2015-11-03', idType:'hkid', idNum:'Z3456789', throwing:'右投', batting:'左打', primaryPos:'SS', altPos:['P','3B'], status:'active', teamId:'t03', teamName:'九龙飓风U12队', isCaptain:false, regStatus:'approved'},
+    {id:'p004', name:'何晓婷', enName:'HO Hiu Ting', gender:'F', dob:'2014-05-18', idType:'hkid', idNum:'Z4567890', throwing:'左投', batting:'左打', primaryPos:'P', altPos:['1B'], status:'active', teamId:'t03', teamName:'九龙飓风U12队', isCaptain:true, regStatus:'approved'},
+    {id:'p005', name:'王子轩', enName:'WONG Chi Hin', gender:'M', dob:'2012-09-10', idType:'hkid', idNum:'Z5678901', throwing:'右投', batting:'右打', primaryPos:'CF', altPos:['LF','RF'], status:'active', teamId:'t04', teamName:'香港国际U15队', isCaptain:true, regStatus:'approved'},
+    {id:'p006', name:'李雅文', enName:'LEE Nga Man', gender:'F', dob:'2010-04-25', idType:'hkid', idNum:'Z6789012', throwing:'右投', batting:'左右开弓', primaryPos:'P', altPos:['SS'], status:'active', teamId:'t05', teamName:'香港红雀U18队', isCaptain:false, regStatus:'approved'},
+    {id:'p007', name:'周俊杰', enName:'CHOW Chun Kit', gender:'M', dob:'2016-07-08', idType:'hkid', idNum:'Z7890123', throwing:'右投', batting:'右打', primaryPos:'2B', altPos:['SS','3B'], status:'active', teamId:'t02', teamName:'香港天使U10队', isCaptain:false, regStatus:'approved'},
+    {id:'p008', name:'吴芷晴', enName:'NG Chi Ching', gender:'F', dob:'2013-12-01', idType:'hkid', idNum:'Z8901234', throwing:'左投', batting:'右打', primaryPos:'LF', altPos:['CF','P'], status:'active', teamId:'t03', teamName:'九龙飓风U12队', isCaptain:false, regStatus:'approved'},
+  ];
+  save(STORAGE_KEY_PLAYERS, players);
+
+  const teams = [
+    {id:'t01', name:'香港老虎U8队', type:'club', ageGroups:['U8'], org:'香港老虎棒球俱乐部', coach:'李志伟', coachTel:'+852 2345 6789', venue:'香港仔运动场', year:2022, status:'active', note:''},
+    {id:'t02', name:'香港天使U10队', type:'club', ageGroups:['U10'], org:'香港天使体育会', coach:'陈美琪', coachTel:'+852 3456 7890', venue:'天水围运动场', year:2021, status:'active', note:'全女队'},
+    {id:'t03', name:'九龙飓风U12队', type:'club', ageGroups:['U12'], org:'九龙飓风棒球会', coach:'张伟明', coachTel:'+852 4567 8901', venue:'摩士公园', year:2020, status:'active', note:''},
+    {id:'t04', name:'香港国际U15队', type:'school', ageGroups:['U15'], org:'香港国际学校', coach:'David Wong', coachTel:'+852 5678 9012', venue:'香港国际学校', year:2019, status:'active', note:'校队'},
+    {id:'t05', name:'香港红雀U18队', type:'district', ageGroups:['U18'], org:'港岛东体育会', coach:'黄志远', coachTel:'+852 6789 0123', venue:'柴湾运动场', year:2018, status:'active', note:''},
+    {id:'t06', name:'沙田火箭U10队', type:'club', ageGroups:['U10'], org:'沙田体育会', coach:'刘志华', coachTel:'+852 7890 1234', venue:'沙田运动场', year:2023, status:'pending', note:'新注册球队'},
+    {id:'t07', name:'新界野马U15队', type:'club', ageGroups:['U15'], org:'新界野马棒球俱乐部', coach:'马超仁', coachTel:'+852 8901 2345', venue:'上水运动场', year:2021, status:'active', note:''},
+  ];
+  save(STORAGE_KEY_TEAMS, teams);
+
+  // Roster: team -> [playerIds]
+  const roster = {
+    't01': ['p001'],
+    't02': ['p002','p007'],
+    't03': ['p003','p004','p008'],
+    't04': ['p005'],
+    't05': ['p006'],
+    't06': [],
+    't07': [],
+  };
+  save(STORAGE_KEY_ROSTER, roster);
+
+  const squads = [
+    {id:'sq01', name:'香港少棒U12代表队', ageGroups:['U12'], coach:'张伟明', target:18, current:3, year:2024, best:'2024年粤港澳少棒赛亚军', note:'由九龙飓风及全港各队选拔'},
+    {id:'sq02', name:'香港青棒U18代表队', ageGroups:['U15','U18'], coach:'黄志远', target:20, current:1, year:2023, best:'2023年全港棒球锦标赛冠军', note:'面向U15/U18优秀球员开放选拔'},
+  ];
+  save(STORAGE_KEY_SQUAD, squads);
+
+  const coaches = [
+    {id:'c01', name:'李志伟', role:'head', ageGroups:['U8'], cert:'香港棒总一级教练', teamId:'t01', tel:'+852 2345 6789', status:'active', note:'执教8年'},
+    {id:'c02', name:'陈美琪', role:'head', ageGroups:['U10'], cert:'香港棒总二级教练', teamId:'t02', tel:'+852 3456 7890', status:'active', note:'专注女子棒球发展'},
+    {id:'c03', name:'张伟明', role:'pitch', ageGroups:['U12'], cert:'美国棒球协会认证投手教练', teamId:'t03', tel:'+852 4567 8901', status:'active', note:'前香港代表队投手'},
+    {id:'c04', name:'David Wong', role:'head', ageGroups:['U15'], cert:'美国LLB亚洲区教练', teamId:'t04', tel:'+852 5678 9012', status:'active', note:'英文授课'},
+    {id:'c05', name:'黄志远', role:'head', ageGroups:['U18'], cert:'香港棒总三级教练', teamId:'t05', tel:'+852 6789 0123', status:'active', note:'20年执教经验'},
+  ];
+  save(STORAGE_KEY_COACHES, coaches);
+}
+
+// ==================== TEAMS ====================
+let selectedTeamIds = [];
+
+function renderStats() {
+  const teams = load(STORAGE_KEY_TEAMS, []);
+  const players = load(STORAGE_KEY_PLAYERS, []);
+  const roster = load(STORAGE_KEY_ROSTER, {});
+  const squads = load(STORAGE_KEY_SQUAD, []);
+
+  const countByAge = (ag) => teams.filter(t => t.ageGroups.includes(ag) && t.status==='active').length;
+  const totalPlayers = players.filter(p => p.status==='active').length;
+
+  const html = `
+    <div class="stat-card total"><div class="stat-num">${teams.length}</div><div class="stat-label">注册球队</div><div class="stat-sub">${teams.filter(t=>t.status==='active').length}支活跃</div></div>
+    <div class="stat-card u8"><div class="stat-num">${countByAge('U8')}</div><div class="stat-label">U8 球队</div><div class="stat-sub">幼儿组</div></div>
+    <div class="stat-card u10"><div class="stat-num">${countByAge('U10')}</div><div class="stat-label">U10 球队</div><div class="stat-sub">儿童组</div></div>
+    <div class="stat-card u12"><div class="stat-num">${countByAge('U12')}</div><div class="stat-label">U12 球队</div><div class="stat-sub">少棒组</div></div>
+    <div class="stat-card u15"><div class="stat-num">${countByAge('U15')}</div><div class="stat-label">U15 球队</div><div class="stat-sub">青少棒组</div></div>
+    <div class="stat-card u18"><div class="stat-num">${countByAge('U18')}</div><div class="stat-label">U18 球队</div><div class="stat-sub">青棒组</div></div>
+    <div class="stat-card total"><div class="stat-num">${totalPlayers}</div><div class="stat-label">注册球员</div><div class="stat-sub">${squads.length}支梯队</div></div>
+  `;
+  document.getElementById('statsGrid').innerHTML = html;
+}
+
+function renderTeams() {
+  const teams = load(STORAGE_KEY_TEAMS, []);
+  const players = load(STORAGE_KEY_PLAYERS, []);
+  const roster = load(STORAGE_KEY_ROSTER, {});
+  const search = document.getElementById('teamSearch').value.toLowerCase();
+  const typeFilter = document.getElementById('filterType').value;
+  const ageFilter = document.getElementById('filterAge').value;
+  const statusFilter = document.getElementById('filterStatus').value;
+
+  let filtered = teams.filter(t => {
+    if (search && !t.name.toLowerCase().includes(search) && !t.org.toLowerCase().includes(search)) return false;
+    if (typeFilter && t.type !== typeFilter) return false;
+    if (statusFilter && t.status !== statusFilter) return false;
+    if (ageFilter && !t.ageGroups.includes(ageFilter)) return false;
+    return true;
+  });
+
+  if (!filtered.length) {
+    document.getElementById('teamsTableBody').innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#aaa;">暂无球队记录</td></tr>';
+    return;
+  }
+
+  document.getElementById('teamsTableBody').innerHTML = filtered.map(t => {
+    const memberIds = roster[t.id] || [];
+    const memberCount = memberIds.length;
+    const typeClass = {club:'tag-club', school:'tag-school', district:'tag-district', squad:'tag-official'}[t.type];
+    return `<tr>
+      <td><input type="checkbox" class="row-checkbox" value="${t.id}" ${selectedTeamIds.includes(t.id)?'checked':''} onchange="toggleTeamSelect('${t.id}')"></td>
+      <td><div style="font-weight:700;color:#1a3a5c">${t.name}</div><div style="font-size:10px;color:#888;margin-top:2px">ID: ${t.id}</div></td>
+      <td><span class="tag ${typeClass}">${typeLabel(t.type)}</span></td>
+      <td>${t.ageGroups.map(g => ageGroupTag(g)).join(' ')}</td>
+      <td><span style="font-weight:700;font-size:15px;color:#1a3a5c">${memberCount}</span><span style="color:#888;font-size:11px"> 人</span></td>
+      <td><div style="font-weight:600">${t.coach||'—'}</div>${t.coachTel?`<div style="font-size:10px;color:#888">${t.coachTel}</div>`:''}</td>
+      <td>${t.org||'—'}</td>
+      <td><span class="tag ${statusClass(t.status)}">${statusTag(t.status)}</span></td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="viewRoster('${t.id}')" title="查看球员">👥</button>
+        <button class="btn btn-secondary btn-sm" onclick="editTeam('${t.id}')" title="编辑">✏️</button>
+        <button class="btn btn-secondary btn-sm" onclick="confirmDeleteTeam('${t.id}')" title="删除">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Update select all
+  document.getElementById('selectAllTeams').checked = filtered.length > 0 && filtered.every(t => selectedTeamIds.includes(t.id));
+
+  // Update team selects in other tabs
+  updateTeamSelects();
+}
+
+function toggleTeamSelect(id) {
+  if (selectedTeamIds.includes(id)) {
+    selectedTeamIds = selectedTeamIds.filter(x => x !== id);
+  } else {
+    selectedTeamIds.push(id);
+  }
+  updateSelectBar();
+  renderTeams();
+}
+
+function toggleAllTeams(cb) {
+  const teams = load(STORAGE_KEY_TEAMS, []);
+  if (cb.checked) {
+    selectedTeamIds = teams.map(t => t.id);
+  } else {
+    selectedTeamIds = [];
+  }
+  updateSelectBar();
+  renderTeams();
+}
+
+function updateSelectBar() {
+  const bar = document.getElementById('teamSelectBar');
+  if (selectedTeamIds.length > 0) {
+    bar.style.display = 'flex';
+    document.getElementById('teamSelCount').textContent = selectedTeamIds.length;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function clearTeamSelection() {
+  selectedTeamIds = [];
+  updateSelectBar();
+  renderTeams();
+}
+
+function bulkApproveTeams() {
+  let teams = load(STORAGE_KEY_TEAMS, []);
+  selectedTeamIds.forEach(id => {
+    const t = teams.find(x => x.id === id);
+    if (t) t.status = 'active';
+  });
+  save(STORAGE_KEY_TEAMS, teams);
+  showToast('✅ 已批量审核通过 ' + selectedTeamIds.length + ' 支球队', 'success');
+  clearTeamSelection();
+  renderStats();
+  renderTeams();
+}
+
+function openTeamModal(id) {
+  document.getElementById('teamEditId').value = id || '';
+  document.getElementById('teamModalTitle').textContent = id ? '✏️ 编辑球队' : '＋ 新增球队';
+
+  // Reset form
+  ['tmName','tmOrg','tmCoach','tmCoachTel','tmVenue','tmYear','tmNote'].forEach(k => document.getElementById(k).value = '');
+  document.getElementById('tmType').value = 'club';
+  document.getElementById('tmStatus').value = 'active';
+  document.getElementById('tmOrgGroup').style.display = '';
+
+  // Reset age checkboxes
+  document.querySelectorAll('#tmAgeGroup label').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll('#tmAgeGroup input').forEach(i => i.checked = false);
+
+  if (id) {
+    const t = load(STORAGE_KEY_TEAMS, []).find(x => x.id === id);
+    if (t) {
+      document.getElementById('tmName').value = t.name;
+      document.getElementById('tmType').value = t.type;
+      document.getElementById('tmOrg').value = t.org || '';
+      document.getElementById('tmCoach').value = t.coach || '';
+      document.getElementById('tmCoachTel').value = t.coachTel || '';
+      document.getElementById('tmVenue').value = t.venue || '';
+      document.getElementById('tmYear').value = t.year || '';
+      document.getElementById('tmStatus').value = t.status;
+      document.getElementById('tmNote').value = t.note || '';
+      onTeamTypeChange();
+      document.querySelectorAll('#tmAgeGroup input').forEach(i => {
+        i.checked = t.ageGroups.includes(i.value);
+        if (i.checked) i.closest('label').classList.add('active');
+      });
+    }
+  }
+
+  document.getElementById('teamModal').classList.add('show');
+}
+
+function onTeamTypeChange() {
+  const type = document.getElementById('tmType').value;
+  const orgGroup = document.getElementById('tmOrgGroup');
+  if (type === 'squad') {
+    orgGroup.innerHTML = '<label class="form-label">管理机构</label><input class="form-input" id="tmOrg" value="香港棒垒球总会" readonly>';
+  } else {
+    orgGroup.innerHTML = '<label class="form-label">所属机构 / 俱乐部</label><input class="form-input" id="tmOrg" placeholder="例如：香港青苗棒球俱乐部">';
+  }
+}
+
+function closeTeamModal() {
+  document.getElementById('teamModal').classList.remove('show');
+}
+
+function saveTeam() {
+  const id = document.getElementById('teamEditId').value;
+  const name = document.getElementById('tmName').value.trim();
+  if (!name) { showToast('❌ 请填写球队名称', 'error'); return; }
+
+  const ageChecked = Array.from(document.querySelectorAll('#tmAgeGroup input:checked')).map(i => i.value);
+  if (!ageChecked.length) { showToast('❌ 请至少选择一个参赛组别', 'error'); return; }
+
+  const team = {
+    id: id || genId(),
+    name,
+    type: document.getElementById('tmType').value,
+    ageGroups: ageChecked,
+    org: document.getElementById('tmOrg').value.trim(),
+    coach: document.getElementById('tmCoach').value.trim(),
+    coachTel: document.getElementById('tmCoachTel').value.trim(),
+    venue: document.getElementById('tmVenue').value.trim(),
+    year: parseInt(document.getElementById('tmYear').value) || null,
+    status: document.getElementById('tmStatus').value,
+    note: document.getElementById('tmNote').value.trim(),
+  };
+
+  let teams = load(STORAGE_KEY_TEAMS, []);
+  if (id) {
+    const idx = teams.findIndex(t => t.id === id);
+    if (idx >= 0) teams[idx] = team;
+  } else {
+    teams.push(team);
+    // Init empty roster
+    let roster = load(STORAGE_KEY_ROSTER, {});
+    roster[team.id] = [];
+    save(STORAGE_KEY_ROSTER, roster);
+  }
+  save(STORAGE_KEY_TEAMS, teams);
+  closeTeamModal();
+  renderStats();
+  renderTeams();
+  showToast(id ? '✅ 球队已更新' : '✅ 球队已新增', 'success');
+}
+
+function editTeam(id) { openTeamModal(id); }
+
+function confirmDeleteTeam(id) {
+  if (!confirm('确定删除此球队？球员名单不会被删除。')) return;
+  let teams = load(STORAGE_KEY_TEAMS, []);
+  teams = teams.filter(t => t.id !== id);
+  save(STORAGE_KEY_TEAMS, teams);
+  selectedTeamIds = selectedTeamIds.filter(x => x !== id);
+  renderStats();
+  renderTeams();
+  showToast('🗑️ 球队已删除', 'success');
+}
+
+function viewRoster(teamId) {
+  switchTab('roster');
+  document.getElementById('rosterTeamSelect').value = teamId;
+  renderRoster();
+}
+
+function exportTeams() {
+  const teams = load(STORAGE_KEY_TEAMS, []);
+  const roster = load(STORAGE_KEY_ROSTER, {});
+  let csv = '\uFEFF球队名称,类型,参赛组别,球员人数,主教练,主教练电话,所属机构,主场场地,成立年份,状态,备注\n';
+  teams.forEach(t => {
+    const count = (roster[t.id]||[]).length;
+    csv += `"${t.name}","${typeLabel(t.type)}","${t.ageGroups.join('/')}","${count}","${t.coach||''}","${t.coachTel||''}","${t.org||''}","${t.venue||''}","${t.year||''}","${statusTag(t.status)}","${t.note||''}"\n`;
+  });
+  downloadFile(csv, '球队名单_' + todayStr() + '.csv', 'text/csv;charset=utf-8');
+}
+
+// ==================== ROSTER ====================
+function updateTeamSelects() {
+  const teams = load(STORAGE_KEY_TEAMS, []);
+  const opts = teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  document.getElementById('rosterTeamSelect').innerHTML = '<option value="">— 选择球队 —</option>' + opts;
+  document.getElementById('historyTeamSelect').innerHTML = '<option value="">— 选择球队 —</option>' + opts;
+  document.getElementById('chTeam').innerHTML = '<option value="">— 关联球队 —</option>' + opts;
+}
+
+function renderRoster() {
+  const teamId = document.getElementById('rosterTeamSelect').value;
+  const team = load(STORAGE_KEY_TEAMS, []).find(t => t.id === teamId);
+  const roster = load(STORAGE_KEY_ROSTER, {});
+  const players = load(STORAGE_KEY_PLAYERS, []);
+
+  if (!teamId) {
+    document.getElementById('rosterTeamName').textContent = '请选择球队';
+    document.getElementById('rosterBody').innerHTML = '<div class="roster-empty">👆 请从上方选择一支球队，查看其完整球员名单</div>';
+    document.getElementById('addPlayerBtn').disabled = true;
+    document.getElementById('rosterImportBtn').disabled = true;
+    return;
+  }
+
+  document.getElementById('addPlayerBtn').disabled = false;
+  document.getElementById('rosterImportBtn').disabled = false;
+  document.getElementById('rosterTeamName').textContent = team.name + ' · 球员名单';
+
+  const memberIds = roster[teamId] || [];
+  const members = members_data = memberIds.map(pid => players.find(p => p.id === pid)).filter(Boolean);
+
+  if (!members.length) {
+    document.getElementById('rosterBody').innerHTML = '<div class="roster-empty">该球队暂无球员，请点击「添加球员」从资料库分配</div>';
+    return;
+  }
+
+  document.getElementById('rosterBody').innerHTML = members.map(p => {
+    const pos = [p.primaryPos, ...(p.altPos||[])].join(' / ');
+    return `<div class="roster-player">
+      <div class="roster-avatar" style="background:${avatarColor(p.name)}">${initials(p.name)}</div>
+      <div class="roster-info">
+        <div class="roster-name">
+          ${p.name}
+          ${p.isCaptain ? '<span class="tag tag-captain">队长</span>' : ''}
+          ${p.isCaptain === 'vice' ? '<span class="tag tag-vice">副队长</span>' : ''}
+          ${ageGroupTag(p.primaryPos.match(/U(\d+)/) ? 'U' + (p.dob ? calcAge(p.dob) : '?') : inferAgeGroup(p))}
+        </div>
+        <div class="roster-pos">${pos} · ${p.throwing} · ${p.batting}</div>
+      </div>
+      <div style="flex:1;font-size:11px;color:#888;text-align:right;padding-right:10px">${p.enName}</div>
+      <button class="roster-remove" onclick="removeFromTeam('${teamId}','${p.id}')" title="移除">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function inferAgeGroup(p) {
+  if (!p.dob) return 'U?';
+  const age = calcAgeGroup(p.dob);
+  return age;
+}
+
+function calcAge(dob) {
+  const birth = new Date(dob);
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+function calcAgeGroup(dob) {
+  const age = calcAge(dob);
+  if (age <= 8) return 'U8';
+  if (age <= 10) return 'U10';
+  if (age <= 12) return 'U12';
+  if (age <= 15) return 'U15';
+  if (age <= 18) return 'U18';
+  return 'Open';
+}
+
+function removeFromTeam(teamId, playerId) {
+  let roster = load(STORAGE_KEY_ROSTER, {});
+  roster[teamId] = (roster[teamId]||[]).filter(id => id !== playerId);
+  save(STORAGE_KEY_ROSTER, roster);
+  let players = load(STORAGE_KEY_PLAYERS, []);
+  const p = players.find(x => x.id === playerId);
+  if (p) { p.teamId = ''; p.teamName = ''; }
+  save(STORAGE_KEY_PLAYERS, players);
+  renderRoster();
+  renderTeams();
+  showToast('✅ 球员已从球队移除', 'success');
+}
+
+function openAddPlayerModal() {
+  const teamId = document.getElementById('rosterTeamSelect').value;
+  if (!teamId) { showToast('请先选择球队', 'error'); return; }
+  document.getElementById('rosterTeamId').value = teamId;
+  document.getElementById('rosterModalTitle').textContent = '从球员库添加球员 — ' + (load(STORAGE_KEY_TEAMS,[]).find(t=>t.id===teamId)||{}).name;
+
+  const players = load(STORAGE_KEY_PLAYERS, []);
+  const roster = load(STORAGE_KEY_ROSTER, {});
+  const existingIds = roster[teamId] || [];
+  const available = players.filter(p => p.status === 'active' && !existingIds.includes(p.id));
+
+  if (!available.length) {
+    document.getElementById('playerPicker').innerHTML = '<div class="roster-empty">球员库中没有可添加的球员（全部已在此球队或未注册）</div>';
+    return;
+  }
+
+  document.getElementById('playerPicker').innerHTML = available.map(p => {
+    const pos = [p.primaryPos, ...(p.altPos||[])].join('/');
+    return `<div class="player-picker-item" onclick="togglePickerItem(this, '${p.id}')">
+      <input type="checkbox" id="pp_${p.id}">
+      <span class="pname">${p.name}</span>
+      <span class="ppos">${pos} · ${p.throwing} · ${p.batting}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('rosterModal').classList.add('show');
+}
+
+function togglePickerItem(el, id) {
+  const cb = el.querySelector('input');
+  cb.checked = !cb.checked;
+  el.classList.toggle('checked', cb.checked);
+}
+
+function closeRosterModal() {
+  document.getElementById('rosterModal').classList.remove('show');
+}
+
+function saveRoster() {
+  const teamId = document.getElementById('rosterTeamId').value;
+  const checked = Array.from(document.querySelectorAll('#playerPicker input[type=checkbox]:checked')).map(i => i.id.replace('pp_',''));
+  if (!checked.length) { showToast('请至少选择一名球员', 'error'); return; }
+
+  let roster = load(STORAGE_KEY_ROSTER, {});
+  const existing = new Set(roster[teamId]||[]);
+  checked.forEach(id => existing.add(id));
+  roster[teamId] = Array.from(existing);
+  save(STORAGE_KEY_ROSTER, roster);
+
+  const team = load(STORAGE_KEY_TEAMS, []).find(t => t.id === teamId);
+  let players = load(STORAGE_KEY_PLAYERS, []);
+  players.forEach(p => {
+    if (checked.includes(p.id)) {
+      p.teamId = teamId;
+      p.teamName = team ? team.name : '';
+    }
+  });
+  save(STORAGE_KEY_PLAYERS, players);
+
+  closeRosterModal();
+  renderRoster();
+  renderTeams();
+  showToast(`✅ 已添加 ${checked.length} 名球员到球队`, 'success');
+}
+
+function openRosterImportModal() {
+  showToast('📥 请下载「球员名单导入模板」，按格式填写后上传', 'success');
+  downloadFile('\uFEFF球员姓名,证件号码,参赛组别,主力位置,投手习惯,打击习惯\n陈俊轩,Z1234567,U8,P,右投,右打\n', '球员名单导入模板.csv', 'text/csv;charset=utf-8');
+}
+
+// ==================== SQUADS ====================
+function renderSquads() {
+  const squads = load(STORAGE_KEY_SQUAD, []);
+  if (!squads.length) {
+    document.getElementById('squadTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#aaa;">暂无梯队球队</td></tr>';
+    return;
+  }
+  document.getElementById('squadTableBody').innerHTML = squads.map(sq => {
+    const pct = sq.target ? Math.round(sq.current / sq.target * 100) : 0;
+    return `<tr>
+      <td><div style="font-weight:700;color:#1a3a5c">${sq.name}</div></td>
+      <td>${sq.ageGroups.map(g => ageGroupTag(g)).join(' ')}</td>
+      <td><span style="font-weight:700">${sq.current}</span> / ${sq.target}人</td>
+      <td>${sq.coach||'—'}</td>
+      <td>${sq.year||'—'}</td>
+      <td>${sq.best||'—'}</td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="editSquad('${sq.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDeleteSquad('${sq.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openSquadModal(id) {
+  document.getElementById('squadEditId').value = id || '';
+  document.getElementById('squadModalTitle').textContent = id ? '✏️ 编辑梯队' : '＋ 新增梯队球队';
+  ['sqName','sqCoach','sqYear','sqBest','sqNote'].forEach(k => document.getElementById(k).value = '');
+  document.getElementById('sqTarget').value = '';
+  document.querySelectorAll('#sqAgeGroup label').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll('#sqAgeGroup input').forEach(i => i.checked = false);
+
+  if (id) {
+    const sq = load(STORAGE_KEY_SQUAD, []).find(x => x.id === id);
+    if (sq) {
+      document.getElementById('sqName').value = sq.name;
+      document.getElementById('sqCoach').value = sq.coach || '';
+      document.getElementById('sqTarget').value = sq.target || '';
+      document.getElementById('sqYear').value = sq.year || '';
+      document.getElementById('sqBest').value = sq.best || '';
+      document.getElementById('sqNote').value = sq.note || '';
+      document.querySelectorAll('#sqAgeGroup input').forEach(i => {
+        i.checked = sq.ageGroups.includes(i.value);
+        if (i.checked) i.closest('label').classList.add('active');
+      });
+    }
+  }
+  document.getElementById('squadModal').classList.add('show');
+}
+
+function closeSquadModal() {
+  document.getElementById('squadModal').classList.remove('show');
+}
+
+function saveSquad() {
+  const id = document.getElementById('squadEditId').value;
+  const name = document.getElementById('sqName').value.trim();
+  if (!name) { showToast('❌ 请填写梯队名称', 'error'); return; }
+  const ages = Array.from(document.querySelectorAll('#sqAgeGroup input:checked')).map(i => i.value);
+  if (!ages.length) { showToast('❌ 请至少选择一个年龄段', 'error'); return; }
+
+  const sq = { id: id||genId(), name, ageGroups: ages, coach: document.getElementById('sqCoach').value.trim(), target: parseInt(document.getElementById('sqTarget').value)||0, current:0, year: parseInt(document.getElementById('sqYear').value)||null, best: document.getElementById('sqBest').value.trim(), note: document.getElementById('sqNote').value.trim() };
+
+  let squads = load(STORAGE_KEY_SQUAD, []);
+  if (id) { const idx = squads.findIndex(x=>x.id===id); if(idx>=0) squads[idx]=sq; }
+  else squads.push(sq);
+  save(STORAGE_KEY_SQUAD, squads);
+  closeSquadModal();
+  renderSquads();
+  showToast(id ? '✅ 梯队已更新' : '✅ 梯队已新增', 'success');
+}
+
+function editSquad(id) { openSquadModal(id); }
+function confirmDeleteSquad(id) {
+  if (!confirm('确定删除此梯队？')) return;
+  let squads = load(STORAGE_KEY_SQUAD, []);
+  save(STORAGE_KEY_SQUAD, squads.filter(s => s.id !== id));
+  renderSquads();
+  showToast('🗑️ 梯队已删除', 'success');
+}
+
+function downloadSquadTemplate() {
+  downloadFile('\uFEFF梯队名称,年龄段,主教练,目标人数,成立年份,历史最佳成绩\n香港青少棒U15代表队,U15,主教练姓名,18,2024,2023年粤港澳冠军\n', '梯队球队导入模板.csv', 'text/csv;charset=utf-8');
+}
+
+// Squad overview
+function renderSquadOverview() {
+  const squads = load(STORAGE_KEY_SQUAD, []);
+  const rows = [
+    ['U8 幼棒组', '6-8岁', 'U8', 20, 0],
+    ['U10 儿童组', '8-10岁', 'U10', 20, 0],
+    ['U12 少棒组', '10-12岁', 'U12', 20, 0],
+    ['U15 青少棒组', '13-15岁', 'U15', 24, 0],
+    ['U18 青棒组', '16-18岁', 'U18', 24, 0],
+  ];
+  squads.forEach(sq => {
+    sq.ageGroups.forEach(ag => {
+      const row = rows.find(r => r[2] === ag);
+      if (row) { row[3] += sq.target; row[4] += sq.current; }
+    });
+  });
+
+  document.getElementById('squadOverviewBody').innerHTML = rows.map(r => {
+    const pct = r[3] ? Math.round(r[4]/r[3]*100) : 0;
+    const bar = `<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:8px;background:#f0f0f0;border-radius:4px"><div style="width:${pct}%;height:100%;background:${pct>=80?'#059669':pct>=40?'#f59e0b':'#2e6fa3'};border-radius:4px"></div></div><span style="font-size:11px;font-weight:700;color:#666;min-width:40px">${r[4]}/${r[3]}</span></div>`;
+    return `<tr>
+      <td><div style="font-weight:700">${r[0]}</div></td>
+      <td style="color:#888;font-size:12px">${r[1]}</td>
+      <td>${ageGroupTag(r[2])}</td>
+      <td>${r[3]}</td>
+      <td>${r[4]}</td>
+      <td>各俱乐部/学校/区队推荐</td>
+      <td style="min-width:150px">${bar}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ==================== COACHES ====================
+function renderCoaches() {
+  const coaches = load(STORAGE_KEY_COACHES, []);
+  if (!coaches.length) {
+    document.getElementById('coachesTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#aaa;">暂无教练记录</td></tr>';
+    return;
+  }
+  document.getElementById('coachesTableBody').innerHTML = coaches.map(c => {
+    const team = load(STORAGE_KEY_TEAMS, []).find(t => t.id === c.teamId);
+    return `<tr>
+      <td><div style="font-weight:700">${c.name}</div></td>
+      <td>${roleTag(c.role)}</td>
+      <td><span style="font-size:11px;color:#666">${c.cert||'—'}</span></td>
+      <td>${team ? team.name : '—'}</td>
+      <td style="font-size:12px">${c.tel||'—'}</td>
+      <td><span class="tag ${c.status==='active'?'tag-active':'tag-suspended'}">${c.status==='active'?'✅ 在职':'❌ 离职'}</span></td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="editCoach('${c.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDeleteCoach('${c.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openCoachModal(id) {
+  document.getElementById('coachEditId').value = id || '';
+  document.getElementById('coachModalTitle').textContent = id ? '✏️ 编辑教练' : '＋ 新增教练';
+  ['chName','chCert','chTel','chNote'].forEach(k => document.getElementById(k).value = '');
+  document.getElementById('chRole').value = 'head';
+  document.getElementById('chTeam').value = '';
+  document.querySelectorAll('#chAgeGroup label').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll('#chAgeGroup input').forEach(i => i.checked = false);
+
+  if (id) {
+    const c = load(STORAGE_KEY_COACHES, []).find(x => x.id === id);
+    if (c) {
+      document.getElementById('chName').value = c.name;
+      document.getElementById('chRole').value = c.role;
+      document.getElementById('chCert').value = c.cert || '';
+      document.getElementById('chTel').value = c.tel || '';
+      document.getElementById('chTeam').value = c.teamId || '';
+      document.getElementById('chNote').value = c.note || '';
+      document.querySelectorAll('#chAgeGroup input').forEach(i => {
+        i.checked = c.ageGroups.includes(i.value);
+        if (i.checked) i.closest('label').classList.add('active');
+      });
+    }
+  }
+  document.getElementById('coachModal').classList.add('show');
+}
+
+function closeCoachModal() { document.getElementById('coachModal').classList.remove('show'); }
+
+function saveCoach() {
+  const id = document.getElementById('coachEditId').value;
+  const name = document.getElementById('chName').value.trim();
+  if (!name) { showToast('❌ 请填写教练姓名', 'error'); return; }
+  const ages = Array.from(document.querySelectorAll('#chAgeGroup input:checked')).map(i => i.value);
+
+  const coach = {
+    id: id||genId(), name, role: document.getElementById('chRole').value,
+    ageGroups: ages, cert: document.getElementById('chCert').value.trim(),
+    teamId: document.getElementById('chTeam').value, tel: document.getElementById('chTel').value.trim(),
+    status: 'active', note: document.getElementById('chNote').value.trim()
+  };
+
+  let coaches = load(STORAGE_KEY_COACHES, []);
+  if (id) { const idx = coaches.findIndex(x=>x.id===id); if(idx>=0) coaches[idx]=coach; }
+  else coaches.push(coach);
+  save(STORAGE_KEY_COACHES, coaches);
+  closeCoachModal();
+  renderCoaches();
+  showToast(id?'✅ 教练信息已更新':'✅ 教练已新增', 'success');
+}
+
+function editCoach(id) { openCoachModal(id); }
+function confirmDeleteCoach(id) {
+  if (!confirm('确定删除此教练？')) return;
+  let coaches = load(STORAGE_KEY_COACHES, []);
+  save(STORAGE_KEY_COACHES, coaches.filter(c => c.id !== id));
+  renderCoaches();
+  showToast('🗑️ 教练已删除', 'success');
+}
+
+// ==================== HISTORY ====================
+function renderTeamHistory() {
+  const teamId = document.getElementById('historyTeamSelect').value;
+  const team = load(STORAGE_KEY_TEAMS, []).find(t => t.id === teamId);
+  if (!teamId || !team) {
+    document.getElementById('historyBody').innerHTML = '<div class="roster-empty">请选择球队查看历史记录</div>';
+    return;
+  }
+
+  const history = [
+    {year:'2024', text:`参加 ${team.ageGroups.join('/')} 组别联赛，获得第 ${Math.floor(Math.random()*3)+1} 名`},
+    {year:'2024', text:'香港棒总年度注册完成'},
+    {year:'2023', text:`新加入 ${Math.floor(Math.random()*5)+2} 名球员`},
+    {year:'2023', text:'参加港深棒球交流赛'},
+    {year: team.year||'2022', text:`球队成立，初始成员 ${Math.floor(Math.random()*8)+5} 人`},
+  ];
+
+  document.getElementById('historyBody').innerHTML = `
+    <div style="margin-bottom:16px">
+      <div style="font-weight:700;font-size:16px;color:#1a3a5c;margin-bottom:4px">${team.name}</div>
+      <div style="font-size:12px;color:#888">${typeLabel(team.type)} · ${team.year?'成立于'+team.year:''} · ${team.org||''}</div>
+    </div>
+    <div class="history-item" style="border-bottom:2px solid #e2e8f0;padding-bottom:14px;margin-bottom:14px">
+      <div style="font-weight:700;color:#1a3a5c">📊 累计参赛</div>
+      <div style="font-size:24px;font-weight:800;color:#2e6fa3;margin-top:6px">${history.length}</div>
+      <div style="font-size:12px;color:#888">场次</div>
+    </div>
+    ${history.map(h => `<div class="history-item"><div class="history-year">${h.year}</div><div class="history-text">${h.text}</div></div>`).join('')}
+  `;
+}
+
+// ==================== TABS ====================
+function switchTab(tab) {
+  document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+
+  const tabMap = {teams:'tab-teams',roster:'tab-roster',squad:'tab-squad',coaches:'tab-coaches',history:'tab-history'};
+  if (tabMap[tab]) {
+    document.getElementById(tabMap[tab]).style.display = '';
+    document.querySelectorAll('.nav-tab')[Object.keys(tabMap).indexOf(tab)].classList.add('active');
+  }
+
+  if (tab === 'roster') { renderSquads(); }
+  if (tab === 'squad') { renderSquadOverview(); }
+  if (tab === 'coaches') { renderCoaches(); }
+  if (tab === 'history') { renderTeamHistory(); }
+}
+
+// ==================== UTILS ====================
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function downloadFile(content, filename, mime) {
+  const blob = new Blob([content], {type: mime});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function downloadTeamTemplate() {
+  downloadFile('\uFEFF球队名称,类型,参赛组别,主教练,主教练电话,所属机构,主场场地,成立年份,备注\n香港老虎U8队,俱乐部,U8,李志伟,+852 2345 6789,香港老虎棒球俱乐部,香港仔运动场,2022,\n', '球队导入模板.csv', 'text/csv;charset=utf-8');
+}
+
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  document.getElementById('toastIcon').textContent = type === 'success' ? '✅' : '❌';
+  document.getElementById('toastMsg').textContent = msg;
+  toast.className = 'toast ' + type;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// Age checkbox click handler
+document.addEventListener('click', e => {
+  const label = e.target.closest('.age-check label');
+  if (label) { label.classList.toggle('active', !label.classList.contains('active')); }
+});
+
+// ==================== INIT ====================
+(function init() {
+  document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('zh-HK', {year:'numeric',month:'long',day:'numeric'});
+
+  // Init data if empty
+  if (!localStorage.getItem(STORAGE_KEY_TEAMS)) {
+    initSampleData();
+  }
+
+  renderStats();
+  renderTeams();
+  updateTeamSelects();
+  renderSquads();
+  renderSquadOverview();
+})();
+</script>
+</body>
+</html>
