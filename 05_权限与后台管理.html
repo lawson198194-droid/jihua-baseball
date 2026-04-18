@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块5 · 权限与后台管理 — 香港棒垒球总会</title>
+<style>
+  :root {
+    --primary: #1B4F72;
+    --primary-light: #2E86C1;
+    --accent: #E67E22;
+    --bg: #F2F3F4;
+    --white: #FFFFFF;
+    --border: #D5D8DC;
+    --text: #1C2833;
+    --text-light: #707B7C;
+    --success: #1E8449;
+    --danger: #C0392B;
+    --warning: #D68910;
+    --info: #2980B9;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Arial,sans-serif; }
+  body { background:var(--bg); color:var(--text); min-height:100vh; font-size:14px; }
+
+  header {
+    background:var(--primary); color:white; padding:0 24px;
+    height:56px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  }
+  .header-brand { display:flex; align-items:center; gap:12px; }
+  .header-logo { width:36px; height:36px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:bold; }
+  .header-title { font-size:16px; font-weight:600; }
+  .header-sub { font-size:11px; opacity:0.75; }
+  .header-right { display:flex; align-items:center; gap:12px; }
+  .header-badge { background:var(--accent); padding:4px 12px; border-radius:12px; font-size:12px; font-weight:600; }
+  .header-user { font-size:13px; opacity:0.9; }
+
+  .nav-tabs {
+    background:var(--white); display:flex; gap:0;
+    border-bottom:2px solid var(--border); padding:0 24px; overflow-x:auto;
+  }
+  .nav-tab {
+    padding:14px 20px; font-size:14px; font-weight:500;
+    color:var(--text-light); cursor:pointer; border-bottom:3px solid transparent;
+    transition:all 0.2s; white-space:nowrap; display:flex; align-items:center; gap:7px;
+  }
+  .nav-tab:hover { color:var(--primary); }
+  .nav-tab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+
+  .main { padding:24px; max-width:1400px; margin:0 auto; }
+
+  .panel {
+    background:var(--white); border-radius:12px;
+    box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; margin-bottom:24px;
+  }
+  .panel-header {
+    padding:16px 20px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+  .panel-title { font-size:15px; font-weight:700; color:var(--primary); display:flex; align-items:center; gap:8px; }
+  .panel-body { padding:20px; }
+
+  .btn {
+    padding:8px 16px; border:none; border-radius:8px; font-size:13px; font-weight:500;
+    cursor:pointer; transition:all 0.15s; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+  }
+  .btn-primary { background:var(--primary); color:white; }
+  .btn-primary:hover { background:var(--primary-light); }
+  .btn-accent { background:var(--accent); color:white; }
+  .btn-accent:hover { background:#D35400; }
+  .btn-outline { background:white; color:var(--primary); border:1.5px solid var(--primary); }
+  .btn-outline:hover { background:#EBF5FB; }
+  .btn-success { background:var(--success); color:white; }
+  .btn-success:hover { background:#239B56; }
+  .btn-danger { background:var(--danger); color:white; }
+  .btn-danger:hover { background:#A93226; }
+  .btn-sm { padding:5px 10px; font-size:12px; }
+  .btn-xs { padding:3px 8px; font-size:11px; border-radius:6px; }
+
+  input, select, textarea {
+    padding:8px 12px; border:1.5px solid var(--border); border-radius:8px;
+    font-size:13px; color:var(--text); background:white; outline:none; transition:border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color:var(--primary); }
+  input::placeholder, textarea::placeholder { color:var(--text-light); }
+  textarea { resize:vertical; min-height:80px; }
+
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  thead th {
+    background:#EBF5FB; padding:10px 12px; text-align:left;
+    font-size:12px; font-weight:700; color:var(--primary);
+    text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid var(--border); white-space:nowrap;
+  }
+  tbody tr { border-bottom:1px solid var(--border); transition:background 0.1s; }
+  tbody tr:hover { background:#F8FBFD; }
+  td { padding:10px 12px; font-size:13px; vertical-align:middle; }
+  .td-center { text-align:center; }
+
+  .badge {
+    display:inline-block; padding:3px 10px; border-radius:12px;
+    font-size:11px; font-weight:600; white-space:nowrap;
+  }
+  .badge-active { background:#D5F5E3; color:var(--success); }
+  .badge-inactive { background:#EAECEE; color:var(--text-light); }
+  .badge-admin { background:#1B4F72; color:white; }
+  .badge-coach { background:#2980B9; color:white; }
+  .badge-user { background:#27AE60; color:white; }
+  .badge-viewer { background:#7F8C8D; color:white; }
+  .badge-guest { background:#F39C12; color:white; }
+  .badge-done { background:#D5F5E3; color:var(--success); }
+  .badge-pending { background:#FDEBD0; color:var(--warning); }
+  .badge-error { background:#FADBD8; color:var(--danger); }
+
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  .stat-row { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+  .stat-card {
+    background:#EBF5FB; border-radius:10px; padding:16px;
+    text-align:center; min-width:120px; flex:1;
+  }
+  .stat-num { font-size:28px; font-weight:800; color:var(--primary); line-height:1; }
+  .stat-label { font-size:11px; color:var(--text-light); margin-top:4px; }
+
+  .card {
+    background:white; border:1.5px solid var(--border); border-radius:12px;
+    padding:16px; transition:all 0.2s;
+  }
+  .card:hover { border-color:var(--primary); box-shadow:0 4px 16px rgba(27,79,114,0.12); }
+  .card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+
+  .role-card {
+    background:#F8F9FA; border:1.5px solid var(--border); border-radius:12px;
+    padding:16px; margin-bottom:16px;
+  }
+  .role-header { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .role-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+  .role-name { font-size:15px; font-weight:700; }
+  .role-desc { font-size:12px; color:var(--text-light); margin-top:2px; }
+  .role-count { margin-left:auto; font-size:20px; font-weight:800; color:var(--primary); }
+  .role-perms { display:flex; flex-wrap:wrap; gap:6px; }
+  .perm-tag {
+    padding:3px 8px; border-radius:6px; font-size:11px; font-weight:500;
+    border:1px solid var(--border); color:var(--text-light);
+  }
+  .perm-yes { background:#D5F5E3; color:var(--success); border-color:#A9DFBF; }
+  .perm-no { background:#FDEDEC; color:var(--danger); border-color:#F5B7B1; }
+
+  .perm-matrix { width:100%; border-collapse:collapse; font-size:12px; }
+  .perm-matrix th { background:#EBF5FB; padding:8px 10px; text-align:center; font-weight:700; color:var(--primary); border-bottom:2px solid var(--border); }
+  .perm-matrix th:first-child { text-align:left; }
+  .perm-matrix td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .perm-matrix td:first-child { font-weight:600; }
+  .perm-cell { text-align:center; font-size:14px; }
+
+  .log-item {
+    display:flex; align-items:flex-start; gap:12px;
+    padding:12px 0; border-bottom:1px solid var(--border);
+  }
+  .log-item:last-child { border-bottom:none; }
+  .log-time { font-size:11px; color:var(--text-light); white-space:nowrap; min-width:130px; }
+  .log-type { padding:2px 8px; border-radius:6px; font-size:10px; font-weight:700; white-space:nowrap; }
+  .log-msg { font-size:13px; flex:1; }
+  .log-user { font-weight:600; color:var(--primary); }
+
+  .setting-group { margin-bottom:20px; }
+  .setting-title { font-size:13px; font-weight:700; color:var(--primary); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+  .setting-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #F0F0F0; flex-wrap:wrap; gap:8px; }
+  .setting-label { font-size:13px; }
+  .setting-desc { font-size:11px; color:var(--text-light); margin-top:2px; }
+  .toggle { position:relative; width:40px; height:22px; cursor:pointer; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle-slider { position:absolute; inset:0; background:#ccc; border-radius:11px; transition:0.3s; }
+  .toggle-slider::before { content:''; position:absolute; width:16px; height:16px; background:white; border-radius:50%; top:3px; left:3px; transition:0.3s; }
+  .toggle input:checked + .toggle-slider { background:var(--success); }
+  .toggle input:checked + .toggle-slider::before { transform:translateX(18px); }
+
+  .alert-box { padding:14px 16px; border-radius:10px; margin-bottom:16px; font-size:13px; display:flex; align-items:flex-start; gap:10px; }
+  .alert-warning { background:#FEF9E7; border:1px solid #F9E79F; color:#7D6608; }
+  .alert-info { background:#EBF5FB; border:1px solid #AED6F1; color:#1A5276; }
+  .alert-success { background:#EAFAF1; border:1px solid #A9DFBF; color:#1E8449; }
+
+  .user-row { display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .user-avatar { width:36px; height:36px; border-radius:50%; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; flex-shrink:0; }
+  .user-info { flex:1; min-width:150px; }
+  .user-name { font-size:13px; font-weight:600; }
+  .user-email { font-size:11px; color:var(--text-light); }
+  .user-actions { display:flex; gap:6px; }
+
+  .form-group { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
+  .form-label { font-size:12px; font-weight:600; color:var(--text); }
+  .form-label span { color:var(--danger); }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:1000; display:none; }
+  .modal-overlay.show { display:flex; }
+  .modal { background:white; border-radius:16px; width:520px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+  .modal-header { padding:20px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .modal-title { font-size:16px; font-weight:700; color:var(--primary); }
+  .modal-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-light); line-height:1; }
+  .modal-body { padding:20px 24px; }
+  .modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+
+  .divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
+  .mt-8 { margin-top:8px; }
+  .mt-16 { margin-top:16px; }
+  .text-success { color:var(--success); }
+  .text-danger { color:var(--danger); }
+  .text-muted { color:var(--text-light); font-size:12px; }
+  .flex { display:flex; }
+  .gap-8 { gap:8px; }
+  .flex-center { display:flex; align-items:center; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <div class="header-logo">⚾</div>
+    <div>
+      <div class="header-title">香港棒垒球总会 · 系统后台管理</div>
+      <div class="header-sub">Hong Kong Baseball & Softball Association · Admin Panel</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-badge">⚡ 模块 5</div>
+    <div class="header-user">👤 超级管理员</div>
+  </div>
+</header>
+
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab(this,'users')">👥 用户管理</div>
+  <div class="nav-tab" onclick="switchTab(this,'roles')">🔐 角色权限</div>
+  <div class="nav-tab" onclick="switchTab(this,'logs')">📋 操作日志</div>
+  <div class="nav-tab" onclick="switchTab(this,'settings')">⚙️ 系统设置</div>
+  <div class="nav-tab" onclick="switchTab(this,'backup')">💾 数据管理</div>
+</div>
+
+<div class="main">
+
+  <!-- ── Tab 1: 用户管理 ── -->
+  <div class="tab-content active" id="tab-users">
+
+    <div class="alert-box alert-info">
+      <span style="font-size:18px;">ℹ️</span>
+      <div><strong>权限说明：</strong>家长联系信息（电话/紧急联系人）仅<span style="font-weight:700;">棒总管理员</span>可见，俱乐部/教练无法查看。</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">👥 系统用户管理</div>
+        <div class="flex gap-8">
+          <button class="btn btn-outline btn-sm" onclick="exportUsers()">📤 导出用户</button>
+          <button class="btn btn-primary btn-sm" onclick="openNewUser()">+ 新增用户</button>
+        </div>
+      </div>
+      <div class="panel-body" id="users-list"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Tab 2: 角色权限 ── -->
+  <div class="tab-content" id="tab-roles">
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🔐 角色权限配置</div>
+        <button class="btn btn-primary btn-sm" onclick="openNewRole()">+ 新增角色</button>
+      </div>
+      <div class="panel-body">
+        <div class="card-grid" id="role-cards"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><div class="panel-title">📊 权限矩阵</div></div>
+      <div class="panel-body">
+        <div class="table-wrap">
+          <table class="perm-matrix" id="perm-matrix">
+            <thead><tr><th>功能模块</th><th>超级管理员</th><th>棒总管理员</th><th>球队教练</th><th>俱乐部管理员</th><th>球员/家长</th><th>访客</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Tab 3: 操作日志 ── -->
+  <div class="tab-content" id="tab-logs">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📋 操作日志 — 记录所有系统操作</div>
+        <div class="flex gap-8">
+          <select id="log-type-filter" onchange="renderLogs()" style="min-width:140px;">
+            <option value="">全部类型</option>
+            <option>登录</option><option>数据操作</option><option>权限变更</option><option>系统设置</option><option>导出</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="exportLogs()">📤 导出日志</button>
+        </div>
+      </div>
+      <div class="panel-body" id="logs-list"></div>
+    </div>
+  </div>
+
+  <!-- ── Tab 4: 系统设置 ── -->
+  <div class="tab-content" id="tab-settings">
+    <div class="panel">
+      <div class="panel-header"><div class="panel-title">⚙️ 系统设置</div></div>
+      <div class="panel-body">
+        <div class="setting-group">
+          <div class="setting-title">📌 球员注册设置</div>
+          <div class="setting-row">
+            <div><div class="setting-label">允许自动审核注册</div><div class="setting-desc">当球员信息完整时，自动通过审核，无需手动确认</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">超龄自动禁止参赛</div><div class="setting-desc">超出年龄组别的球员自动标记为「禁止参赛」</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">证件号码必填</div><div class="setting-desc">球员注册时必须填写香港身份证或回乡证号码</div></div>
+            <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">球员照片必填</div><div class="setting-desc">注册时必须上传球员近照</div></div>
+            <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-title">🔒 隐私与数据安全</div>
+          <div class="setting-row">
+            <div><div class="setting-label">家长联系方式对教练可见</div><div class="setting-desc">球队教练可查看本队球员家长的联系方式</div></div>
+            <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">数据导出需二次确认</div><div class="setting-desc">批量导出球员数据时，需输入验证码确认</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">记录所有数据访问日志</div><div class="setting-desc">所有用户的数据查询和导出操作均记录日志</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">球员数据跨境传输限制</div><div class="setting-desc">球员影像数据仅存储于香港本地服务器，禁止传至境外</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-title">📧 通知设置</div>
+          <div class="setting-row">
+            <div><div class="setting-label">注册审核通知（管理员）</div><div class="setting-desc">有新球员注册时，发送邮件通知棒总管理员</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">赛事提醒通知（教练）</div><div class="setting-desc">赛事开始前3天，自动通知相关球队教练</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">AI分析完成通知（家长）</div><div class="setting-desc">球员技术档案分析完成后，自动通知家长</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-title">🤖 AI分析设置</div>
+          <div class="setting-row">
+            <div><div class="setting-label">允许教练上传视频进行AI分析</div><div class="setting-desc">球队教练可使用AI分析工具为自己的球员分析</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">AI分析报告对家长开放</div><div class="setting-desc">家长可查看自己孩子的AI技术分析报告</div></div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><div class="panel-title">🔔 积分规则配置</div></div>
+      <div class="panel-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">U8 组别最低年龄</label>
+            <input type="number" value="0" min="0" max="12" style="width:120px;">
+            <div class="text-muted mt-8">填写0表示当年满X岁方可参赛</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">U8 组别最高年龄</label>
+            <input type="number" value="8" min="0" max="18" style="width:120px;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">U10 组别最高年龄</label>
+            <input type="number" value="10" min="0" max="18" style="width:120px;">
+          </div>
+          <div class="form-group">
+            <label class="form-label">U12 组别最高年龄</label>
+            <input type="number" value="12" min="0" max="18" style="width:120px;">
+          </div>
+        </div>
+        <div class="alert-box alert-warning mt-16">
+          <span>⚠️</span>
+          <div>修改年龄规则后，现有球员的参赛资格将<span style="font-weight:700;">自动重新计算</span>。建议在休赛期调整。</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Tab 5: 数据管理 ── -->
+  <div class="tab-content" id="tab-backup">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">💾 数据备份与恢复</div>
+        <button class="btn btn-primary btn-sm" onclick="runBackup()">⚡ 立即备份</button>
+      </div>
+      <div class="panel-body">
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-num" id="data-players">6</div><div class="stat-label">球员档案</div></div>
+          <div class="stat-card"><div class="stat-num" id="data-teams">7</div><div class="stat-label">球队数据</div></div>
+          <div class="stat-card"><div class="stat-num" id="data-games">4</div><div class="stat-label">赛事记录</div></div>
+          <div class="stat-card"><div class="stat-num">2026-04-18</div><div class="stat-label">最近备份</div></div>
+          <div class="stat-card"><div class="stat-num">256 MB</div><div class="stat-label">数据总量</div></div>
+        </div>
+        <hr class="divider">
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-title">📥 数据导出</div>
+            <div class="card-sub mt-8">将所有数据导出为 JSON 格式文件，用于数据备份或迁移</div>
+            <div class="card-footer">
+              <button class="btn btn-primary btn-sm" onclick="exportAllData()">导出全部数据</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">📤 数据导入</div>
+            <div class="card-sub mt-8">从 JSON 备份文件恢复数据，支持增量导入或全量覆盖</div>
+            <div class="card-footer">
+              <button class="btn btn-accent btn-sm" onclick="importData()">导入备份文件</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">🗑️ 历史数据清理</div>
+            <div class="card-sub mt-8">清理超过指定年限的历史赛事数据，释放存储空间</div>
+            <div class="card-footer">
+              <button class="btn btn-danger btn-sm" onclick="clearOldData()">清理3年前数据</button>
+            </div>
+          </div>
+        </div>
+        <div class="alert-box alert-success mt-16">
+          <span>✅</span>
+          <div>自动备份已开启：每<span style="font-weight:700;">周日 03:00</span>自动备份全部数据至云端。上次备份：2026-04-13 03:00</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal: 新增用户 -->
+<div class="modal-overlay" id="modal-user">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-user-title">新增用户</div>
+      <button class="modal-close" onclick="closeModal('modal-user')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-user-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">姓名 <span>*</span></label>
+          <input type="text" id="u-name" placeholder="真实姓名">
+        </div>
+        <div class="form-group">
+          <label class="form-label">角色 <span>*</span></label>
+          <select id="u-role">
+            <option value="admin">棒总管理员</option>
+            <option value="coach">球队教练</option>
+            <option value="club">俱乐部管理员</option>
+            <option value="parent">球员/家长</option>
+            <option value="viewer">访客（只读）</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">登录账号 <span>*</span></label>
+          <input type="text" id="u-account" placeholder="邮箱或手机号">
+        </div>
+        <div class="form-group">
+          <label class="form-label">关联球队</label>
+          <select id="u-team">
+            <option value="">— 无 —</option>
+            <option>香港老虎少棒队</option><option>九龙天使队</option>
+            <option>港岛红雀队</option><option>新界飓风队</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">初始密码 <span>*</span></label>
+          <input type="password" id="u-pw" placeholder="8位以上，含数字和字母">
+        </div>
+        <div class="form-group">
+          <label class="form-label">状态</label>
+          <select id="u-status">
+            <option value="active">启用</option>
+            <option value="inactive">停用</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">备注</label>
+        <textarea id="u-note" placeholder="补充说明，如：关联球员姓名"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-user')">取消</button>
+      <button class="btn btn-primary" onclick="saveUser()">保存用户</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: 新增角色 -->
+<div class="modal-overlay" id="modal-role">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">新增角色</div>
+      <button class="modal-close" onclick="closeModal('modal-role')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">角色名称 <span>*</span></label>
+        <input type="text" id="r-name" placeholder="如：数据分析师">
+      </div>
+      <div class="form-group">
+        <label class="form-label">角色描述</label>
+        <input type="text" id="r-desc" placeholder="角色功能描述">
+      </div>
+      <div class="alert-box alert-info mt-8">
+        <span>ℹ️</span>
+        <div>权限可在创建后进入「权限矩阵」单独配置</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-role')">取消</button>
+      <button class="btn btn-primary" onclick="saveRole()">创建角色</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+const ROLES = [
+  {id:'super', name:'超级管理员', desc:'系统最高权限，可管理所有模块', color:'#1B4F72', bg:'#D6EAF8', icon:'👑', count:1,
+   perms:{players:'crud',teams:'crud',games:'crud',profiles:'crud',settings:'crud',logs:'read',users:'crud',export:'all'}},
+  {id:'admin', name:'棒总管理员', desc:'棒总日常运营，可管理所有球员/球队/赛事', color:'#1A5276', bg:'#EBF5FB', icon:'🏢', count:2,
+   perms:{players:'crud',teams:'crud',games:'crud',profiles:'crud',settings:'read',logs:'read',users:'crud',export:'team'}},
+  {id:'coach', name:'球队教练', desc:'仅管理所属球队球员，查看赛事统计', color:'#2980B9', bg:'#D6EAF8', icon:'👨‍🏫', count:5,
+   perms:{players:'team',teams:'read',games:'team',profiles:'team',settings:'none',logs:'none',users:'none',export:'own'}},
+  {id:'club', name:'俱乐部管理员', desc:'管理俱乐部旗下球队和球员', color:'#27AE60', bg:'#D5F5E3', icon:'🏟️', count:3,
+   perms:{players:'club',teams:'club',games:'club',profiles:'club',settings:'none',logs:'none',users:'none',export:'own'}},
+  {id:'parent', name:'球员/家长', desc:'查看自己孩子的档案和技术报告', color:'#8E44AD', bg:'#F5EEF8', icon:'👤', count:12,
+   perms:{players:'own',teams:'read',games:'own',profiles:'own',settings:'none',logs:'none',users:'none',export:'own'}},
+  {id:'viewer', name:'访客（只读）', desc:'查看公开赛事信息和积分榜，无数据修改权限', color:'#7F8C8D', bg:'#EAECEE', icon:'👁️', count:0,
+   perms:{players:'read',teams:'read',games:'read',profiles:'none',settings:'none',logs:'none',users:'none',export:'none'}},
+];
+
+const SAMPLE_USERS = [
+  {id:'U001', name:'罗志明', role:'super', account:'admin@hkba.org.hk', team:'', status:'active', lastLogin:'2026-04-18 14:20', note:'系统管理员'},
+  {id:'U002', name:'陈慧珊', role:'admin', account:'chan.waisan@hkba.org.hk', team:'', status:'active', lastLogin:'2026-04-18 09:15', note:'赛事运营负责人'},
+  {id:'U003', name:'张志明', role:'admin', account:'cheung.cm@hkba.org.hk', team:'', status:'active', lastLogin:'2026-04-17 17:30', note:'球员注册管理员'},
+  {id:'U004', name:'李伟强', role:'coach', account:'li.wk@tigers.hk', team:'香港老虎少棒队', status:'active', lastLogin:'2026-04-18 11:05', note:'老虎少棒队主教练'},
+  {id:'U005', name:'王芷晴', role:'coach', account:'wong.cq@angels.hk', team:'九龙天使队', status:'active', lastLogin:'2026-04-16 16:45', note:'天使队教练'},
+  {id:'U006', name:'陈俊轩爸爸', role:'parent', account:'parent.chen@mail.com', team:'', status:'active', lastLogin:'2026-04-15 20:10', note:'陈俊轩（U12）'},
+  {id:'U007', name:'林可晴妈妈', role:'parent', account:'parent.lam@mail.com', team:'', status:'active', lastLogin:'2026-04-14 09:30', note:'林可晴（U12）'},
+];
+
+let users = JSON.parse(localStorage.getItem('hkba_users') || 'null') || [...SAMPLE_USERS];
+
+const LOGS = [
+  {time:'2026-04-18 14:32', type:'登录', msg:'<span class="log-user">陈慧珊</span> 登录系统', ip:'192.168.1.12'},
+  {time:'2026-04-18 14:28', type:'数据操作', msg:'<span class="log-user">陈慧珊</span> 新增球员 <strong>王家耀</strong> 至球队 新界飓风队', ip:'192.168.1.12'},
+  {time:'2026-04-18 11:15', type:'导出', msg:'<span class="log-user">张志明</span> 导出球员名单（U12，共42人）', ip:'192.168.1.18'},
+  {time:'2026-04-18 10:45', type:'权限变更', msg:'<span class="log-user">罗志明</span> 为用户 <strong>王芷晴</strong> 分配角色：球队教练 → 俱乐部管理员', ip:'192.168.1.10'},
+  {time:'2026-04-17 17:30', type:'数据操作', msg:'<span class="log-user">张志明</span> 审核通过 5 名新球员注册', ip:'192.168.1.18'},
+  {time:'2026-04-17 16:20', type:'系统设置', msg:'<span class="log-user">罗志明</span> 修改系统设置：家长联系方式可见性', ip:'192.168.1.10'},
+  {time:'2026-04-17 09:00', type:'登录', msg:'<span class="log-user">李伟强</span>（教练）登录系统，查看球队数据', ip:'10.0.0.5'},
+  {time:'2026-04-16 15:30', type:'数据操作', msg:'<span class="log-user">王芷晴</span> 为球队 九龙天使队 新增 3 名球员', ip:'192.168.1.25'},
+];
+
+const PERM_LABELS = {
+  players:'球员资料', teams:'球队管理', games:'赛事/记分',
+  profiles:'技术档案', settings:'系统设置', logs:'操作日志', users:'用户管理', export:'数据导出'
+};
+const PERM_VALS = {all:'全部',crud:'增删改查',team:'本队',club:'俱乐部',own:'本人',read:'只读',none:'无权限',read2:'只读'};
+
+let currentLogType = '';
+
+// ─── Tab Switch ───
+function switchTab(el, id) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (id === 'users') renderUsers();
+  if (id === 'roles') renderRoles();
+  if (id === 'logs') renderLogs();
+}
+
+// ─── Users ───
+function renderUsers() {
+  const roleColors = {super:'badge-admin',admin:'badge-admin',coach:'badge-coach',club:'badge-user',parent:'badge-viewer',viewer:'badge-guest'};
+  const roleNames = {super:'超级管理员',admin:'棒总管理员',coach:'球队教练',club:'俱乐部管理',parent:'球员/家长',viewer:'访客'};
+
+  document.getElementById('users-list').innerHTML = users.map(u => {
+    const initials = u.name.slice(0,2);
+    const badge = roleColors[u.role] || 'badge-guest';
+    return `<div class="user-row">
+      <div class="user-avatar">${initials}</div>
+      <div class="user-info">
+        <div class="user-name">${u.name} <span class="badge ${badge}" style="font-size:10px;">${roleNames[u.role]||u.role}</span> ${u.status==='inactive'?'<span class="badge badge-inactive" style="font-size:10px;">停用</span>':''}</div>
+        <div class="user-email">${u.account} ${u.team ? '· ' + u.team : ''}</div>
+      </div>
+      <div class="text-muted" style="white-space:nowrap;">上次登录：${u.lastLogin}</div>
+      <div class="user-actions">
+        <button class="btn btn-xs btn-outline" onclick="editUser('${u.id}')">✏️</button>
+        <button class="btn btn-xs ${u.status==='active'?'btn-outline':'btn-success'}" onclick="toggleUserStatus('${u.id}')">${u.status==='active'?'停用':'启用'}</button>
+        <button class="btn btn-xs btn-danger" onclick="deleteUser('${u.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openNewUser() {
+  document.getElementById('edit-user-id').value = '';
+  document.getElementById('u-name').value = '';
+  document.getElementById('u-account').value = '';
+  document.getElementById('u-pw').value = '';
+  document.getElementById('u-note').value = '';
+  document.getElementById('u-role').value = 'coach';
+  document.getElementById('u-team').value = '';
+  document.getElementById('u-status').value = 'active';
+  document.getElementById('modal-user-title').textContent = '新增用户';
+  openModal('modal-user');
+}
+
+function editUser(id) {
+  const u = users.find(x => x.id === id);
+  if (!u) return;
+  document.getElementById('edit-user-id').value = u.id;
+  document.getElementById('u-name').value = u.name;
+  document.getElementById('u-account').value = u.account;
+  document.getElementById('u-pw').value = '';
+  document.getElementById('u-note').value = u.note || '';
+  document.getElementById('u-role').value = u.role;
+  document.getElementById('u-team').value = u.team || '';
+  document.getElementById('u-status').value = u.status;
+  document.getElementById('modal-user-title').textContent = '编辑用户 — ' + u.name;
+  openModal('modal-user');
+}
+
+function saveUser() {
+  const name = document.getElementById('u-name').value.trim();
+  const account = document.getElementById('u-account').value.trim();
+  if (!name || !account) { alert('请填写姓名和登录账号'); return; }
+  const id = document.getElementById('edit-user-id').value;
+  const data = {
+    name, role: document.getElementById('u-role').value,
+    account, team: document.getElementById('u-team').value,
+    status: document.getElementById('u-status').value,
+    note: document.getElementById('u-note').value,
+    lastLogin: id ? users.find(x=>x.id===id)?.lastLogin : '从未登录',
+  };
+  if (id) {
+    const idx = users.findIndex(x => x.id === id);
+    if (idx !== -1) users[idx] = {...users[idx], ...data};
+  } else {
+    data.id = 'U' + String(users.length + 1).padStart(3,'0');
+    users.push(data);
+  }
+  localStorage.setItem('hkba_users', JSON.stringify(users));
+  closeModal('modal-user');
+  renderUsers();
+}
+
+function toggleUserStatus(id) {
+  const u = users.find(x => x.id === id);
+  if (!u) return;
+  u.status = u.status === 'active' ? 'inactive' : 'active';
+  localStorage.setItem('hkba_users', JSON.stringify(users));
+  renderUsers();
+}
+
+function deleteUser(id) {
+  if (!confirm('确定删除用户？')) return;
+  users = users.filter(x => x.id !== id);
+  localStorage.setItem('hkba_users', JSON.stringify(users));
+  renderUsers();
+}
+
+function exportUsers() {
+  const headers = ['ID','姓名','角色','账号','球队','状态','上次登录'];
+  const roleNames = {super:'超级管理员',admin:'棒总管理员',coach:'球队教练',club:'俱乐部管理',parent:'球员/家长',viewer:'访客'};
+  const rows = users.map(u => [u.id,u.name,roleNames[u.role]||u.role,u.account,u.team||'',u.status,u.lastLogin]);
+  const csv = [headers,...rows].map(r=>r.join(',')).join('\n');
+  downloadFile('\uFEFF'+csv, '系统用户.csv', 'text/csv;charset=utf-8');
+}
+
+// ─── Roles ───
+function renderRoles() {
+  const roleColors = {super:'#1B4F72',admin:'#1A5276',coach:'#2980B9',club:'#27AE60',parent:'#8E44AD',viewer:'#7F8C8D'};
+  document.getElementById('role-cards').innerHTML = ROLES.map(r => `
+    <div class="role-card">
+      <div class="role-header">
+        <div class="role-icon" style="background:${r.bg};color:${r.color};">${r.icon}</div>
+        <div>
+          <div class="role-name">${r.name}</div>
+          <div class="role-desc">${r.desc}</div>
+        </div>
+        <div class="role-count">${r.count}</div>
+      </div>
+      <div class="role-perms">${Object.entries(PERM_LABELS).map(([k,v]) => {
+        const val = r.perms[k] || 'none';
+        return `<span class="perm-tag ${val==='none'?'perm-no':val!=='none'?'perm-yes':''}">${v}：${PERM_VALS[val]||val}</span>`;
+      }).join('')}</div>
+      <div style="margin-top:10px;display:flex;gap:6px;">
+        <button class="btn btn-xs btn-outline" onclick="editRole('${r.id}')">编辑权限</button>
+      </div>
+    </div>`).join('');
+
+  // Perm matrix
+  const matrix = document.querySelector('#perm-matrix tbody');
+  matrix.innerHTML = Object.entries(PERM_LABELS).map(([k,label]) => {
+    const cells = ROLES.map(r => {
+      const v = r.perms[k] || 'none';
+      return `<td class="perm-cell"><span class="perm-tag ${v==='none'?'perm-no':v!=='none'?'perm-yes':''}">${PERM_VALS[v]||v}</span></td>`;
+    });
+    return `<tr><td>${label}</td>${cells.join('')}</tr>`;
+  }).join('');
+}
+
+function editRole(id) { alert('编辑角色权限：\n可修改该角色的具体权限设置。\n（当前为演示模式）'); }
+
+function openNewRole() { openModal('modal-role'); }
+function saveRole() {
+  const name = document.getElementById('r-name').value.trim();
+  if (!name) { alert('请填写角色名称'); return; }
+  closeModal('modal-role');
+  alert(`角色「${name}」已创建！\n\n请进入权限矩阵为该角色配置具体权限。`);
+}
+
+// ─── Logs ───
+function renderLogs() {
+  const type = document.getElementById('log-type-filter').value;
+  const filtered = type ? LOGS.filter(l => l.type === type) : LOGS;
+  document.getElementById('logs-list').innerHTML = filtered.map(l => {
+    const typeColors = {登录:'#2980B9',数据操作:'#27AE60',权限变更:'#8E44AD',系统设置:'#E67E22',导出:'#7F8C8D'};
+    const bg = typeColors[l.type] || '#95A5A6';
+    return `<div class="log-item">
+      <div class="log-time">${l.time}</div>
+      <div class="log-type" style="background:${bg};color:white;">${l.type}</div>
+      <div class="log-msg">${l.msg}</div>
+      <div class="text-muted" style="white-space:nowrap;">IP: ${l.ip}</div>
+    </div>`;
+  }).join('');
+}
+
+function exportLogs() {
+  const headers = ['时间','类型','操作内容','IP地址'];
+  const rows = LOGS.map(l => [l.time,l.type,l.msg.replace(/<[^>]+>/g,''),l.ip]);
+  const csv = [headers,...rows].map(r=>r.join(',')).join('\n');
+  downloadFile('\uFEFF'+csv, '操作日志.csv', 'text/csv;charset=utf-8');
+}
+
+// ─── Data Management ───
+function runBackup() {
+  const data = {
+    players: profiles || [], teams: teams || [], games: games || [],
+    users: users, backupTime: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'hkba_backup_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  alert('✅ 备份完成！\n\n文件名：hkba_backup_' + new Date().toISOString().slice(0,10) + '.json\n\n建议将备份文件保存至云端（Google Drive / OneDrive）。');
+}
+
+function exportAllData() { runBackup(); }
+function importData() { alert('📂 数据导入功能：\n\n请选择之前导出的 JSON 备份文件，\n支持「全量覆盖」或「增量合并」两种模式。'); }
+function clearOldData() { alert('⚠️ 确认清理历史数据？\n\n将删除 2023年4月18日 之前的所有赛事记录、记分数据和操作日志。\n此操作不可逆，建议先执行完整备份。'); }
+
+// ─── Utils ───
+function downloadFile(content, name, type) {
+  const blob = new Blob([content], {type});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = name; a.click();
+}
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// Init
+renderUsers();
+renderRoles();
+renderLogs();
+</script>
+</body>
+</html>
