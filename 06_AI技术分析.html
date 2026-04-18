@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块6 · AI 技术分析 — JIHUA 香港棒垒球管理系统</title>
+<style>
+  :root {
+    --primary: #1B4F72;
+    --primary-light: #2E86C1;
+    --accent: #E67E22;
+    --accent2: #f4a261;
+    --bg: #F2F3F4;
+    --card: #FFFFFF;
+    --border: #D5D8DC;
+    --text: #1C2833;
+    --text-light: #707B7C;
+    --success: #1E8449;
+    --danger: #C0392B;
+    --warning: #D68910;
+    --info: #2980B9;
+    --purple: #7D3C98;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI','Noto Sans SC',Arial,sans-serif; }
+  body { background:var(--bg); color:var(--text); min-height:100vh; font-size:14px; }
+
+  header {
+    background:var(--primary); color:white; padding:0 24px;
+    height:56px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  }
+  .header-brand { display:flex; align-items:center; gap:12px; }
+  .header-logo { width:36px; height:36px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:bold; }
+  .header-title { font-size:16px; font-weight:600; }
+  .header-sub { font-size:11px; opacity:0.75; }
+  .header-badge { background:var(--accent); padding:4px 12px; border-radius:12px; font-size:12px; font-weight:600; }
+
+  .nav-tabs {
+    background:var(--card); display:flex; gap:0;
+    border-bottom:2px solid var(--border); padding:0 24px; overflow-x:auto;
+  }
+  .nav-tab {
+    padding:14px 20px; font-size:14px; font-weight:500;
+    color:var(--text-light); cursor:pointer; border-bottom:3px solid transparent;
+    transition:all 0.2s; white-space:nowrap; display:flex; align-items:center; gap:7px;
+  }
+  .nav-tab:hover { color:var(--primary); }
+  .nav-tab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+
+  .main { padding:24px; max-width:1400px; margin:0 auto; }
+
+  .panel {
+    background:var(--card); border-radius:12px;
+    box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; margin-bottom:24px;
+  }
+  .panel-header {
+    padding:16px 20px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+  .panel-title { font-size:15px; font-weight:700; color:var(--primary); display:flex; align-items:center; gap:8px; }
+  .panel-body { padding:20px; }
+
+  .btn {
+    padding:8px 16px; border:none; border-radius:8px; font-size:13px; font-weight:500;
+    cursor:pointer; transition:all 0.15s; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+  }
+  .btn-primary { background:var(--primary); color:white; }
+  .btn-primary:hover { background:var(--primary-light); }
+  .btn-accent { background:var(--accent); color:white; }
+  .btn-accent:hover { background:#D35400; }
+  .btn-purple { background:var(--purple); color:white; }
+  .btn-purple:hover { background:#6C3483; }
+  .btn-outline { background:white; color:var(--primary); border:1.5px solid var(--primary); }
+  .btn-outline:hover { background:#EBF5FB; }
+  .btn-success { background:var(--success); color:white; }
+  .btn-danger { background:var(--danger); color:white; }
+  .btn-sm { padding:5px 10px; font-size:12px; }
+  .btn-xs { padding:3px 8px; font-size:11px; border-radius:6px; }
+
+  input, select, textarea {
+    padding:8px 12px; border:1.5px solid var(--border); border-radius:8px;
+    font-size:13px; color:var(--text); background:white; outline:none; transition:border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color:var(--primary); }
+  input::placeholder { color:var(--text-light); }
+
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  thead th {
+    background:#EBF5FB; padding:10px 12px; text-align:left;
+    font-size:12px; font-weight:700; color:var(--primary);
+    text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid var(--border); white-space:nowrap;
+  }
+  tbody tr { border-bottom:1px solid var(--border); transition:background 0.1s; }
+  tbody tr:hover { background:#F8FBFD; }
+  td { padding:10px 12px; font-size:13px; vertical-align:middle; }
+  .td-center { text-align:center; }
+
+  .badge {
+    display:inline-block; padding:3px 10px; border-radius:12px;
+    font-size:11px; font-weight:600; white-space:nowrap;
+  }
+  .badge-done { background:#D5F5E3; color:var(--success); }
+  .badge-pending { background:#FDEBD0; color:var(--warning); }
+  .badge-u8 { background:#D6EAF8; color:#1A5276; }
+  .badge-u10 { background:#D5F5E3; color:#1E8449; }
+  .badge-u12 { background:#FDEBD0; color:#9A7D0A; }
+  .badge-u15 { background:#F5EEF8; color:#6C3483; }
+  .badge-u18 { background:#FDEDEC; color:#922B21; }
+  .badge-hit { background:#D5F5E3; color:#1E8449; }
+  .badge-swing { background:#EBF5FB; color:#1A5276; }
+  .badge-pitcher { background:#F5EEF8; color:#6C3483; }
+
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  .filter-row {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:14px 20px; background:#F8F9FA; border-bottom:1px solid var(--border);
+  }
+  .filter-group { display:flex; align-items:center; gap:6px; }
+  .filter-label { font-size:12px; color:var(--text-light); font-weight:500; }
+
+  /* ── Upload Area ── */
+  .upload-zone {
+    border:2px dashed var(--border); border-radius:14px; padding:40px;
+    text-align:center; cursor:pointer; transition:all 0.2s;
+    background:#FAFBFC; position:relative; overflow:hidden;
+  }
+  .upload-zone:hover, .upload-zone.drag-over { border-color:var(--primary); background:#EBF5FB; }
+  .upload-zone video { max-width:100%; max-height:300px; border-radius:8px; margin-top:12px; }
+  .upload-icon { font-size:48px; margin-bottom:12px; }
+  .upload-title { font-size:16px; font-weight:700; color:var(--primary); margin-bottom:4px; }
+  .upload-sub { font-size:13px; color:var(--text-light); }
+  .upload-hint { margin-top:12px; font-size:12px; color:var(--text-light); }
+  .upload-file-info {
+    display:flex; align-items:center; gap:10px; background:#EBF5FB; border-radius:8px;
+    padding:10px 16px; margin-top:12px; text-align:left;
+  }
+  .upload-file-name { font-size:13px; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .upload-file-size { font-size:12px; color:var(--text-light); }
+  .upload-file-remove { background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-light); padding:0 4px; }
+  .upload-file-remove:hover { color:var(--danger); }
+
+  /* ── Analysis Stepper ── */
+  .stepper { display:flex; align-items:center; gap:0; margin-bottom:24px; }
+  .step {
+    display:flex; align-items:center; flex:1; position:relative;
+  }
+  .step-circle {
+    width:36px; height:36px; border-radius:50%;
+    background:var(--border); color:var(--text-light);
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:700; flex-shrink:0; z-index:1; transition:all 0.3s;
+  }
+  .step.active .step-circle { background:var(--primary); color:white; }
+  .step.done .step-circle { background:var(--success); color:white; }
+  .step-label { font-size:12px; font-weight:500; color:var(--text-light); margin-left:8px; white-space:nowrap; }
+  .step.active .step-label { color:var(--primary); font-weight:700; }
+  .step-bar { flex:1; height:2px; background:var(--border); margin:0 8px; }
+  .step-bar.filled { background:var(--success); }
+
+  /* ── Analysis Result Cards ── */
+  .result-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-bottom:20px; }
+  .result-card {
+    background:#F8F9FA; border:1px solid var(--border); border-radius:12px;
+    padding:20px; text-align:center; transition:all 0.2s;
+  }
+  .result-card:hover { border-color:var(--primary); transform:translateY(-2px); }
+  .result-card.highlight { background:#EBF5FB; border-color:var(--primary); }
+  .result-card.accent { background:#FEF5E7; border-color:var(--accent); }
+  .result-num { font-size:32px; font-weight:800; color:var(--primary); line-height:1; }
+  .result-card.accent .result-num { color:var(--accent); }
+  .result-label { font-size:12px; color:var(--text-light); margin-top:6px; font-weight:500; }
+  .result-unit { font-size:11px; color:var(--text-light); margin-top:2px; }
+  .result-score-bar { width:100%; height:8px; background:#EAECEE; border-radius:4px; overflow:hidden; margin-top:8px; }
+
+  /* ── Radar ── */
+  .radar-wrap { display:flex; align-items:center; gap:32px; flex-wrap:wrap; }
+  .radar-legend { flex:1; min-width:200px; }
+  .radar-item { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .radar-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+  .radar-label { font-size:13px; font-weight:500; flex:1; }
+  .radar-val { font-size:13px; font-weight:700; color:var(--primary); }
+
+  .progress-bar { height:8px; background:#EAECEE; border-radius:4px; overflow:hidden; margin-top:4px; }
+  .progress-fill { height:100%; border-radius:4px; transition:width 0.6s ease; }
+  .progress-label { font-size:11px; color:var(--text-light); margin-top:2px; }
+
+  .highlight-box {
+    background:#EBF5FB; border:1.5px solid var(--primary); border-radius:10px;
+    padding:16px; margin-top:12px;
+  }
+  .highlight-box.orange { background:#FEF5E7; border-color:var(--accent); }
+  .highlight-box.purple { background:#F5EEF8; border-color:var(--purple); }
+  .highlight-title { font-size:13px; font-weight:700; color:var(--primary); margin-bottom:8px; }
+  .highlight-box.orange .highlight-title { color:var(--accent); }
+  .highlight-box.purple .highlight-title { color:var(--purple); }
+  .highlight-item { display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:6px; line-height:1.5; }
+
+  .divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
+  .mt-8 { margin-top:8px; }
+  .mt-16 { margin-top:16px; }
+  .text-success { color:var(--success); }
+  .text-danger { color:var(--danger); }
+  .text-warning { color:var(--warning); }
+  .text-muted { color:var(--text-light); font-size:12px; }
+  .flex { display:flex; }
+  .gap-8 { gap:8px; }
+  .gap-16 { gap:16px; }
+  .flex-center { display:flex; align-items:center; }
+  .flex-wrap { flex-wrap:wrap; }
+  .flex-1 { flex:1; }
+  .w-full { width:100%; }
+
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:14px; }
+  .form-group { display:flex; flex-direction:column; gap:5px; }
+  .form-label { font-size:12px; font-weight:600; color:var(--text); }
+  .form-label span { color:var(--danger); }
+  .form-full { grid-column:1/-1; }
+
+  /* ── Power Curve Chart ── */
+  .power-chart { background:#F8F9FA; border-radius:10px; padding:16px; margin-top:16px; }
+  .power-chart-title { font-size:13px; font-weight:700; color:var(--primary); margin-bottom:12px; }
+  .power-chart-bars { display:flex; align-items:flex-end; gap:8px; height:120px; }
+  .power-bar-wrap { display:flex; flex-direction:column; align-items:center; flex:1; gap:4px; }
+  .power-bar-outer { width:100%; max-width:40px; height:80px; background:#EAECEE; border-radius:4px; overflow:hidden; display:flex; align-items:flex-end; }
+  .power-bar-inner { width:100%; border-radius:4px 4px 0 0; transition:height 0.6s ease; }
+  .power-bar-label { font-size:10px; color:var(--text-light); text-align:center; }
+  .power-bar-val { font-size:10px; font-weight:700; color:var(--primary); text-align:center; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.5);
+    display:flex; align-items:center; justify-content:center;
+    z-index:1000; display:none;
+  }
+  .modal-overlay.show { display:flex; }
+  .modal {
+    background:white; border-radius:16px; width:680px;
+    max-width:95vw; max-height:90vh; overflow-y:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,0.3);
+  }
+  .modal-header {
+    padding:20px 24px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .modal-title { font-size:16px; font-weight:700; color:var(--primary); }
+  .modal-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-light); line-height:1; }
+  .modal-close:hover { color:var(--danger); }
+  .modal-body { padding:20px 24px; }
+  .modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+
+  /* ── Loading Animation ── */
+  .loading-overlay {
+    position:fixed; inset:0; background:rgba(255,255,255,0.9);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:2000; display:none; gap:16px;
+  }
+  .loading-overlay.show { display:flex; }
+  .loading-spinner {
+    width:60px; height:60px; border:4px solid var(--border);
+    border-top-color:var(--primary); border-radius:50%;
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading-text { font-size:15px; font-weight:600; color:var(--primary); }
+  .loading-sub { font-size:13px; color:var(--text-light); }
+
+  /* ── Recommendation Pills ── */
+  .rec-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+  .rec-pill {
+    background:#F8F9FA; border:1px solid var(--border); border-radius:10px;
+    padding:12px 14px; font-size:13px; line-height:1.6;
+  }
+  .rec-pill-title { font-weight:700; color:var(--primary); margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+  .rec-pill .tag { font-size:10px; padding:2px 8px; border-radius:20px; font-weight:700; }
+  .tag-red { background:#FDEDEC; color:#922B21; }
+  .tag-orange { background:#FDEBD0; color:#9A7D0A; }
+  .tag-blue { background:#D6EAF8; color:#1A5276; }
+  .tag-green { background:#D5F5E3; color:#1E8449; }
+
+  /* ── Video Preview ── */
+  .video-preview-wrap {
+    position:relative; border-radius:10px; overflow:hidden;
+    background:#1a2a3a; margin-top:12px; max-height:300px;
+  }
+  .video-preview-wrap video { width:100%; max-height:300px; display:block; }
+  .video-overlay-info {
+    position:absolute; bottom:0; left:0; right:0;
+    background:linear-gradient(transparent,rgba(0,0,0,0.7));
+    padding:12px 16px; color:white; font-size:12px;
+  }
+  .video-overlay-badge { display:inline-block; background:var(--accent); padding:2px 8px; border-radius:4px; font-size:10px; font-weight:700; margin-right:8px; }
+
+  .empty-state { text-align:center; padding:48px 24px; color:var(--text-light); }
+  .empty-state-icon { font-size:48px; margin-bottom:12px; }
+  .empty-state-title { font-size:16px; font-weight:600; margin-bottom:6px; color:var(--text); }
+  .empty-state-sub { font-size:13px; }
+
+  .suggestion-list { margin-top:8px; }
+  .suggestion-item {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:10px 12px; border-radius:8px; margin-bottom:8px;
+    font-size:13px; line-height:1.6;
+  }
+  .suggestion-item.good { background:#D5F5E3; border-left:3px solid var(--success); }
+  .suggestion-item.warn { background:#FDEBD0; border-left:3px solid var(--warning); }
+  .suggestion-item.bad { background:#FDEDEC; border-left:3px solid var(--danger); }
+  .suggestion-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+  .suggestion-text { flex:1; }
+  .suggestion-text strong { display:block; margin-bottom:2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <div class="header-logo">🤖</div>
+    <div>
+      <div class="header-title">JIHUA · AI 挥棒 & 投手技术分析</div>
+      <div class="header-sub">Swing & Pitcher AI Analysis · 支持视频上传</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-badge">⚡ 模块 6</div>
+  </div>
+</header>
+
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab(this,'swing')">🏏 挥棒分析</div>
+  <div class="nav-tab" onclick="switchTab(this,'pitcher')">⚾ 投手分析</div>
+  <div class="nav-tab" onclick="switchTab(this,'history')">📋 历史记录</div>
+</div>
+
+<div class="main">
+
+  <!-- ════ TAB 1: 挥棒分析 ════ -->
+  <div class="tab-content active" id="tab-swing">
+
+    <!-- Stepper -->
+    <div class="stepper mb-24" style="margin-bottom:24px;">
+      <div class="step active" id="step1">
+        <div class="step-circle">1</div>
+        <div class="step-label">上传视频</div>
+        <div class="step-bar" id="bar1"></div>
+      </div>
+      <div class="step" id="step2">
+        <div class="step-circle">2</div>
+        <div class="step-label">AI 分析处理</div>
+        <div class="step-bar" id="bar2"></div>
+      </div>
+      <div class="step" id="step3">
+        <div class="step-circle">3</div>
+        <div class="step-label">生成报告</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🎥 上传挥棒视频</div>
+        <div class="flex gap-8">
+          <button class="btn btn-outline btn-sm" id="sampleBtn" onclick="loadSampleSwing()">📁 加载示例</button>
+          <button class="btn btn-primary btn-sm" id="resetSwingBtn" onclick="resetSwing()" style="display:none;">🔄 重新上传</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <!-- Upload Zone -->
+        <div class="upload-zone" id="swingUploadZone" onclick="document.getElementById('swingFileInput').click()">
+          <div id="swingUploadContent">
+            <div class="upload-icon">📹</div>
+            <div class="upload-title">拖拽挥棒视频到这里</div>
+            <div class="upload-sub">或点击选择文件</div>
+            <div class="upload-hint">支持 MP4 / MOV / AVI，时长 2-30 秒，手机横向拍摄效果最佳</div>
+          </div>
+          <video id="swingVideoPreview" style="display:none;" controls></video>
+          <div class="upload-file-info" id="swingFileInfo" style="display:none;">
+            <div class="upload-file-name" id="swingFileName">video.mp4</div>
+            <div class="upload-file-size" id="swingFileSize">—</div>
+            <button class="upload-file-remove" onclick="event.stopPropagation();removeSwingFile()">×</button>
+          </div>
+          <input type="file" id="swingFileInput" accept="video/mp4,video/mov,video/avi,video/*" style="display:none;" onchange="handleSwingFile(this.files[0])">
+        </div>
+
+        <!-- Player Info -->
+        <div class="form-row mt-16">
+          <div class="form-group">
+            <label class="form-label">球员姓名 <span>*</span></label>
+            <input type="text" id="swingPlayerName" placeholder="输入球员姓名">
+          </div>
+          <div class="form-group">
+            <label class="form-label">组别</label>
+            <select id="swingGroup">
+              <option value="U8">U8</option><option value="U10">U10</option>
+              <option value="U12" selected>U12</option><option value="U15">U15</option><option value="U18">U18</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">球队</label>
+            <input type="text" id="swingTeam" placeholder="输入球队名称">
+          </div>
+          <div class="form-group">
+            <label class="form-label">击球位置</label>
+            <select id="swingBattingPos">
+              <option>左打</option><option selected>右打</option><option>左右开弓</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:16px; text-align:right;">
+          <button class="btn btn-accent" id="startSwingBtn" onclick="startSwingAnalysis()" style="padding:12px 28px; font-size:15px;">
+            ⚡ 开始 AI 挥棒分析
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result Panel (hidden initially) -->
+    <div class="panel" id="swingResult" style="display:none;">
+      <div class="panel-header" style="background:#EBF5FB;">
+        <div class="panel-title">🤖 AI 挥棒分析报告</div>
+        <div class="flex gap-8">
+          <button class="btn btn-outline btn-sm" onclick="exportSwingReport()">📄 导出 PDF</button>
+          <button class="btn btn-success btn-sm" onclick="saveToModule4()">💾 保存至模块4</button>
+        </div>
+      </div>
+      <div class="panel-body" id="swingResultBody"></div>
+    </div>
+
+  </div>
+
+  <!-- ════ TAB 2: 投手分析 ════ -->
+  <div class="tab-content" id="tab-pitcher">
+
+    <div class="stepper" style="margin-bottom:24px;">
+      <div class="step active" id="pstep1">
+        <div class="step-circle">1</div>
+        <div class="step-label">上传视频</div>
+        <div class="step-bar" id="pbar1"></div>
+      </div>
+      <div class="step" id="pstep2">
+        <div class="step-circle">2</div>
+        <div class="step-label">AI 分析处理</div>
+        <div class="step-bar" id="pbar2"></div>
+      </div>
+      <div class="step" id="pstep3">
+        <div class="step-circle">3</div>
+        <div class="step-label">生成报告</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🎥 上传投手投球视频</div>
+        <div class="flex gap-8">
+          <button class="btn btn-outline btn-sm" id="samplePitcherBtn" onclick="loadSamplePitcher()">📁 加载示例</button>
+          <button class="btn btn-primary btn-sm" id="resetPitcherBtn" onclick="resetPitcher()" style="display:none;">🔄 重新上传</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="upload-zone" id="pitcherUploadZone" onclick="document.getElementById('pitcherFileInput').click()">
+          <div id="pitcherUploadContent">
+            <div class="upload-icon">⚾</div>
+            <div class="upload-title">拖拽投手投球视频到这里</div>
+            <div class="upload-sub">或点击选择文件</div>
+            <div class="upload-hint">支持 MP4 / MOV / AVI，时长 2-30 秒，建议正面或侧面角度拍摄</div>
+          </div>
+          <video id="pitcherVideoPreview" style="display:none;" controls></video>
+          <div class="upload-file-info" id="pitcherFileInfo" style="display:none;">
+            <div class="upload-file-name" id="pitcherFileName">video.mp4</div>
+            <div class="upload-file-size" id="pitcherFileSize">—</div>
+            <button class="upload-file-remove" onclick="event.stopPropagation();removePitcherFile()">×</button>
+          </div>
+          <input type="file" id="pitcherFileInput" accept="video/mp4,video/mov,video/avi,video/*" style="display:none;" onchange="handlePitcherFile(this.files[0])">
+        </div>
+
+        <div class="form-row mt-16">
+          <div class="form-group">
+            <label class="form-label">球员姓名 <span>*</span></label>
+            <input type="text" id="pitcherPlayerName" placeholder="输入球员姓名">
+          </div>
+          <div class="form-group">
+            <label class="form-label">组别</label>
+            <select id="pitcherGroup">
+              <option value="U8">U8</option><option value="U10">U10</option>
+              <option value="U12" selected>U12</option><option value="U15">U15</option><option value="U18">U18</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">投手类型</label>
+            <select id="pitcherType">
+              <option value="右投">右投手</option>
+              <option value="左投">左投手</option>
+              <option value="两手">两手投手</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">主力球种</label>
+            <select id="pitcherPitchType">
+              <option>四缝线快速球</option>
+              <option>曲球</option>
+              <option>滑球</option>
+              <option>变速球</option>
+              <option>指叉球</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:16px; text-align:right;">
+          <button class="btn btn-purple" id="startPitcherBtn" onclick="startPitcherAnalysis()" style="padding:12px 28px; font-size:15px;">
+            ⚡ 开始 AI 投手分析
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result Panel -->
+    <div class="panel" id="pitcherResult" style="display:none;">
+      <div class="panel-header" style="background:#F5EEF8;">
+        <div class="panel-title">🤖 AI 投手投球分析报告</div>
+        <div class="flex gap-8">
+          <button class="btn btn-outline btn-sm" onclick="exportPitcherReport()">📄 导出 PDF</button>
+          <button class="btn btn-success btn-sm" onclick="savePitcherToModule4()">💾 保存至模块4</button>
+        </div>
+      </div>
+      <div class="panel-body" id="pitcherResultBody"></div>
+    </div>
+
+  </div>
+
+  <!-- ════ TAB 3: 历史记录 ════ -->
+  <div class="tab-content" id="tab-history">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📋 AI 分析历史记录</div>
+        <div class="flex gap-8">
+          <select id="hist-type" onchange="renderHistory()">
+            <option value="">全部类型</option>
+            <option value="挥棒分析">挥棒分析</option>
+            <option value="投手分析">投手分析</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="historyTable">
+          <thead><tr>
+            <th>ID</th><th>球员</th><th>类型</th><th>组别</th><th>综合评分</th><th>状态</th><th>时间</th><th>操作</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="historyEmpty" class="empty-state" style="display:none;">
+        <div class="empty-state-icon">📋</div>
+        <div class="empty-state-title">暂无分析记录</div>
+        <div class="empty-state-sub">上传视频进行 AI 分析后，记录会自动保存在此</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loadingText">正在处理视频...</div>
+  <div class="loading-sub" id="loadingSub">AI 正在提取关键帧，请稍候</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════
+const SAMPLE_SWINIG = {
+  player: '陈俊轩', team: '香港老虎少棒队', group: 'U12',
+  batPos: '右打', videoNote: '正面角度拍摄，U12标准场地'
+};
+const SAMPLE_PITCHER = {
+  player: '林可晴', team: '九龙天使队', group: 'U12',
+  pitcherType: '右投', pitchType: '四缝线快速球', videoNote: '侧面角度拍摄'
+};
+
+let aiHistory = JSON.parse(localStorage.getItem('hkba_ai_v2_history') || 'null') || [
+  {id:'AI001', player:'陈俊轩', type:'挥棒分析', group:'U12', score:78, status:'已完成', time:'2026-04-12 14:32'},
+  {id:'AI002', player:'林可晴', type:'投手分析', group:'U12', score:85, status:'已完成', time:'2026-04-11 10:15'},
+  {id:'AI003', player:'张浩然', type:'挥棒分析', group:'U12', score:72, status:'已完成', time:'2026-04-10 16:48'},
+];
+
+let currentSwingData = null;
+let currentPitcherData = null;
+
+// ═══════════════════════════════════════
+// TAB SWITCH
+// ═══════════════════════════════════════
+function switchTab(el, id) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (id === 'history') renderHistory();
+}
+
+// ═══════════════════════════════════════
+// SWING: FILE HANDLING
+// ═══════════════════════════════════════
+function handleSwingFile(file) {
+  if (!file) return;
+  const maxSize = 100 * 1024 * 1024; // 100MB
+  if (file.size > maxSize) { alert('视频文件过大，请控制在 100MB 以内'); return; }
+  const validTypes = ['video/mp4','video/quicktime','video/x-msvideo','video/avi'];
+  if (!validTypes.some(t => file.type.startsWith('video/'))) {
+    alert('请上传视频文件（MP4 / MOV / AVI）'); return;
+  }
+
+  const video = document.getElementById('swingVideoPreview');
+  video.src = URL.createObjectURL(file);
+  video.style.display = 'block';
+  document.getElementById('swingUploadContent').style.display = 'none';
+
+  document.getElementById('swingFileName').textContent = file.name;
+  document.getElementById('swingFileSize').textContent = formatFileSize(file.size);
+  document.getElementById('swingFileInfo').style.display = 'flex';
+  document.getElementById('resetSwingBtn').style.display = 'inline-flex';
+
+  // Auto-fill player name from history
+  if (!document.getElementById('swingPlayerName').value) {
+    document.getElementById('swingPlayerName').value = SAMPLE_SWINIG.player;
+    document.getElementById('swingTeam').value = SAMPLE_SWINIG.team;
+  }
+
+  completeStep('step1', 'bar1');
+}
+
+function removeSwingFile() {
+  const video = document.getElementById('swingVideoPreview');
+  video.src = '';
+  video.style.display = 'none';
+  document.getElementById('swingUploadContent').style.display = 'block';
+  document.getElementById('swingFileInfo').style.display = 'none';
+  document.getElementById('swingFileInput').value = '';
+  resetStepper('step', 1);
+}
+
+function loadSampleSwing() {
+  document.getElementById('swingPlayerName').value = SAMPLE_SWINIG.player;
+  document.getElementById('swingTeam').value = SAMPLE_SWINIG.team;
+  document.getElementById('swingGroup').value = SAMPLE_SWINIG.group;
+  document.getElementById('swingBattingPos').value = SAMPLE_SWINIG.batPos;
+  document.getElementById('swingFileName').textContent = 'sample_swing_U12.mp4';
+  document.getElementById('swingFileSize').textContent = '示例文件（已加载）';
+  document.getElementById('swingFileInfo').style.display = 'flex';
+  document.getElementById('resetSwingBtn').style.display = 'inline-flex';
+  document.getElementById('swingUploadContent').style.display = 'none';
+  completeStep('step1', 'bar1');
+  showToast('已加载示例数据，请上传视频文件或直接开始分析', 'info');
+}
+
+function resetSwing() {
+  removeSwingFile();
+  document.getElementById('swingPlayerName').value = '';
+  document.getElementById('swingTeam').value = '';
+  document.getElementById('swingResult').style.display = 'none';
+  document.getElementById('swingUploadContent').style.display = 'block';
+  document.getElementById('swingFileInfo').style.display = 'none';
+  currentSwingData = null;
+}
+
+// ═══════════════════════════════════════
+// SWING: ANALYSIS
+// ═══════════════════════════════════════
+function startSwingAnalysis() {
+  const name = document.getElementById('swingPlayerName').value.trim();
+  if (!name) { alert('请输入球员姓名'); return; }
+
+  showLoading('正在处理挥棒视频...', 'AI 正在提取挥棒轨迹关键帧，请稍候...');
+  completeStep('step1', 'bar1');
+
+  setTimeout(() => {
+    completeStep('step2', 'bar2');
+    updateLoading('正在计算挥棒参数...', '分析挥棒速度、角度与力量曲线...');
+  }, 1500);
+
+  setTimeout(() => {
+    completeStep('step3', 'bar2');
+    updateLoading('正在生成分析报告...', '生成雷达图与训练建议...');
+  }, 3000);
+
+  setTimeout(() => {
+    hideLoading();
+    generateSwingReport(name);
+  }, 4500);
+}
+
+function generateSwingReport(playerName) {
+  const group = document.getElementById('swingGroup').value;
+  const batPos = document.getElementById('swingBattingPos').value;
+  const team = document.getElementById('swingTeam').value || '未填写';
+
+  // Simulate AI analysis data (real app would use CV on video)
+  const swingSpeed = 85 + Math.random() * 30;
+  const bpa = 20 + Math.random() * 10;
+  const aa = 25 + Math.random() * 15;
+  const radar = {
+    speed: Math.round(60 + Math.random() * 35),
+    angle: Math.round(65 + Math.random() * 30),
+    plane: Math.round(60 + Math.random() * 35),
+    efficiency: Math.round(55 + Math.random() * 40),
+  };
+  const overallScore = Math.round((radar.speed + radar.angle + radar.plane + radar.efficiency) / 4);
+
+  // Power curve data
+  const powerCurve = [30, 55, 78, 95, 100, 88, 65, 40, 20, 8];
+
+  currentSwingData = { playerName, group, team, batPos, swingSpeed, bpa, aa, radar, overallScore, powerCurve };
+
+  const radarColors = ['#1B4F72','#E67E22','#1E8449','#7D3C98'];
+  const scoreColor = overallScore >= 80 ? '#1E8449' : overallScore >= 65 ? '#D68910' : '#C0392B';
+
+  const html = `
+    <div class="flex gap-8" style="align-items:flex-start; margin-bottom:16px;">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0;">${playerName.slice(0,2)}</div>
+      <div style="flex:1;">
+        <div style="font-size:20px;font-weight:800;">${playerName}</div>
+        <div style="font-size:13px;color:var(--text-light);margin-top:4px;">
+          ${team} · <span class="badge badge-${group.toLowerCase()}">${group}</span> · ${batPos}
+        </div>
+        <div style="margin-top:6px;">
+          <span class="badge badge-done">分析完成</span>
+          <span style="font-size:12px;color:var(--text-light);margin-left:8px;">基于视频帧分析 · AI v2.0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-grid">
+      <div class="result-card highlight">
+        <div class="result-num">${swingSpeed.toFixed(1)}</div>
+        <div class="result-label">挥棒速度</div>
+        <div class="result-unit">km/h</div>
+        <div class="result-score-bar">
+          <div class="progress-fill" style="width:${Math.min(swingSpeed * 0.8, 100)}%;background:var(--primary);"></div>
+        </div>
+      </div>
+      <div class="result-card">
+        <div class="result-num">${bpa.toFixed(1)}°</div>
+        <div class="result-label">BPA 挥棒平面角</div>
+        <div class="result-unit">理想 18-26°</div>
+        <div class="result-score-bar">
+          <div class="progress-fill" style="width:${Math.min(bpa * 3.5, 100)}%;background:var(--accent);"></div>
+        </div>
+      </div>
+      <div class="result-card">
+        <div class="result-num">${aa.toFixed(1)}°</div>
+        <div class="result-label">AA 攻击角度</div>
+        <div class="result-unit">理想 20-35°</div>
+        <div class="result-score-bar">
+          <div class="progress-fill" style="width:${Math.min(aa * 2.8, 100)}%;background:var(--success);"></div>
+        </div>
+      </div>
+      <div class="result-card accent">
+        <div class="result-num">${overallScore}</div>
+        <div class="result-label">综合评分</div>
+        <div class="result-unit">/100 · ${overallScore >= 80 ? '优秀' : overallScore >= 65 ? '良好' : '待提升'}</div>
+        <div class="result-score-bar">
+          <div class="progress-fill" style="width:${overallScore}%;background:var(--accent);"></div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="panel-title mt-8">🎯 四维能力雷达图</div>
+    <div class="radar-wrap mt-8">
+      <canvas id="swingRadarCanvas" class="radar-canvas" width="280" height="280"></canvas>
+      <div class="radar-legend">
+        ${['挥棒速度','角度控制','挥杆平面','力量效率'].map((l,i) => `
+          <div class="radar-item">
+            <div class="radar-dot" style="background:${radarColors[i]};"></div>
+            <div class="radar-label">${l}</div>
+            <div class="radar-val">${radar[['speed','angle','plane','efficiency'][i]]} / 100</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="panel-title">💪 力量曲线（挥棒过程中）</div>
+    <div class="power-chart">
+      <div class="power-chart-bars">
+        ${powerCurve.map((v, i) => {
+          const barColor = v >= 90 ? '#1E8449' : v >= 70 ? '#E67E22' : '#C0392B';
+          return `<div class="power-bar-wrap">
+            <div class="power-bar-val">${v}</div>
+            <div class="power-bar-outer">
+              <div class="power-bar-inner" style="height:${v}%;background:${barColor};"></div>
+            </div>
+            <div class="power-bar-label">t${i+1}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text-light);margin-top:8px;">横轴：挥棒时序（t1~t10） · 纵轴：力量输出（%）</div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="panel-title">💡 AI 分析结论</div>
+    <div class="suggestion-list">
+      ${bpa > 26 ? `
+      <div class="suggestion-item warn">
+        <div class="suggestion-icon">🔧</div>
+        <div class="suggestion-text">
+          <strong>BPA 挥棒平面角偏高（${bpa.toFixed(1)}°）</strong>
+          理想范围 18-26°，当前角度偏大，可能导致击球角度过高。建议加强后摆蓄力训练，优化挥杆轨迹。
+        </div>
+      </div>` : `
+      <div class="suggestion-item good">
+        <div class="suggestion-icon">✅</div>
+        <div class="suggestion-text">
+          <strong>BPA 挥棒平面角正常（${bpa.toFixed(1)}°）</strong>
+          处于理想范围内，挥杆轨迹合理，击球效率有保障。
+        </div>
+      </div>`}
+      ${swingSpeed >= 95 ? `
+      <div class="suggestion-item good">
+        <div class="suggestion-icon">⚡</div>
+        <div class="suggestion-text">
+          <strong>挥棒速度出色（${swingSpeed.toFixed(1)} km/h）</strong>
+          处于${group}同龄人优秀水平，力量充足，是进攻核心优势。
+        </div>
+      </div>` : `
+      <div class="suggestion-item warn">
+        <div class="suggestion-icon">🔧</div>
+        <div class="suggestion-text">
+          <strong>挥棒速度有提升空间（${swingSpeed.toFixed(1)} km/h）</strong>
+          ${group}均值约 85-100 km/h，建议加强核心力量与髋部旋转训练。
+        </div>
+      </div>`}
+      ${overallScore >= 80 ? `
+      <div class="suggestion-item good">
+        <div class="suggestion-icon">⭐</div>
+        <div class="suggestion-text">
+          <strong>综合评分优秀（${overallScore}/100）</strong>
+          具备代表队实力，建议继续保持技术稳定性，增加比赛经验。
+        </div>
+      </div>` : ''}
+    </div>
+
+    <div class="highlight-box mt-16">
+      <div class="highlight-title">📋 个性化训练计划（建议）</div>
+      <div class="rec-grid">
+        <div class="rec-pill">
+          <div class="rec-pill-title">🏋️ 力量训练 <span class="tag tag-blue">每日</span></div>
+          核心力量 + 髋部旋转训练，每次 15 分钟，重点加强爆发力。
+        </div>
+        <div class="rec-pill">
+          <div class="rec-pill-title">🎯 挥杆平面 <span class="tag tag-orange">重点</span></div>
+          ${bpa > 26 ? '后摆蓄力优化，减少平面角，每天 10 分钟镜子练习。' : '保持当前挥杆平面，增加击球精度训练。'}
+        </div>
+        <div class="rec-pill">
+          <div class="rec-pill-title">📹 视频复盘 <span class="tag tag-green">每周</span></div>
+          每周上传一段挥棒视频，对比进步情况，AI 自动追踪改善。
+        </div>
+        <div class="rec-pill">
+          <div class="rec-pill-title">🏃 体能储备 <span class="tag tag-red">加强</span></div>
+          ${group}梯队强度增加，需保持有氧体能，每周至少 2 次跑步训练。
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('swingResultBody').innerHTML = html;
+  document.getElementById('swingResult').style.display = 'block';
+
+  setTimeout(() => {
+    drawRadar('swingRadarCanvas', radar, radarColors);
+  }, 100);
+
+  // Save to history
+  const newId = 'AI' + String(Date.now()).slice(-6);
+  const entry = {id: newId, player: playerName, type:'挥棒分析', group, score: overallScore, status:'已完成', time: new Date().toLocaleString('zh-CN')};
+  aiHistory.unshift(entry);
+  localStorage.setItem('hkba_ai_v2_history', JSON.stringify(aiHistory));
+}
+
+// ═══════════════════════════════════════
+// PITCHER: FILE HANDLING
+// ═══════════════════════════════════════
+function handlePitcherFile(file) {
+  if (!file) return;
+  const maxSize = 100 * 1024 * 1024;
+  if (file.size > maxSize) { alert('视频文件过大，请控制在 100MB 以内'); return; }
+  if (!file.type.startsWith('video/')) { alert('请上传视频文件'); return; }
+
+  const video = document.getElementById('pitcherVideoPreview');
+  video.src = URL.createObjectURL(file);
+  video.style.display = 'block';
+  document.getElementById('pitcherUploadContent').style.display = 'none';
+
+  document.getElementById('pitcherFileName').textContent = file.name;
+  document.getElementById('pitcherFileSize').textContent = formatFileSize(file.size);
+  document.getElementById('pitcherFileInfo').style.display = 'flex';
+  document.getElementById('resetPitcherBtn').style.display = 'inline-flex';
+
+  if (!document.getElementById('pitcherPlayerName').value) {
+    document.getElementById('pitcherPlayerName').value = SAMPLE_PITCHER.player;
+    document.getElementById('pitcherTeam').value = SAMPLE_PITCHER.team;
+  }
+
+  completeStep('pstep1', 'pbar1');
+}
+
+function removePitcherFile() {
+  const video = document.getElementById('pitcherVideoPreview');
+  video.src = '';
+  video.style.display = 'none';
+  document.getElementById('pitcherUploadContent').style.display = 'block';
+  document.getElementById('pitcherFileInfo').style.display = 'none';
+  document.getElementById('pitcherFileInput').value = '';
+  resetStepper('pstep', 1);
+}
+
+function loadSamplePitcher() {
+  document.getElementById('pitcherPlayerName').value = SAMPLE_PITCHER.player;
+  document.getElementById('pitcherTeam').value = SAMPLE_PITCHER.team;
+  document.getElementById('pitcherGroup').value = SAMPLE_PITCHER.group;
+  document.getElementById('pitcherType').value = SAMPLE_PITCHER.pitcherType;
+  document.getElementById('pitcherPitchType').value = SAMPLE_PITCHER.pitchType;
+  document.getElementById('pitcherFileName').textContent = 'sample_pitcher_U12.mp4';
+  document.getElementById('pitcherFileSize').textContent = '示例文件（已加载）';
+  document.getElementById('pitcherFileInfo').style.display = 'flex';
+  document.getElementById('resetPitcherBtn').style.display = 'inline-flex';
+  document.getElementById('pitcherUploadContent').style.display = 'none';
+  completeStep('pstep1', 'pbar1');
+  showToast('已加载示例数据，请上传视频文件或直接开始分析', 'info');
+}
+
+function resetPitcher() {
+  removePitcherFile();
+  document.getElementById('pitcherPlayerName').value = '';
+  document.getElementById('pitcherTeam').value = '';
+  document.getElementById('pitcherResult').style.display = 'none';
+  document.getElementById('pitcherUploadContent').style.display = 'block';
+  document.getElementById('pitcherFileInfo').style.display = 'none';
+  currentPitcherData = null;
+}
+
+// ═══════════════════════════════════════
+// PITCHER: ANALYSIS
+// ═══════════════════════════════════════
+function startPitcherAnalysis() {
+  const name = document.getElementById('pitcherPlayerName').value.trim();
+  if (!name) { alert('请输入球员姓名'); return; }
+
+  showLoading('正在处理投手视频...', 'AI 正在追踪球路轨迹，请稍候...');
+  completeStep('pstep1', 'pbar1');
+
+  setTimeout(() => {
+    completeStep('pstep2', 'pbar2');
+    updateLoading('正在计算球速与转速...', '分析出手角度与球路变化...');
+  }, 1800);
+
+  setTimeout(() => {
+    completeStep('pstep3', 'pbar2');
+    updateLoading('正在生成投手报告...', '生成投手能力图谱与建议...');
+  }, 3600);
+
+  setTimeout(() => {
+    hideLoading();
+    generatePitcherReport(name);
+  }, 5200);
+}
+
+function generatePitcherReport(playerName) {
+  const group = document.getElementById('pitcherGroup').value;
+  const pitcherType = document.getElementById('pitcherType').value;
+  const pitchType = document.getElementById('pitcherPitchType').value;
+  const team = document.getElementById('pitcherTeam')?.value || '未填写';
+
+  const pitchSpeed = 65 + Math.random() * 30;
+  const releaseAngle = 65 + Math.random() * 20;
+  const spinRate = 800 + Math.random() * 1500;
+  const control = 60 + Math.random() * 35;
+  const stamina = 65 + Math.random() * 30;
+
+  const radar = {
+    speed: Math.round(55 + Math.random() * 40),
+    spin: Math.round(50 + Math.random() * 45),
+    control: Math.round(60 + Math.random() * 35),
+    stamina: Math.round(55 + Math.random() * 40),
+  };
+  const overallScore = Math.round((radar.speed + radar.spin + radar.control + radar.stamina) / 4);
+
+  // Pitch movement chart
+  const pitchMovement = [
+    {name:'四缝线快速球', speed: pitchSpeed.toFixed(1), mov: '↓2.3"', rating: pitchSpeed >= 85 ? 'good' : 'normal'},
+    {name:'曲球', speed: (pitchSpeed * 0.65).toFixed(1), mov: '↙6.8"', rating: 'good'},
+    {name:'滑球', speed: (pitchSpeed * 0.75).toFixed(1), mov: '←4.1"', rating: 'normal'},
+    {name:'变速球', speed: (pitchSpeed * 0.82).toFixed(1), mov: '↑1.2"', rating: 'normal'},
+  ];
+
+  currentPitcherData = { playerName, group, team, pitcherType, pitchType, pitchSpeed, releaseAngle, spinRate, control, stamina, radar, overallScore, pitchMovement };
+
+  const radarColors = ['#1B4F72','#7D3C98','#1E8449','#E67E22'];
+  const scoreColor = overallScore >= 80 ? '#1E8449' : overallScore >= 65 ? '#D68910' : '#C0392B';
+
+  const html = `
+    <div class="flex gap-8" style="align-items:flex-start; margin-bottom:16px;">
+      <div style="width:64px;height:64px;border-radius:50%;background:#7D3C98;color:white;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0;">⚾</div>
+      <div style="flex:1;">
+        <div style="font-size:20px;font-weight:800;">${playerName}</div>
+        <div style="font-size:13px;color:var(--text-light);margin-top:4px;">
+          ${team} · <span class="badge badge-${group.toLowerCase()}">${group}</span> · ${pitcherType} · 主力：${pitchType}
+        </div>
+        <div style="margin-top:6px;">
+          <span class="badge badge-done">分析完成</span>
+          <span style="font-size:12px;color:var(--text-light);margin-left:8px;">基于视频帧分析 · AI v2.0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-grid">
+      <div class="result-card highlight">
+        <div class="result-num">${pitchSpeed.toFixed(1)}</div>
+        <div class="result-label">最快球速</div>
+        <div class="result-unit">km/h</div>
+      </div>
+      <div class="result-card">
+        <div class="result-num">${releaseAngle.toFixed(0)}°</div>
+        <div class="result-label">出手角度</div>
+        <div class="result-unit">理想 65-80°</div>
+      </div>
+      <div class="result-card">
+        <div class="result-num">${(spinRate/1000).toFixed(1)}k</div>
+        <div class="result-label">转速 RPM</div>
+        <div class="result-unit">转/分钟</div>
+      </div>
+      <div class="result-card accent">
+        <div class="result-num">${overallScore}</div>
+        <div class="result-label">综合评分</div>
+        <div class="result-unit">/100 · ${overallScore >= 80 ? '优秀投手' : overallScore >= 65 ? '良好' : '待提升'}</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="panel-title mt-8">⚾ 球种分析</div>
+    <div class="table-wrap mt-8">
+      <table>
+        <thead><tr><th>球种</th><th>均速 (km/h)</th><th>尾劲/位移</th><th>评价</th></tr></thead>
+        <tbody>
+          ${pitchMovement.map(p => `
+            <tr>
+              <td><strong>${p.name}</strong></td>
+              <td class="td-center">${p.speed}</td>
+              <td class="td-center">${p.mov}</td>
+              <td class="td-center"><span class="badge ${p.rating === 'good' ? 'badge-done' : 'badge-pending'}">${p.rating === 'good' ? '良好' : '一般'}</span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <hr class="divider">
+
+    <div class="panel-title">🎯 投手四维能力雷达图</div>
+    <div class="radar-wrap mt-8">
+      <canvas id="pitcherRadarCanvas" class="radar-canvas" width="260" height="260"></canvas>
+      <div class="radar-legend">
+        ${['球速/转速','出手控制','控球能力','体能耐力'].map((l,i) => `
+          <div class="radar-item">
+            <div class="radar-dot" style="background:${radarColors[i]};"></div>
+            <div class="radar-label">${l}</div>
+            <div class="radar-val">${radar[['speed','spin','control','stamina'][i]]} / 100</div>
+          </div>
+        `).join('')}
+        <div style="margin-top:12px;padding:10px;background:#F8F9FA;border-radius:8px;">
+          <div style="font-size:12px;font-weight:700;color:var(--primary);">综合评分</div>
+          <div style="font-size:24px;font-weight:800;color:${scoreColor};">${overallScore}<span style="font-size:13px;color:var(--text-light);"> / 100</span></div>
+          <div style="font-size:11px;color:var(--text-light);margin-top:2px;">${overallScore >= 80 ? '⭐ 梯队核心投手' : overallScore >= 65 ? '👍 有竞争力' : '📈 潜力可期'}</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="highlight-box purple mt-16">
+      <div class="highlight-title">💡 AI 投手专项建议</div>
+      ${pitchSpeed >= 80 ? `
+      <div class="highlight-item">⚡ <strong>球速出色（${pitchSpeed.toFixed(1)} km/h）</strong> — 处于${group}女子投手优秀水平，具备代表队投手实力</div>` : `
+      <div class="highlight-item">🔧 <strong>球速有提升空间（${pitchSpeed.toFixed(1)} km/h）</strong> — 建议加强上肢力量训练，每周 2 次</div>`}
+      ${releaseAngle >= 65 && releaseAngle <= 85 ? `
+      <div class="highlight-item">✅ <strong>出手角度理想（${releaseAngle.toFixed(0)}°）</strong> — 球路落点控制稳定</div>` : `
+      <div class="highlight-item">🔧 <strong>出手角度偏${releaseAngle < 65 ? '小' : '大'}（${releaseAngle.toFixed(0)}°）</strong> — 建议调整投球姿势，改善腿部发力</div>`}
+      <div class="highlight-item">📋 <strong>球种配置建议</strong> — 建议掌握至少 2 种变化球，增强打者应对难度</div>
+      <div class="highlight-item">🏃 <strong>体能储备</strong> — 投手对体能要求高，建议每周至少 3 次有氧训练</div>
+    </div>
+
+    <div class="highlight-box mt-16">
+      <div class="highlight-title">📋 投手训练计划（建议）</div>
+      <div class="rec-grid">
+        <div class="rec-pill">
+          <div class="rec-pill-title">💪 上肢力量 <span class="tag tag-blue">每周3次</span></div>
+          增加球速，${group}标准：每周 3 次力量训练，每次 30 分钟。
+        </div>
+        <div class="rec-pill">
+          <div class="rec-pill-title">🔄 变化球练习 <span class="tag tag-orange">重点</span></div>
+          建议掌握曲球 + 滑球各 1 种，增加投球多样性。
+        </div>
+        <div class="rec-pill">
+          <div class="rec-pill-title">📹 投球姿势复盘 <span class="tag tag-green">每周</span></div>
+          每周上传视频，AI 自动追踪出手角度变化。
+        </div>
+        <div class="rec-pill">
+          <div class="rec-pill-title">🧠 控球训练 <span class="tag tag-red">加强</span></div>
+          建议进行四角控球训练，每组 20 球，提升好球率。
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('pitcherResultBody').innerHTML = html;
+  document.getElementById('pitcherResult').style.display = 'block';
+
+  setTimeout(() => {
+    drawRadar('pitcherRadarCanvas', radar, radarColors);
+  }, 100);
+
+  const newId = 'AI' + String(Date.now()).slice(-6);
+  const entry = {id: newId, player: playerName, type:'投手分析', group, score: overallScore, status:'已完成', time: new Date().toLocaleString('zh-CN')};
+  aiHistory.unshift(entry);
+  localStorage.setItem('hkba_ai_v2_history', JSON.stringify(aiHistory));
+}
+
+// ═══════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════
+function renderHistory() {
+  const typeFilter = document.getElementById('hist-type').value;
+  const filtered = typeFilter ? aiHistory.filter(h => h.type === typeFilter) : aiHistory;
+  const tbody = document.querySelector('#historyTable tbody');
+  const empty = document.getElementById('historyEmpty');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  tbody.innerHTML = filtered.map(h => {
+    const scoreColor = h.score >= 80 ? 'var(--success)' : h.score >= 65 ? 'var(--warning)' : 'var(--danger)';
+    return `<tr>
+      <td><span class="text-muted">${h.id}</span></td>
+      <td><strong>${h.player}</strong></td>
+      <td><span class="badge ${h.type === '挥棒分析' ? 'badge-swing' : 'badge-pitcher'}">${h.type}</span></td>
+      <td><span class="badge badge-${h.group.toLowerCase()}">${h.group}</span></td>
+      <td class="td-center" style="font-weight:800;color:${scoreColor};">${h.score}</td>
+      <td><span class="badge badge-done">${h.status}</span></td>
+      <td class="text-muted">${h.time}</td>
+      <td>
+        <button class="btn btn-xs btn-outline" onclick="viewHistoryDetail('${h.id}')">查看</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function viewHistoryDetail(id) {
+  const h = aiHistory.find(x => x.id === id);
+  if (!h) return;
+  alert(`分析ID：${h.id}\n球员：${h.player}\n类型：${h.type}\n组别：${h.group}\n评分：${h.score}\n时间：${h.time}\n\n详细报告请重新运行分析或导出PDF。`);
+}
+
+// ═══════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════
+function drawRadar(canvasId, data, colors) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx = canvas.width / 2, cy = canvas.height / 2, r = 100;
+  const labels = ['速度','角度','平面','效率'];
+  const keys = ['speed','angle','plane','efficiency'];
+  if (canvasId.includes('pitcher')) labels.splice(1,0,'转速'), labels.push('体能耐力');
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (let level = 1; level <= 5; level++) {
+    const rr = r * level / 5;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const angle = (i * 90 - 90) * Math.PI / 180;
+      const x = cx + rr * Math.cos(angle);
+      const y = cy + rr * Math.sin(angle);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = '#EAECEE';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  for (let i = 0; i < 4; i++) {
+    const angle = (i * 90 - 90) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+    ctx.strokeStyle = '#D5D8DC';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#707B7C';
+    ctx.font = '12px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const lbl = labels[i] || keys[i];
+    ctx.fillText(lbl, cx + (r + 18) * Math.cos(angle), cy + (r + 18) * Math.sin(angle));
+  }
+
+  const vals = [data.speed||0, data.angle||0, data.plane||0, data.efficiency||0];
+  ctx.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const angle = (i * 90 - 90) * Math.PI / 180;
+    const val = (vals[i] || 0) / 100 * r;
+    const x = cx + val * Math.cos(angle);
+    const y = cy + val * Math.sin(angle);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(27,79,114,0.2)';
+  ctx.fill();
+  ctx.strokeStyle = '#1B4F72';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  for (let i = 0; i < 4; i++) {
+    const angle = (i * 90 - 90) * Math.PI / 180;
+    const val = (vals[i] || 0) / 100 * r;
+    ctx.beginPath();
+    ctx.arc(cx + val * Math.cos(angle), cy + val * Math.sin(angle), 4, 0, Math.PI * 2);
+    ctx.fillStyle = colors[i] || '#1B4F72';
+    ctx.fill();
+  }
+}
+
+function completeStep(stepId, barId) {
+  document.getElementById(stepId)?.classList.add('done');
+  document.getElementById(stepId)?.classList.add('active');
+  document.getElementById(barId)?.classList.add('filled');
+}
+
+function resetStepper(prefix, fromStep) {
+  for (let i = fromStep; i <= 3; i++) {
+    const step = document.getElementById(prefix + i);
+    if (step) { step.classList.remove('done','active'); }
+  }
+  document.getElementById(prefix + 'bar' + (fromStep === 1 ? '1' : '2'))?.classList.remove('filled');
+  document.getElementById(prefix + 'bar' + (fromStep === 1 ? '2' : '3'))?.classList.remove('filled');
+}
+
+function showLoading(text, sub) {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingSub').textContent = sub;
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+
+function updateLoading(text, sub) {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingSub').textContent = sub;
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showToast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;top:70px;right:20px;background:white;border-radius:8px;padding:12px 18px;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:9999;border-left:4px solid var(--success);animation:fadeIn 0.2s ease;';
+  el.innerHTML = `<span>${type === 'success' ? '✅' : type === 'info' ? 'ℹ️' : '❌'}</span> ${msg}`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function exportSwingReport() {
+  if (!currentSwingData) { alert('请先完成分析'); return; }
+  alert('PDF 报告导出功能：\n\n报告包含球员姓名、挥棒参数、雷达图、力量曲线与训练建议。\n如有需要，小弟可以帮你生成完整的 PDF 文件。');
+}
+
+function exportPitcherReport() {
+  if (!currentPitcherData) { alert('请先完成分析'); return; }
+  alert('投手分析 PDF 导出功能：\n\n报告包含球速、转速、球种分析、雷达图与训练计划。');
+}
+
+function saveToModule4() {
+  if (!currentSwingData) return;
+  // Save to module 4's localStorage
+  const existing = JSON.parse(localStorage.getItem('hkba_profiles') || '[]');
+  const newProfile = {
+    id: 'P' + String(existing.length + 1).padStart(3,'0'),
+    name: currentSwingData.playerName,
+    team: currentSwingData.team,
+    group: currentSwingData.group,
+    pos: '待定',
+    swing: parseFloat(currentSwingData.swingSpeed.toFixed(1)),
+    bpa: parseFloat(currentSwingData.bpa.toFixed(1)),
+    aa: parseFloat(currentSwingData.aa.toFixed(1)),
+    radar: currentSwingData.radar,
+    status: '已分析',
+    note: `AI挥棒分析：综合评分 ${currentSwingData.overallScore}/100`
+  };
+  existing.push(newProfile);
+  localStorage.setItem('hkba_profiles', JSON.stringify(existing));
+  showToast('已保存至模块4球员档案', 'success');
+}
+
+function savePitcherToModule4() {
+  if (!currentPitcherData) return;
+  const existing = JSON.parse(localStorage.getItem('hkba_profiles') || '[]');
+  const newProfile = {
+    id: 'P' + String(existing.length + 1).padStart(3,'0'),
+    name: currentPitcherData.playerName,
+    team: currentPitcherData.team,
+    group: currentPitcherData.group,
+    pos: '投手',
+    swing: parseFloat(currentPitcherData.pitchSpeed.toFixed(1)),
+    bpa: parseFloat(currentPitcherData.releaseAngle.toFixed(0)),
+    aa: 0,
+    radar: {speed: currentPitcherData.radar.speed, angle: currentPitcherData.radar.spin, plane: currentPitcherData.radar.control, efficiency: currentPitcherData.radar.stamina},
+    status: '已分析',
+    note: `AI投手分析：综合评分 ${currentPitcherData.overallScore}/100，${currentPitcherData.pitchType}`
+  };
+  existing.push(newProfile);
+  localStorage.setItem('hkba_profiles', JSON.stringify(existing));
+  showToast('已保存至模块4球员档案', 'success');
+}
+
+// ── Drag & Drop ──
+const swingZone = document.getElementById('swingUploadZone');
+const pitcherZone = document.getElementById('pitcherUploadZone');
+
+if (swingZone) {
+  swingZone.addEventListener('dragover', e => { e.preventDefault(); swingZone.classList.add('drag-over'); });
+  swingZone.addEventListener('dragleave', () => swingZone.classList.remove('drag-over'));
+  swingZone.addEventListener('drop', e => {
+    e.preventDefault(); swingZone.classList.remove('drag-over');
+    handleSwingFile(e.dataTransfer.files[0]);
+  });
+}
+
+if (pitcherZone) {
+  pitcherZone.addEventListener('dragover', e => { e.preventDefault(); pitcherZone.classList.add('drag-over'); });
+  pitcherZone.addEventListener('dragleave', () => pitcherZone.classList.remove('drag-over'));
+  pitcherZone.addEventListener('drop', e => {
+    e.preventDefault(); pitcherZone.classList.remove('drag-over');
+    handlePitcherFile(e.dataTransfer.files[0]);
+  });
+}
+
+// Init
+renderHistory();
+</script>
+
+<style>
+@keyframes fadeIn { from { opacity:0; transform:translateX(20px); } }
+.mb-24 { margin-bottom: 24px; }
+</style>
+</body>
+</html>
