@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>模块4 · 球员技术数据档案 — 香港棒垒球总会</title>
+<script src="database.js"></script>
 <style>
   :root {
     --primary: #1B4F72;
@@ -1140,8 +1141,24 @@ function openModal(id) { document.getElementById(id).classList.add('show'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
 // Init
-renderPlayers();
-renderAIHistory();
+(async function init() {
+  await DB.load();
+  const dbPlayers = DB.cache().players;
+  if (dbPlayers && dbPlayers.length > 0) {
+    const merged = dbPlayers.map(p => ({
+      id: p.id, name: p.name, age: p.age || 11, position: p.position || '',
+      throw_speed: p.throw_speed || 0, swing_speed: p.swing_speed || 0,
+      throw_hand: p.throw_hand || 'R', bat_hand: p.bat_hand || 'R',
+      team: p.team || '', height: p.height_cm || 0, weight: p.weight_kg || 0,
+      school: p.school || '', notes: p.notes || '',
+      radarScore: 0, trendData: []
+    }));
+    localStorage.setItem('hkba_profiles', JSON.stringify(merged));
+    profiles = merged;
+  }
+  renderPlayers();
+  renderAIHistory();
+})();
 </script>
 </body>
 </html>
