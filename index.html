@@ -3,98 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JIHUA · 香港棒垒球管理系统</title>
+<title>JIHUA 棒球管理系统</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI','Noto Sans SC',Arial,sans-serif; }
-  body { background:#0a1628; color:white; min-height:100vh; display:flex; align-items:center; justify-content:center; }
-  
-  .container { text-align:center; max-width:800px; padding:40px; }
-  .logo { width:80px; height:80px; background:linear-gradient(135deg,#E67E22,#f4a261); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:36px; font-weight:bold; margin:0 auto 24px; box-shadow:0 8px 32px rgba(230,126,34,0.4); animation:pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.05);} }
-  
-  h1 { font-size:48px; font-weight:800; margin-bottom:8px; background:linear-gradient(135deg,#fff,#E67E22); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-  .subtitle { font-size:18px; color:rgba(255,255,255,0.6); margin-bottom:48px; }
-  
-  .modules { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:40px; }
-  .module {
-    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
-    border-radius:16px; padding:24px 16px; cursor:pointer; transition:all 0.3s;
-    text-decoration:none; color:white;
-  }
-  .module:hover { background:rgba(255,255,255,0.1); border-color:#E67E22; transform:translateY(-4px); box-shadow:0 8px 24px rgba(230,126,34,0.3); }
-  .module-icon { font-size:32px; margin-bottom:12px; }
-  .module-name { font-size:14px; font-weight:700; margin-bottom:4px; }
-  .module-desc { font-size:11px; color:rgba(255,255,255,0.5); }
-  .module-badge { display:inline-block; background:#E67E22; color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; margin-top:8px; }
-  
-  .ai-module {
-    background:linear-gradient(135deg,rgba(26,82,118,0.3),rgba(26,82,118,0.1));
-    border-color:#1A5276; grid-column:span 3;
-  }
-  .ai-module:hover { background:linear-gradient(135deg,rgba(26,82,118,0.4),rgba(26,82,118,0.2)); border-color:#3498DB; }
-  .ai-module .module-icon { font-size:48px; }
-  .ai-module .module-name { font-size:20px; }
-  .ai-module .module-desc { font-size:13px; }
-  
-  .footer { font-size:12px; color:rgba(255,255,255,0.3); margin-top:40px; }
-  
-  @media (max-width:768px) {
-    .modules { grid-template-columns:1fr; }
-    .ai-module { grid-column:span 1; }
-    h1 { font-size:32px; }
-  }
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:linear-gradient(135deg,#0d1b2a 0%,#1b263b 50%,#0d1b2a 100%);min-height:100vh;color:#fff;overflow-x:hidden}
+.header{text-align:center;padding:80px 20px 60px;position:relative}
+.header::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100px;height:4px;background:linear-gradient(90deg,transparent,#e94560,#ff6b6b,transparent);border-radius:2px}
+.logo{font-size:80px;margin-bottom:20px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.title{font-size:56px;font-weight:900;color:#fff;letter-spacing:-1px;text-shadow:0 4px 30px rgba(233,69,96,0.3)}
+.subtitle{font-size:20px;color:#778da9;margin-top:12px;letter-spacing:4px;font-weight:300}
+.badge{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#667eea,#764ba2);padding:10px 24px;border-radius:30px;font-size:14px;font-weight:600;margin-top:24px;box-shadow:0 4px 20px rgba(102,126,234,0.3)}
+.modules{max-width:1200px;margin:0 auto;padding:20px 40px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:36px 30px;cursor:pointer;transition:all 0.4s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(233,69,96,0.05),transparent);transition:left 0.6s;pointer-events:none}
+.card:hover{transform:translateY(-10px);border-color:rgba(233,69,96,0.4);box-shadow:0 30px 80px rgba(233,69,96,0.18)}
+.card:hover::before{left:100%}
+.card-top{position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#e94560,#ff6b6b);transform:scaleX(0);transition:transform 0.4s;transform-origin:left}
+.card:hover .card-top{transform:scaleX(1)}
+.card-num{position:absolute;top:20px;right:24px;background:linear-gradient(135deg,#e94560,#ff6b6b);color:#fff;font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;letter-spacing:1px;box-shadow:0 2px 10px rgba(233,69,96,0.4)}
+.card-icon{font-size:52px;margin-bottom:18px}
+.card-name{font-size:22px;font-weight:700;margin-bottom:10px;color:#fff}
+.card-desc{font-size:14px;color:#778da9;line-height:1.75}
+.card-tag{position:absolute;top:20px;left:24px;font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:2px;text-transform:uppercase}
+.card-status{margin-top:18px;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 16px;border-radius:20px}
+.status-active{background:rgba(72,199,116,0.12);color:#48c774;border:1px solid rgba(72,199,116,0.2)}
+.status-demo{background:rgba(255,165,0,0.12);color:#ffa500;border:1px solid rgba(255,165,0,0.2)}
+.footer{text-align:center;padding:60px 20px 50px;color:#415a77;font-size:13px}
+.footer a{color:#778da9;text-decoration:none;transition:color 0.3s}
+.footer a:hover{color:#e94560}
+.divider{width:60px;height:2px;background:linear-gradient(90deg,transparent,#415a77,transparent);margin:0 auto 40px}
+@media(max-width:768px){.modules{padding:20px;grid-template-columns:1fr}.title{font-size:34px}.subtitle{font-size:14px;letter-spacing:2px}.logo{font-size:56px}}
 </style>
 </head>
 <body>
-
-<div class="container">
-  <div class="logo">⚾</div>
-  <h1>JIHUA</h1>
-  <p class="subtitle">香港棒垒球管理系统 · Hong Kong Baseball & Softball Association</p>
-  
-  <div class="modules">
-    <a href="01_球员资料库.html" class="module">
-      <div class="module-icon">👥</div>
-      <div class="module-name">模块 1</div>
-      <div class="module-desc">球员资料库</div>
-    </a>
-    
-    <a href="02_球队梯队管理.html" class="module">
-      <div class="module-icon">🏆</div>
-      <div class="module-name">模块 2</div>
-      <div class="module-desc">球队 & 梯队管理</div>
-    </a>
-    
-    <a href="03_赛事管理与记分.html" class="module">
-      <div class="module-icon">📊</div>
-      <div class="module-name">模块 3</div>
-      <div class="module-desc">赛事管理与记分</div>
-    </a>
-    
-    <a href="04_球员技术档案.html" class="module">
-      <div class="module-icon">📈</div>
-      <div class="module-name">模块 4</div>
-      <div class="module-desc">球员技术档案</div>
-    </a>
-    
-    <a href="05_权限与后台管理.html" class="module">
-      <div class="module-icon">⚙️</div>
-      <div class="module-name">模块 5</div>
-      <div class="module-desc">权限与后台管理</div>
-    </a>
-    
-    <a href="06_AI_运动分析_专属教练.html" class="module ai-module">
-      <div class="module-icon">🤖</div>
-      <div class="module-name">模块 6 · AI 专属教练</div>
-      <div class="module-desc">AI 挥棒分析 · AI 投手分析 · 个性化训练计划</div>
-      <span class="module-badge">✨ 新功能</span>
-    </a>
+<div class="header">
+  <div class="logo">&#9918;</div>
+  <div class="title">JIHUA 棒球管理系统</div>
+  <div class="subtitle">香港棒垒球总会 · AI智能分析 · 数字化管理平台</div>
+  <div class="badge">&#x1F916; AI Powered &nbsp;&middot;&nbsp; &#x1F4BE; 云端数据库</div>
+</div>
+<div class="modules">
+  <div class="card" onclick="location.href='01_球员资料库.html'">
+    <div class="card-top"></div>
+    <span class="card-tag">Module 01</span>
+    <span class="card-num">M1</span>
+    <div class="card-icon">&#128100;</div>
+    <div class="card-name">球员资料库</div>
+    <div class="card-desc">球员注册、信息管理、照片管理、联系方式，支持批量导入导出，数据云端同步存储。</div>
+    <span class="card-status status-active">&#10003; 已上线</span>
   </div>
-  
-  <div class="footer">
-    JIHUA 香港棒垒球管理系统 · Powered by AI · © 2026
+  <div class="card" onclick="location.href='02_球队梯队管理.html'">
+    <div class="card-top"></div>
+    <span class="card-tag">Module 02</span>
+    <span class="card-num">M2</span>
+    <div class="card-icon">&#127934;</div>
+    <div class="card-name">球队 &amp; 梯队管理</div>
+    <div class="card-desc">球队组织架构、多梯队分组、教练团队管理、训练计划与日程安排全流程管理。</div>
+    <span class="card-status status-active">&#10003; 已上线</span>
+  </div>
+  <div class="card" onclick="location.href='03_赛事管理与记分.html'">
+    <div class="card-top"></div>
+    <span class="card-tag">Module 03</span>
+    <span class="card-num">M3</span>
+    <div class="card-icon">&#127942;</div>
+    <div class="card-name">赛事管理与记分</div>
+    <div class="card-desc">赛事发布、赛程编排、实时记分板、数据统计与联赛排名系统，支持移动端记分。</div>
+    <span class="card-status status-active">&#10003; 已上线</span>
+  </div>
+  <div class="card" onclick="location.href='04_球员技术档案.html'">
+    <div class="card-top"></div>
+    <span class="card-tag">Module 04</span>
+    <span class="card-num">M4</span>
+    <div class="card-icon">&#128200;</div>
+    <div class="card-name">球员技术档案</div>
+    <div class="card-desc">投球/击球数据追踪、技术雷达评估、成长曲线图表，AI算法自动生成综合评分。</div>
+    <span class="card-status status-active">&#10003; 已上线</span>
+  </div>
+  <div class="card" onclick="location.href='05_权限与后台管理.html'">
+    <div class="card-top"></div>
+    <span class="card-tag">Module 05</span>
+    <span class="card-num">M5</span>
+    <div class="card-icon">&#9881;</div>
+    <div class="card-name">权限 &amp; 后台管理</div>
+    <div class="card-desc">角色权限配置、系统设置、操作日志审计、数据备份与恢复，保障系统安全。</div>
+    <span class="card-status status-active">&#10003; 已上线</span>
+  </div>
+  <div class="card" onclick="location.href='06_AI_运动分析_专属教练.html'">
+    <div class="card-top"></div>
+    <span class="card-tag">Module 06</span>
+    <span class="card-num">M6</span>
+    <div class="card-icon">&#128640;</div>
+    <div class="card-name">AI 专属教练</div>
+    <div class="card-desc">AI运动分析引擎 · 动作捕捉识别 · 技术诊断报告 · 个性化训练计划生成</div>
+    <span class="card-status status-demo">&#9889; Demo</span>
+  </div>
+  <div class="card" onclick="location.href='安安挥棒分析报告_v3.html'">
+    <div class="card-top"></div>
+    <span class="card-tag">AI Demo</span>
+    <span class="card-num">AI</span>
+    <div class="card-icon">&#128202;</div>
+    <div class="card-name">安安挥棒分析报告</div>
+    <div class="card-desc">挥棒速度 / 击球角度 / 力量曲线 / 技术雷达评分 · U12投手罗莀安专属档案</div>
+    <span class="card-status status-demo">&#9889; Demo</span>
   </div>
 </div>
-
+<div class="footer">
+  <div class="divider"></div>
+  <p>&#169; 2026 JIHUA Technology · 香港棒垒球AI分析平台</p>
+  <p style="margin-top:8px;">
+    <a href="https://github.com/lawson198194-droid/jihua-baseball">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    部署于 GitHub Pages
+    &nbsp;&middot;&nbsp;
+    数据由 Supabase 云端驱动
+  </p>
+</div>
 </body>
 </html>
