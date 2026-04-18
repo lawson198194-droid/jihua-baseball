@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>香港棒垒球青少年球员注册与管理系统 — JIHUA</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚾</text></svg>">
+<script src="database.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -896,8 +898,9 @@ let editingPlayerId = null;
 // ========================================================
 // INITIALIZE
 // ========================================================
-function init() {
-  loadData();
+async function init() {
+  await DB.load();
+  await loadData();
   buildPositionGrids();
   bindAgeCalculation();
   updateStats();
@@ -905,23 +908,27 @@ function init() {
   renderTable();
 }
 
-function loadData() {
-  const saved = localStorage.getItem('hkba_players');
-  if (saved) {
-    players = JSON.parse(saved);
-  } else {
-    // Sample HK data
-    players = [
-      { id: genId(), name: '陈俊轩', nameEn: 'CHAN Chun Hin', gender: 'M', dob: '2018-03-15', idType: 'hkid', idNum: 'Z1234567', clubType: 'club', clubName: '香港少年棒球会', team: 'U8 Tigers', role: 'official', pitchArm: 'R', batSide: 'R', mainPos: 'P', subPos: ['C'], regStatus: 'approved', activeStatus: 'active', parentName: '陈伟强', phone: '91234567', emergency: '陈伟强', createdAt: '2026-01-10' },
-      { id: genId(), name: '林可晴', nameEn: 'LAM Ho Ching', gender: 'F', dob: '2016-07-22', idType: 'hkid', idNum: 'Z7654321', clubType: 'school', clubName: '拔萃女书院附属小学', team: 'U12 Diamonds', role: 'official', pitchArm: 'L', batSide: 'L', mainPos: 'P', subPos: ['1B'], regStatus: 'approved', activeStatus: 'active', parentName: '林志明', phone: '98765432', emergency: '林志明', createdAt: '2026-01-12' },
-      { id: genId(), name: '张浩然', nameEn: 'CHEUNG Ho Yin', gender: 'M', dob: '2014-11-08', idType: 'hkid', idNum: 'K2345678', clubType: 'club', clubName: '香港投手学院', team: 'U15 Eagles', role: 'official', pitchArm: 'R', batSide: 'R', mainPos: 'P', subPos: ['1B'], regStatus: 'approved', activeStatus: 'active', parentName: '张家豪', phone: '91234568', emergency: '张家豪', createdAt: '2026-02-01' },
-      { id: genId(), name: '王诗雅', nameEn: 'WONG Sze Nga', gender: 'F', dob: '2015-05-30', idType: 'hkid', idNum: 'K8765432', clubType: 'district', clubName: '东区棒球队', team: 'U12 Stars', role: 'official', pitchArm: 'R', batSide: 'L', mainPos: 'C', subPos: ['SS'], regStatus: 'pending', activeStatus: 'active', parentName: '王国安', phone: '96543210', emergency: '王国安', createdAt: '2026-03-05' },
-      { id: genId(), name: '黄梓轩', nameEn: 'WONG Tsz Hin', gender: 'M', dob: '2012-09-14', idType: 'hkid', idNum: 'R3456789', clubType: 'club', clubName: '香港全明星棒球俱乐部', team: 'U18 Monarchs', role: 'official', pitchArm: 'L', batSide: 'B', mainPos: 'P', subPos: ['CF'], regStatus: 'approved', activeStatus: 'active', parentName: '黄金荣', phone: '91239988', emergency: '黄金荣', createdAt: '2026-02-20' },
-      { id: genId(), name: '李芷晴', nameEn: 'LEE Tsz Ching', gender: 'F', dob: '2017-02-18', idType: 'hkid', idNum: 'Z3456789', clubType: 'club', clubName: '香港少女棒球会', team: 'U10 Angels', role: 'official', pitchArm: 'R', batSide: 'R', mainPos: 'CF', subPos: ['LF', 'RF'], regStatus: 'approved', activeStatus: 'active', parentName: '李志伟', phone: '97654321', emergency: '李志伟', createdAt: '2026-03-10' },
-      { id: genId(), name: '周文博', nameEn: 'CHOW Man Pok', gender: 'M', dob: '2019-08-05', idType: 'hkid', idNum: 'Z9876543', clubType: 'club', clubName: '香港少年棒球会', team: 'U8 Tigers', role: 'reserve', pitchArm: 'R', batSide: 'R', mainPos: '1B', subPos: [], regStatus: 'pending', activeStatus: 'active', parentName: '周国华', phone: '93334444', emergency: '周国华', createdAt: '2026-04-01' },
-      { id: genId(), name: '吴宇轩', nameEn: 'NG Yu Hin', gender: 'M', dob: '2013-12-01', idType: 'hkid', idNum: 'M1234567', clubType: 'school', clubName: '英基学校', team: 'U15 Warriors', role: 'official', pitchArm: 'R', batSide: 'R', mainPos: 'SS', subPos: ['2B', '3B'], regStatus: 'approved', activeStatus: 'active', parentName: '吴大伟', phone: '95556666', emergency: '吴大伟', createdAt: '2026-01-25' },
-    ];
-    saveData();
+async function loadData() {
+  try {
+    const data = await DB.players.getAll();
+    if (data && data.length > 0) {
+      players = data;
+    } else {
+      players = [
+        { id: genId(), name: '陈俊轩', nameEn: 'CHAN Chun Hin', gender: 'M', dob: '2018-03-15', idType: 'hkid', idNum: 'Z1234567', clubType: 'club', clubName: '香港少年棒球会', team: 'U8 Tigers', role: 'official', pitchArm: 'R', batSide: 'R', mainPos: 'P', subPos: ['C'], regStatus: 'approved', activeStatus: 'active', parentName: '陈伟强', phone: '91234567', emergency: '陈伟强', createdAt: '2026-01-10' },
+        { id: genId(), name: '林可晴', nameEn: 'LAM Ho Ching', gender: 'F', dob: '2016-07-22', idType: 'hkid', idNum: 'Z7654321', clubType: 'school', clubName: '拔萃女书院附属小学', team: 'U12 Diamonds', role: 'official', pitchArm: 'L', batSide: 'L', mainPos: 'P', subPos: ['1B'], regStatus: 'approved', activeStatus: 'active', parentName: '林志明', phone: '98765432', emergency: '林志明', createdAt: '2026-01-12' },
+        { id: genId(), name: '张浩然', nameEn: 'CHEUNG Ho Yin', gender: 'M', dob: '2014-11-08', idType: 'hkid', idNum: 'K2345678', clubType: 'club', clubName: '香港投手学院', team: 'U15 Eagles', role: 'official', pitchArm: 'R', batSide: 'R', mainPos: 'P', subPos: ['1B'], regStatus: 'approved', activeStatus: 'active', parentName: '张家豪', phone: '91234568', emergency: '张家豪', createdAt: '2026-02-01' },
+        { id: genId(), name: '王诗雅', nameEn: 'WONG Sze Nga', gender: 'F', dob: '2015-05-30', idType: 'hkid', idNum: 'K8765432', clubType: 'district', clubName: '东区棒球队', team: 'U12 Stars', role: 'official', pitchArm: 'R', batSide: 'L', mainPos: 'C', subPos: ['SS'], regStatus: 'pending', activeStatus: 'active', parentName: '王国安', phone: '96543210', emergency: '王国安', createdAt: '2026-03-05' },
+        { id: genId(), name: '黄梓轩', nameEn: 'WONG Tsz Hin', gender: 'M', dob: '2012-09-14', idType: 'hkid', idNum: 'R3456789', clubType: 'club', clubName: '香港全明星棒球俱乐部', team: 'U18 Monarchs', role: 'official', pitchArm: 'L', batSide: 'B', mainPos: 'P', subPos: ['CF'], regStatus: 'approved', activeStatus: 'active', parentName: '黄金荣', phone: '91239988', emergency: '黄金荣', createdAt: '2026-02-20' },
+        { id: genId(), name: '李芷晴', nameEn: 'LEE Tsz Ching', gender: 'F', dob: '2017-02-18', idType: 'hkid', idNum: 'Z3456789', clubType: 'club', clubName: '香港少女棒球会', team: 'U10 Angels', role: 'official', pitchArm: 'R', batSide: 'R', mainPos: 'CF', subPos: ['LF', 'RF'], regStatus: 'approved', activeStatus: 'active', parentName: '李志伟', phone: '97654321', emergency: '李志伟', createdAt: '2026-03-10' },
+        { id: genId(), name: '周文博', nameEn: 'CHOW Man Pok', gender: 'M', dob: '2019-08-05', idType: 'hkid', idNum: 'Z9876543', clubType: 'club', clubName: '香港少年棒球会', team: 'U8 Tigers', role: 'reserve', pitchArm: 'R', batSide: 'R', mainPos: '1B', subPos: [], regStatus: 'pending', activeStatus: 'active', parentName: '周国华', phone: '93334444', emergency: '周国华', createdAt: '2026-04-01' },
+        { id: genId(), name: '吴宇轩', nameEn: 'NG Yu Hin', gender: 'M', dob: '2013-12-01', idType: 'hkid', idNum: 'M1234567', clubType: 'school', clubName: '英基学校', team: 'U15 Warriors', role: 'official', pitchArm: 'R', batSide: 'R', mainPos: 'SS', subPos: ['2B', '3B'], regStatus: 'approved', activeStatus: 'active', parentName: '吴大伟', phone: '95556666', emergency: '吴大伟', createdAt: '2026-01-25' },
+      ];
+      saveData();
+    }
+  } catch (e) {
+    const saved = localStorage.getItem('hkba_players');
+    players = saved ? JSON.parse(saved) : [];
   }
 }
 
@@ -1215,7 +1222,7 @@ function clearForm() {
   updateAgeGroupDisplay();
 }
 
-function savePlayer() {
+async function savePlayer() {
   const name = document.getElementById('fName').value.trim();
   const dob = document.getElementById('fDob').value;
   const clubName = document.getElementById('fClubName').value.trim();
@@ -1223,7 +1230,6 @@ function savePlayer() {
   if (!dob) { toast('请填写出生日期', 'error'); return; }
   if (!clubName) { toast('请填写单位名称', 'error'); return; }
 
-  const ag = calcAgeGroup(dob, currentYear);
   const data = {
     id: editingPlayerId || genId(),
     name,
@@ -1248,29 +1254,46 @@ function savePlayer() {
     createdAt: editingPlayerId ? players.find(x => x.id === editingPlayerId)?.createdAt : new Date().toISOString().split('T')[0],
   };
 
-  if (editingPlayerId) {
-    const idx = players.findIndex(x => x.id === editingPlayerId);
-    if (idx >= 0) players[idx] = data;
-    toast('球员信息已更新');
-  } else {
-    players.unshift(data);
-    toast('球员已新增');
+  try {
+    if (editingPlayerId) {
+      await DB.players.update(editingPlayerId, data);
+      const idx = players.findIndex(x => x.id === editingPlayerId);
+      if (idx >= 0) players[idx] = data;
+      toast('球员信息已更新 ✓ (云端同步)');
+    } else {
+      const result = await DB.players.add(data);
+      players.unshift(data);
+      toast('球员已新增 ✓ (云端同步)');
+    }
+  } catch (e) {
+    // local fallback
+    if (editingPlayerId) {
+      const idx = players.findIndex(x => x.id === editingPlayerId);
+      if (idx >= 0) players[idx] = data;
+      toast('球员信息已更新 ✓ (本地保存)');
+    } else {
+      players.unshift(data);
+      toast('球员已新增 ✓ (本地保存)');
+    }
+    saveData();
   }
-  saveData();
   updateStats();
   updateClubFilter();
   renderTable();
   closeModal('playerModal');
 }
 
-function deletePlayer(id) {
+async function deletePlayer(id) {
   if (!confirm('确定删除该球员记录？')) return;
+  try {
+    await DB.players.delete(id);
+  } catch (e) { /* continue locally */ }
   players = players.filter(x => x.id !== id);
   selectedIds.delete(id);
   saveData();
   updateStats();
   renderTable();
-  toast('已删除');
+  toast('已删除 ✓');
 }
 
 // ========================================================

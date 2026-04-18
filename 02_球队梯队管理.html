@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>模块2：球队 & 梯队管理 — 香港棒垒球总会官方系统</title>
+<script src="database.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; background: #f0f2f5; color: #1a1a2e; font-size: 13px; }
@@ -1514,11 +1515,15 @@ document.addEventListener('click', e => {
 });
 
 // ==================== INIT ====================
-(function init() {
+(async function init() {
   document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('zh-HK', {year:'numeric',month:'long',day:'numeric'});
 
-  // Init data if empty
-  if (!localStorage.getItem(STORAGE_KEY_TEAMS)) {
+  // Load from cloud DB first
+  await DB.load();
+  const dbTeams = DB.cache().teams;
+  if (dbTeams && dbTeams.length > 0) {
+    save(STORAGE_KEY_TEAMS, dbTeams);
+  } else if (!localStorage.getItem(STORAGE_KEY_TEAMS)) {
     initSampleData();
   }
 
