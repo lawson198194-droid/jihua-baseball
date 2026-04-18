@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>香港棒垒球青少年球员注册与管理系统 — JIHUA</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --primary: #1a3a5c;
+    --primary-light: #2d5a8e;
+    --accent: #e63946;
+    --accent2: #f4a261;
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --text: #1a2a3a;
+    --text-light: #6b7c93;
+    --border: #dde3ed;
+    --success: #2d8a4e;
+    --warning: #d4850a;
+    --danger: #c0392b;
+    --shadow: 0 2px 12px rgba(26,58,92,0.08);
+    --shadow-lg: 0 8px 32px rgba(26,58,92,0.15);
+    --radius: 10px;
+    --sidebar-w: 260px;
+  }
+  body { font-family: 'Noto Sans SC', -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+  body.modal-open { overflow: hidden; }
+
+  /* === LAYOUT === */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: var(--sidebar-w); background: var(--primary);
+    color: #fff; display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; height: 100vh; z-index: 100;
+    transition: transform 0.3s;
+  }
+  .sidebar-logo { padding: 24px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .sidebar-logo h1 { font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+  .sidebar-logo span { font-size: 11px; opacity: 0.5; display: block; margin-top: 4px; }
+  .sidebar-logo .brand-sub { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+  .sidebar-nav { flex: 1; padding: 12px 0; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 20px; cursor: pointer; border-radius: 0;
+    color: rgba(255,255,255,0.7); font-size: 13.5px; font-weight: 500;
+    transition: all 0.15s; border-left: 3px solid transparent;
+  }
+  .nav-item svg { flex-shrink: 0; }
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .nav-item.active { background: rgba(255,255,255,0.12); color: #fff; border-left-color: var(--accent2); }
+  .nav-item.active svg { color: var(--accent2); }
+  .nav-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 8px 20px; }
+  .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 11px; opacity: 0.5; }
+  .main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; }
+  .topbar {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 0 28px; height: 60px; display: flex; align-items: center;
+    justify-content: space-between; position: sticky; top: 0; z-index: 50;
+    box-shadow: 0 1px 4px rgba(26,58,92,0.05);
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-title { font-size: 16px; font-weight: 600; color: var(--primary); }
+  .topbar-badge { background: var(--accent); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+  .topbar-stat { text-align: center; }
+  .topbar-stat .num { font-size: 18px; font-weight: 700; color: var(--primary); }
+  .topbar-stat .label { font-size: 11px; color: var(--text-light); }
+  .topbar-stat-divider { width: 1px; height: 30px; background: var(--border); }
+  .topbar-user { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .topbar-user .avatar { width: 32px; height: 32px; background: var(--primary); border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; }
+
+  .page { padding: 28px; display: none; }
+  .page.active { display: block; }
+
+  /* === CARDS & PANELS === */
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .card-header { padding: 18px 24px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-size: 15px; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+  .card-body { padding: 24px; }
+
+  /* === STATS === */
+  .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    border: 1px solid var(--border); padding: 20px; text-align: center;
+    transition: transform 0.15s, box-shadow 0.15s; cursor: pointer;
+  }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+  .stat-card.active-filter { border-color: var(--primary); background: #f0f7ff; }
+  .stat-card .stat-num { font-size: 32px; font-weight: 700; color: var(--primary); }
+  .stat-card .stat-label { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+  .stat-card .stat-icon { font-size: 22px; margin-bottom: 8px; }
+
+  /* === BUTTONS === */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+    border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer;
+    border: none; font-family: inherit; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-light); }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover { background: #c62f3c; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-warning { background: var(--warning); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn svg { flex-shrink: 0; }
+
+  /* === TABLES === */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: #f8fafc; padding: 10px 14px; text-align: left;
+    font-weight: 600; color: var(--text-light); font-size: 11.5px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--border); white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:hover { background: #f8fafc; }
+  tbody td { padding: 12px 14px; vertical-align: middle; }
+  .col-check { width: 40px; }
+  input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
+
+  /* === BADGE === */
+  .badge {
+    display: inline-flex; align-items: center; padding: 3px 9px;
+    border-radius: 20px; font-size: 11.5px; font-weight: 600;
+  }
+  .badge-u8 { background: #e8f5e9; color: #2d8a4e; }
+  .badge-u10 { background: #e3f2fd; color: #1565c0; }
+  .badge-u12 { background: #fff3e0; color: #e65100; }
+  .badge-u15 { background: #fce4ec; color: #880e4f; }
+  .badge-u18 { background: #f3e5f5; color: #4a148c; }
+  .badge-approved { background: #e8f5e9; color: #2d8a4e; }
+  .badge-pending { background: #fff8e1; color: #d4850a; }
+  .badge-rejected { background: #ffebee; color: #c0392b; }
+  .badge-active { background: #e8f5e9; color: #2d8a4e; }
+  .badge-paused { background: #fff8e1; color: #d4850a; }
+  .badge-retired { background: #eceff1; color: #546e7a; }
+
+  /* === SEARCH & FILTER === */
+  .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .search-box {
+    flex: 1; min-width: 200px; position: relative;
+  }
+  .search-box input {
+    width: 100%; padding: 9px 12px 9px 36px; border: 1px solid var(--border);
+    border-radius: 7px; font-size: 13px; font-family: inherit;
+    transition: border 0.15s; background: var(--card);
+  }
+  .search-box input:focus { outline: none; border-color: var(--primary); }
+  .search-box svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-light); }
+  .filter-select {
+    padding: 9px 12px; border: 1px solid var(--border); border-radius: 7px;
+    font-size: 13px; font-family: inherit; background: var(--card);
+    cursor: pointer; color: var(--text); min-width: 130px;
+  }
+  .filter-select:focus { outline: none; border-color: var(--primary); }
+  .toolbar-right { display: flex; gap: 8px; margin-left: auto; }
+
+  /* === PAGINATION === */
+  .pagination { display: flex; align-items: center; justify-content: space-between; padding: 14px 0 0; }
+  .pagination-info { font-size: 12px; color: var(--text-light); }
+  .pagination-controls { display: flex; gap: 4px; align-items: center; }
+  .page-btn {
+    width: 32px; height: 32px; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--card); cursor: pointer;
+    font-size: 13px; display: flex; align-items: center; justify-content: center;
+    font-family: inherit; transition: all 0.1s;
+  }
+  .page-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  /* === MODAL === */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(26,58,92,0.5);
+    backdrop-filter: blur(4px); z-index: 200; display: none;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--card); border-radius: 14px; box-shadow: var(--shadow-lg);
+    width: 100%; max-width: 780px; max-height: 90vh; overflow-y: auto;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } }
+  .modal-header { padding: 22px 28px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-size: 16px; font-weight: 600; color: var(--primary); }
+  .modal-close { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border); background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text-light); transition: all 0.1s; }
+  .modal-close:hover { background: #f5f5f5; }
+  .modal-body { padding: 28px; }
+  .modal-footer { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* === FORM === */
+  .form-section { margin-bottom: 24px; }
+  .form-section-title {
+    font-size: 12px; font-weight: 700; color: var(--text-light);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .form-row.full { grid-template-columns: 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-label { font-size: 12.5px; font-weight: 500; color: var(--text); }
+  .form-label .required { color: var(--accent); margin-left: 2px; }
+  .form-input, .form-select {
+    padding: 9px 12px; border: 1px solid var(--border); border-radius: 7px;
+    font-size: 13px; font-family: inherit; background: var(--card);
+    transition: border 0.15s; color: var(--text);
+  }
+  .form-input:focus, .form-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,58,92,0.06); }
+  .form-hint { font-size: 11px; color: var(--text-light); }
+  .form-readonly { padding: 9px 12px; background: #f8fafc; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; color: var(--text-light); }
+
+  /* === POSITION PICKER === */
+  .position-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .position-chip {
+    padding: 5px 12px; border: 1px solid var(--border); border-radius: 20px;
+    font-size: 12px; cursor: pointer; transition: all 0.1s;
+    background: var(--card); color: var(--text);
+  }
+  .position-chip:hover { border-color: var(--primary); color: var(--primary); }
+  .position-chip.selected { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .position-chip.main-pos { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  /* === PHOTO UPLOAD === */
+  .photo-upload {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .photo-preview {
+    width: 80px; height: 80px; border-radius: 10px; border: 2px dashed var(--border);
+    background: #f8fafc; display: flex; align-items: center; justify-content: center;
+    font-size: 28px; color: var(--text-light); cursor: pointer; overflow: hidden;
+    transition: border 0.15s;
+  }
+  .photo-preview:hover { border-color: var(--primary); }
+  .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-info { font-size: 12px; color: var(--text-light); line-height: 1.6; }
+
+  /* === DETAIL VIEW === */
+  .player-detail { display: flex; gap: 28px; }
+  .player-detail-left { width: 200px; flex-shrink: 0; }
+  .player-avatar-lg {
+    width: 200px; height: 200px; border-radius: 14px; border: 3px solid var(--border);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 64px; color: rgba(255,255,255,0.8); overflow: hidden;
+  }
+  .player-avatar-lg img { width: 100%; height: 100%; object-fit: cover; }
+  .player-detail-right { flex: 1; }
+  .player-name-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+  .player-name { font-size: 24px; font-weight: 700; color: var(--primary); }
+  .player-en { font-size: 14px; color: var(--text-light); }
+  .player-badges { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 16px; }
+  .player-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .meta-item { background: #f8fafc; border-radius: 8px; padding: 12px; }
+  .meta-item .meta-label { font-size: 11px; color: var(--text-light); margin-bottom: 4px; }
+  .meta-item .meta-value { font-size: 15px; font-weight: 600; color: var(--primary); }
+
+  /* === IMPORT/EXPORT === */
+  .import-zone {
+    border: 2px dashed var(--border); border-radius: 10px; padding: 40px;
+    text-align: center; cursor: pointer; transition: all 0.15s;
+  }
+  .import-zone:hover { border-color: var(--primary); background: #f8fafc; }
+  .import-zone .icon { font-size: 40px; margin-bottom: 12px; color: var(--text-light); }
+  .import-zone .text { font-size: 14px; color: var(--text); margin-bottom: 4px; }
+  .import-zone .hint { font-size: 12px; color: var(--text-light); }
+
+  /* === CHART BAR === */
+  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; padding-top: 20px; }
+  .bar-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .bar { width: 100%; border-radius: 6px 6px 0 0; transition: height 0.5s ease; min-height: 4px; }
+  .bar-label { font-size: 11px; color: var(--text-light); font-weight: 500; }
+
+  /* === ACTIONS === */
+  .row-actions { display: flex; gap: 6px; }
+  .action-btn {
+    width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border);
+    background: none; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; transition: all 0.1s; font-size: 13px;
+  }
+  .action-btn:hover { background: #f0f4f8; }
+  .action-btn.view:hover { border-color: var(--primary); color: var(--primary); }
+  .action-btn.edit:hover { border-color: var(--warning); color: var(--warning); }
+  .action-btn.delete:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* === TOAST === */
+  .toast-container { position: fixed; top: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--card); border-radius: 8px; box-shadow: var(--shadow-lg);
+    padding: 12px 18px; display: flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 500; animation: toastIn 0.2s ease;
+    border-left: 4px solid var(--success);
+  }
+  .toast.error { border-left-color: var(--danger); }
+  .toast.warning { border-left-color: var(--warning); }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } }
+
+  /* === MISC === */
+  .text-success { color: var(--success); }
+  .text-danger { color: var(--danger); }
+  .text-warning { color: var(--warning); }
+  .text-muted { color: var(--text-light); }
+  .fw-600 { font-weight: 600; }
+  .mb-4 { margin-bottom: 16px; }
+  .mt-4 { margin-top: 16px; }
+  .empty-state { text-align: center; padding: 48px; color: var(--text-light); }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+
+  /* === PRINT === */
+  @media print {
+    .sidebar, .topbar, .toolbar, .pagination, .modal-footer, .btn, .row-actions, .modal-header .modal-close { display: none !important; }
+    .main { margin-left: 0 !important; }
+    .modal { box-shadow: none; border: 1px solid #ccc; max-height: none; }
+    .modal-overlay { position: static; background: none; display: block; }
+    body { background: white; }
+  }
+
+  /* === RADIO GROUP === */
+  .radio-group { display: flex; gap: 16px; }
+  .radio-item { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; }
+  .radio-item input[type="radio"] { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+
+  /* === SWITCH === */
+  .switch-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .switch-row:last-child { border-bottom: none; }
+  .switch { position: relative; width: 44px; height: 24px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch-slider { position: absolute; inset: 0; background: #ccc; border-radius: 24px; cursor: pointer; transition: 0.2s; }
+  .switch-slider::before { content: ''; position: absolute; width: 18px; height: 18px; background: white; border-radius: 50%; top: 3px; left: 3px; transition: 0.2s; }
+  .switch input:checked + .switch-slider { background: var(--success); }
+  .switch input:checked + .switch-slider::before { transform: translateX(20px); }
+
+  /* === BATCH ACTIONS === */
+  .batch-bar {
+    background: var(--primary); color: #fff; padding: 10px 20px;
+    border-radius: 8px; display: none; align-items: center; gap: 12px;
+    margin-bottom: 12px; font-size: 13px;
+  }
+  .batch-bar.show { display: flex; }
+  .batch-bar .count { font-weight: 700; }
+
+  /* === STEP INDICATOR === */
+  .step-indicator { display: flex; gap: 0; margin-bottom: 24px; }
+  .step { flex: 1; display: flex; align-items: center; gap: 0; }
+  .step-circle {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--border);
+    color: var(--text-light); display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0; transition: all 0.2s;
+  }
+  .step.active .step-circle { background: var(--primary); color: #fff; }
+  .step.done .step-circle { background: var(--success); color: #fff; }
+  .step-label { font-size: 12px; color: var(--text-light); margin-left: 8px; white-space: nowrap; }
+  .step.active .step-label { color: var(--primary); font-weight: 600; }
+  .step-line { flex: 1; height: 2px; background: var(--border); margin: 0 8px; align-self: center; }
+  .step.done .step-line { background: var(--success); }
+
+  /* === INFO BOX === */
+  .info-box { background: #f0f7ff; border: 1px solid #c3d9f5; border-radius: 8px; padding: 14px 16px; font-size: 13px; color: var(--primary); margin-bottom: 16px; display: flex; gap: 10px; align-items: flex-start; }
+  .info-box svg { flex-shrink: 0; margin-top: 1px; }
+  .info-box.warning { background: #fff8e1; border-color: #f5d06c; color: #7a5c00; }
+
+  @media (max-width: 900px) {
+    .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    .player-detail { flex-direction: column; }
+    .player-detail-left { width: 100%; }
+    .player-avatar-lg { width: 120px; height: 120px; margin: 0 auto; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <h1>JIHUA</h1>
+      <span class="brand-sub">香港棒垒球 AI 科技</span>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-item active" data-page="players" onclick="switchPage('players')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        球员资料库
+      </div>
+      <div class="nav-item" data-page="teams" onclick="switchPage('teams')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+        球队 & 梯队管理
+      </div>
+      <div class="nav-divider"></div>
+      <div class="nav-item" data-page="competition" onclick="switchPage('competition')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21h8M12 17v4M7 4h10l-2 7H9L7 4zM5 4h14"/></svg>
+        赛事管理 & 记分
+      </div>
+      <div class="nav-item" data-page="stats" onclick="switchPage('stats')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        球员技术数据
+      </div>
+      <div class="nav-divider"></div>
+      <div class="nav-item" data-page="admin" onclick="switchPage('admin')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
+        权限 & 后台管理
+      </div>
+    </div>
+    <div class="sidebar-footer">香港棒垒球总会 · HKBA<br>JIHUA Technology © 2026</div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title" id="topbarTitle">🏉 球员资料库</div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-stat">
+          <div class="num" id="statTotal">--</div>
+          <div class="label">总球员</div>
+        </div>
+        <div class="topbar-stat-divider"></div>
+        <div class="topbar-stat">
+          <div class="num" id="statApproved">--</div>
+          <div class="label">已审核</div>
+        </div>
+        <div class="topbar-stat-divider"></div>
+        <div class="topbar-stat">
+          <div class="num" id="statPending">--</div>
+          <div class="label">待审核</div>
+        </div>
+        <div class="topbar-stat-divider"></div>
+        <div class="topbar-user">
+          <div class="avatar">管</div>
+          <span>棒总管理员</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- === PAGE: PLAYERS === -->
+    <div class="page active" id="page-players">
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card active-filter" onclick="filterByAge('')">
+          <div class="stat-icon">👥</div>
+          <div class="stat-num" id="cnt-all">0</div>
+          <div class="stat-label">全部球员</div>
+        </div>
+        <div class="stat-card" onclick="filterByAge('U8')">
+          <div class="stat-icon">⚾</div>
+          <div class="stat-num" id="cnt-u8">0</div>
+          <div class="stat-label">U8</div>
+        </div>
+        <div class="stat-card" onclick="filterByAge('U10')">
+          <div class="stat-icon">🏆</div>
+          <div class="stat-num" id="cnt-u10">0</div>
+          <div class="stat-label">U10</div>
+        </div>
+        <div class="stat-card" onclick="filterByAge('U12')">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-num" id="cnt-u12">0</div>
+          <div class="stat-label">U12</div>
+        </div>
+        <div class="stat-card" onclick="filterByAge('U15')">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-num" id="cnt-u15">0</div>
+          <div class="stat-label">U15</div>
+        </div>
+        <div class="stat-card" onclick="filterByAge('U18')">
+          <div class="stat-icon">🚀</div>
+          <div class="stat-num" id="cnt-u18">0</div>
+          <div class="stat-label">U18</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg width="16" height="16" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            球员列表
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="showImportModal()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+              批量导入
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="exportPlayers()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              导出 Excel
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="showAddModal()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              新增球员
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="batch-bar" id="batchBar">
+            <span>已选择 <span class="count" id="batchCount">0</span> 名球员</span>
+            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);" onclick="batchApprove()">批量审核通过</button>
+            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);" onclick="batchExport()">导出选中</button>
+            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);" onclick="clearSelection()">取消选择</button>
+          </div>
+          <div class="toolbar">
+            <div class="search-box">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" placeholder="搜索姓名、证件号、俱乐部…" id="searchInput" oninput="renderTable()">
+            </div>
+            <select class="filter-select" id="filterAge" onchange="renderTable()">
+              <option value="">全部组别</option>
+              <option value="U8">U8</option>
+              <option value="U10">U10</option>
+              <option value="U12">U12</option>
+              <option value="U15">U15</option>
+              <option value="U18">U18</option>
+            </select>
+            <select class="filter-select" id="filterStatus" onchange="renderTable()">
+              <option value="">全部状态</option>
+              <option value="approved">已通过</option>
+              <option value="pending">待审核</option>
+              <option value="rejected">已驳回</option>
+            </select>
+            <select class="filter-select" id="filterClub" onchange="renderTable()">
+              <option value="">全部俱乐部</option>
+            </select>
+            <select class="filter-select" id="filterPosition" onchange="renderTable()">
+              <option value="">全部位置</option>
+              <option value="P">投手</option>
+              <option value="C">捕手</option>
+              <option value="1B">一垒</option>
+              <option value="2B">二垒</option>
+              <option value="3B">三垒</option>
+              <option value="SS">游击</option>
+              <option value="LF">左外</option>
+              <option value="CF">中坚</option>
+              <option value="RF">右外</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="col-check"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
+                  <th>球员姓名</th>
+                  <th>组别</th>
+                  <th>性别</th>
+                  <th>出生日期</th>
+                  <th>俱乐部/学校</th>
+                  <th>主力位置</th>
+                  <th>投/打</th>
+                  <th>注册状态</th>
+                  <th>在队状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="playerTableBody"></tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <div class="pagination-info" id="paginationInfo">显示 0 条，共 0 条</div>
+            <div class="pagination-controls" id="paginationControls"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE: TEAMS === -->
+    <div class="page" id="page-teams">
+      <div style="padding:28px;">
+        <div class="info-box">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div><strong>模块 2：球队 &amp; 梯队管理</strong> — 正在开发中敬请期待。罗哥确认模块1无问题后，我将开始制作本模块。</div>
+        </div>
+        <div class="card">
+          <div class="card-body empty-state">
+            <div class="icon">🏟️</div>
+            <div style="font-size:16px;margin-bottom:8px;">球队管理模块</div>
+            <div>梯队分组 · 球队注册 · 球员分配 · 跨队调动</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE: COMPETITION === -->
+    <div class="page" id="page-competition">
+      <div style="padding:28px;">
+        <div class="info-box">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div><strong>模块 3：赛事管理 &amp; 记分</strong> — 正在开发中敬请期待。罗哥确认模块1无问题后，我将开始制作本模块。</div>
+        </div>
+        <div class="card">
+          <div class="card-body empty-state">
+            <div class="icon">🏆</div>
+            <div style="font-size:16px;margin-bottom:8px;">赛事管理与记分系统</div>
+            <div>赛事创建 · 赛程编排 · 实时记分 · 战报导出</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE: STATS === -->
+    <div class="page" id="page-stats">
+      <div style="padding:28px;">
+        <div class="info-box">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div><strong>模块 4：球员技术数据</strong> — 正在开发中敬请期待。罗哥确认模块1无问题后，我将开始制作本模块。</div>
+        </div>
+        <div class="card">
+          <div class="card-body empty-state">
+            <div class="icon">📊</div>
+            <div style="font-size:16px;margin-bottom:8px;">球员技术数据档案</div>
+            <div>投手数据 · 打击数据 · 守备数据 · AI分析报告</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE: ADMIN === -->
+    <div class="page" id="page-admin">
+      <div style="padding:28px;">
+        <div class="info-box">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div><strong>模块 5：权限 &amp; 后台管理</strong> — 正在开发中敬请期待。罗哥确认模块1无问题后，我将开始制作本模块。</div>
+        </div>
+        <div class="card">
+          <div class="card-body empty-state">
+            <div class="icon">⚙️</div>
+            <div style="font-size:16px;margin-bottom:8px;">权限与后台管理</div>
+            <div>角色权限 · 教练账号 · 操作日志 · 系统设置</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- === ADD/EDIT MODAL === -->
+<div class="modal-overlay" id="playerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">新增球员</div>
+      <button class="modal-close" onclick="closeModal('playerModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+
+      <!-- 基本信息 -->
+      <div class="form-section">
+        <div class="form-section-title">📋 基本信息</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">球员姓名<span class="required">*</span></label>
+            <input class="form-input" id="fName" placeholder="中文姓名" maxlength="20">
+          </div>
+          <div class="form-group">
+            <label class="form-label">英文姓名</label>
+            <input class="form-input" id="fNameEn" placeholder="English name" maxlength="40">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">性别<span class="required">*</span></label>
+            <div class="radio-group" style="padding-top:8px;">
+              <label class="radio-item"><input type="radio" name="fGender" value="M" checked> 男</label>
+              <label class="radio-item"><input type="radio" name="fGender" value="F"> 女</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">出生日期<span class="required">*</span></label>
+            <input class="form-input" type="date" id="fDob">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">证件类型</label>
+            <select class="form-select" id="fIdType">
+              <option value="hkid">香港身份证</option>
+              <option value="mhp">回乡证</option>
+              <option value="passport">护照</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">证件号码</label>
+            <input class="form-input" id="fIdNum" placeholder="证件号码">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">所属单位<span class="required">*</span></label>
+            <select class="form-select" id="fClubType">
+              <option value="club">俱乐部</option>
+              <option value="school">学校</option>
+              <option value="district">区队</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">单位名称<span class="required">*</span></label>
+            <input class="form-input" id="fClubName" placeholder="俱乐部/学校/区队名称">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">代表队伍</label>
+            <input class="form-input" id="fTeam" placeholder="队伍名称">
+          </div>
+          <div class="form-group">
+            <label class="form-label">队内身份</label>
+            <select class="form-select" id="fRole">
+              <option value="official">正式队员</option>
+              <option value="reserve">后备</option>
+              <option value="training">集训</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 组别计算 -->
+      <div class="form-section">
+        <div class="form-section-title">📅 参赛组别（系统自动计算）</div>
+        <div class="info-box" id="ageGroupInfo" style="background:#e8f5e9;border-color:#a5d6a7;color:#2d8a4e;">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          <div>请先填写出生日期，系统将自动计算参赛组别</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">当前年份</label>
+            <input class="form-input" type="number" id="fYear" min="2020" max="2035" value="2026">
+          </div>
+          <div class="form-group">
+            <label class="form-label">自动判定组别</label>
+            <div class="form-readonly" id="fAgeGroupDisplay" style="font-size:15px;font-weight:600;color:var(--primary);">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 运动信息 -->
+      <div class="form-section">
+        <div class="form-section-title">⚾ 运动信息</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">投手习惯</label>
+            <div class="radio-group" style="padding-top:8px;">
+              <label class="radio-item"><input type="radio" name="fPitchArm" value="R" checked> 右投</label>
+              <label class="radio-item"><input type="radio" name="fPitchArm" value="L"> 左投</label>
+              <label class="radio-item"><input type="radio" name="fPitchArm" value="B"> 双侧</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">打击习惯</label>
+            <div class="radio-group" style="padding-top:8px;">
+              <label class="radio-item"><input type="radio" name="fBatSide" value="R" checked> 右打</label>
+              <label class="radio-item"><input type="radio" name="fBatSide" value="L"> 左打</label>
+              <label class="radio-item"><input type="radio" name="fBatSide" value="B"> 左右开弓</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group mb-4">
+          <label class="form-label">主力位置（单选）</label>
+          <div class="position-grid" id="mainPosGrid"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">备选位置（可多选）</label>
+          <div class="position-grid" id="subPosGrid"></div>
+        </div>
+      </div>
+
+      <!-- 家长信息 -->
+      <div class="form-section">
+        <div class="form-section-title">👨‍👩‍👧 家长/联系人信息 <span style="font-weight:400;color:var(--text-light);font-size:11px;">（仅棒总管理员可见）</span></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">家长姓名</label>
+            <input class="form-input" id="fParentName" placeholder="家长姓名">
+          </div>
+          <div class="form-group">
+            <label class="form-label">联系电话</label>
+            <input class="form-input" id="fPhone" placeholder="手机/电话">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">紧急联系人</label>
+            <input class="form-input" id="fEmergency" placeholder="紧急联系人">
+          </div>
+          <div class="form-group">
+            <label class="form-label">注册状态</label>
+            <select class="form-select" id="fRegStatus">
+              <option value="pending">待审核</option>
+              <option value="approved">已通过</option>
+              <option value="rejected">已驳回</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('playerModal')">取消</button>
+      <button class="btn btn-primary" onclick="savePlayer()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        保存球员
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- === DETAIL MODAL === -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" style="max-width:860px;">
+    <div class="modal-header">
+      <div class="modal-title">球员档案</div>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div class="modal-body" id="detailContent"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="printDetail()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        打印档案
+      </button>
+      <button class="btn btn-outline" onclick="editFromDetail()">编辑</button>
+      <button class="btn btn-primary" onclick="closeModal('detailModal')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- === IMPORT MODAL === -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <div class="modal-title">批量导入球员</div>
+      <button class="modal-close" onclick="closeModal('importModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-box">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div>请下载 <strong>导入模板</strong>，按格式填写后上传。支持 .xlsx / .xls / .csv 格式。</div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:16px;">
+        <button class="btn btn-outline" onclick="downloadTemplate()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          下载导入模板
+        </button>
+      </div>
+      <div class="import-zone" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">📂</div>
+        <div class="text">点击上传文件，或拖拽文件到这里</div>
+        <div class="hint">支持 .xlsx .xls .csv，单次最多 500 条</div>
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileImport(this)">
+      <div id="importResult" style="margin-top:16px;display:none;" class="card" style="background:#f0f7ff;">
+        <div class="card-body" id="importResultContent"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('importModal')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ========================================================
+// CONSTANTS & STATE
+// ========================================================
+const POSITIONS = [
+  { code: 'P', label: '投手 P', full: '投手' },
+  { code: 'C', label: '捕手 C', full: '捕手' },
+  { code: '1B', label: '一垒 1B', full: '一垒' },
+  { code: '2B', label: '二垒 2B', full: '二垒' },
+  { code: '3B', label: '三垒 3B', full: '三垒' },
+  { code: 'SS', label: '游击 SS', full: '游击' },
+  { code: 'LF', label: '左外野 LF', full: '左外野' },
+  { code: 'CF', label: '中外野 CF', full: '中外野' },
+  { code: 'RF', label: '右外野 RF', full: '右外野' },
+  { code: 'UTIL', label: '多功能', full: '多功能' },
+];
+const GENDER_MAP = { M: '男', F: '女' };
+const PITCH_ARM_MAP = { R: '右投', L: '左投', B: '双侧' };
+const BAT_SIDE_MAP = { R: '右打', L: '左打', B: '左右开弓' };
+const ROLE_MAP = { official: '正式队员', reserve: '后备', training: '集训' };
+const REG_STATUS_MAP = { pending: '待审核', approved: '已通过', rejected: '已驳回' };
+const CLUB_TYPE_MAP = { club: '俱乐部', school: '学校', district: '区队' };
+const currentYear = new Date().getFullYear();
+let players = [];
+let currentFilter = '';
+let currentPage = 1;
+const pageSize = 20;
+let selectedIds = new Set();
+let selectedMainPos = '';
+let selectedSubPos = new Set();
+let editingPlayerId = null;
+
+// ========================================================
+// INITIALIZE
+// ========================================================
+function init() {
+  loadData();
+  buildPositionGrids();
+  bindAgeCalculation();
+  updateStats();
+  updateClubFilter();
+  renderTable();
+}
+
+function loadData() {
+  const saved = localStorage.getItem('hkba_players');
+  if (saved) {
+    players = JSON.parse(saved);
+  } else {
+    // Sample HK data
+    players = [
+      { id: genId(), name: '陈俊轩', nameEn: 'CHAN Chun Hin', gender: 'M', dob: '2018-03-15', idType: 'hkid', idNum: 'Z1234567', clubType: 'club', clubName: '香港少年棒球会', team: 'U8 Tigers', role: 'official', pitchArm: 'R', batSide: 'R', mainPos: 'P', subPos: ['C'], regStatus: 'approved', activeStatus: 'active', parentName: '陈伟强', phone: '91234567', emergency: '陈伟强', createdAt: '2026-01-10' },
+      { id: genId(), name: '林可晴', nameEn: 'LAM Ho Ching', gender: 'F', dob: '2016-07-22', idType: 'hkid', idNum: 'Z7654321', clubType: 'school', clubName: '拔萃女书院附属小学', team: 'U12 Diamonds', role: 'official', pitchArm: 'L', batSide: 'L', mainPos: 'P', subPos: ['1B'], regStatus: 'approved', activeStatus: 'active', parentName: '林志明', phone: '98765432', emergency: '林志明', createdAt: '2026-01-12' },
+      { id: genId(), name: '张浩然', nameEn: 'CHEUNG Ho Yin', gender: 'M', dob: '2014-11-08', idType: 'hkid', idNum: 'K2345678', clubType: 'club', clubName: '香港投手学院', team: 'U15 Eagles', role: 'official', pitchArm: 'R', batSide: 'R', mainPos: 'P', subPos: ['1B'], regStatus: 'approved', activeStatus: 'active', parentName: '张家豪', phone: '91234568', emergency: '张家豪', createdAt: '2026-02-01' },
+      { id: genId(), name: '王诗雅', nameEn: 'WONG Sze Nga', gender: 'F', dob: '2015-05-30', idType: 'hkid', idNum: 'K8765432', clubType: 'district', clubName: '东区棒球队', team: 'U12 Stars', role: 'official', pitchArm: 'R', batSide: 'L', mainPos: 'C', subPos: ['SS'], regStatus: 'pending', activeStatus: 'active', parentName: '王国安', phone: '96543210', emergency: '王国安', createdAt: '2026-03-05' },
+      { id: genId(), name: '黄梓轩', nameEn: 'WONG Tsz Hin', gender: 'M', dob: '2012-09-14', idType: 'hkid', idNum: 'R3456789', clubType: 'club', clubName: '香港全明星棒球俱乐部', team: 'U18 Monarchs', role: 'official', pitchArm: 'L', batSide: 'B', mainPos: 'P', subPos: ['CF'], regStatus: 'approved', activeStatus: 'active', parentName: '黄金荣', phone: '91239988', emergency: '黄金荣', createdAt: '2026-02-20' },
+      { id: genId(), name: '李芷晴', nameEn: 'LEE Tsz Ching', gender: 'F', dob: '2017-02-18', idType: 'hkid', idNum: 'Z3456789', clubType: 'club', clubName: '香港少女棒球会', team: 'U10 Angels', role: 'official', pitchArm: 'R', batSide: 'R', mainPos: 'CF', subPos: ['LF', 'RF'], regStatus: 'approved', activeStatus: 'active', parentName: '李志伟', phone: '97654321', emergency: '李志伟', createdAt: '2026-03-10' },
+      { id: genId(), name: '周文博', nameEn: 'CHOW Man Pok', gender: 'M', dob: '2019-08-05', idType: 'hkid', idNum: 'Z9876543', clubType: 'club', clubName: '香港少年棒球会', team: 'U8 Tigers', role: 'reserve', pitchArm: 'R', batSide: 'R', mainPos: '1B', subPos: [], regStatus: 'pending', activeStatus: 'active', parentName: '周国华', phone: '93334444', emergency: '周国华', createdAt: '2026-04-01' },
+      { id: genId(), name: '吴宇轩', nameEn: 'NG Yu Hin', gender: 'M', dob: '2013-12-01', idType: 'hkid', idNum: 'M1234567', clubType: 'school', clubName: '英基学校', team: 'U15 Warriors', role: 'official', pitchArm: 'R', batSide: 'R', mainPos: 'SS', subPos: ['2B', '3B'], regStatus: 'approved', activeStatus: 'active', parentName: '吴大伟', phone: '95556666', emergency: '吴大伟', createdAt: '2026-01-25' },
+    ];
+    saveData();
+  }
+}
+
+function saveData() {
+  localStorage.setItem('hkba_players', JSON.stringify(players));
+}
+
+// ========================================================
+// AGE GROUP CALCULATION
+// ========================================================
+function calcAgeGroup(dob, year) {
+  if (!dob) return null;
+  const birthYear = parseInt(dob.split('-')[0]);
+  const age = year - birthYear;
+  if (age <= 8) return 'U8';
+  if (age <= 10) return 'U10';
+  if (age <= 12) return 'U12';
+  if (age <= 15) return 'U15';
+  if (age <= 18) return 'U18';
+  return null;
+}
+
+function calcAge(dob, year) {
+  if (!dob) return null;
+  const birthYear = parseInt(dob.split('-')[0]);
+  return year - birthYear;
+}
+
+function getAgeGroupBadgeClass(ag) {
+  const map = { U8: 'badge-u8', U10: 'badge-u10', U12: 'badge-u12', U15: 'badge-u15', U18: 'badge-u18' };
+  return map[ag] || '';
+}
+
+// ========================================================
+// UI BINDING
+// ========================================================
+function buildPositionGrids() {
+  const mainGrid = document.getElementById('mainPosGrid');
+  const subGrid = document.getElementById('subPosGrid');
+  POSITIONS.forEach(p => {
+    const chipMain = document.createElement('div');
+    chipMain.className = 'position-chip';
+    chipMain.textContent = p.label;
+    chipMain.onclick = () => {
+      document.querySelectorAll('#mainPosGrid .position-chip').forEach(c => c.classList.remove('main-pos'));
+      chipMain.classList.add('main-pos');
+      selectedMainPos = p.code;
+    };
+    mainGrid.appendChild(chipMain);
+
+    const chipSub = document.createElement('div');
+    chipSub.className = 'position-chip';
+    chipSub.textContent = p.label;
+    chipSub.onclick = () => {
+      chipSub.classList.toggle('selected');
+      if (chipSub.classList.contains('selected')) selectedSubPos.add(p.code);
+      else selectedSubPos.delete(p.code);
+    };
+    subGrid.appendChild(chipSub);
+  });
+}
+
+function bindAgeCalculation() {
+  document.getElementById('fDob').addEventListener('change', updateAgeGroupDisplay);
+  document.getElementById('fYear').addEventListener('change', updateAgeGroupDisplay);
+}
+
+function updateAgeGroupDisplay() {
+  const dob = document.getElementById('fDob').value;
+  const year = parseInt(document.getElementById('fYear').value) || currentYear;
+  const ag = calcAgeGroup(dob, year);
+  const age = calcAge(dob, year);
+  const el = document.getElementById('fAgeGroupDisplay');
+  const info = document.getElementById('ageGroupInfo');
+  if (ag) {
+    el.textContent = `${ag} — ${age}岁`;
+    info.style.cssText = 'background:#e8f5e9;border-color:#a5d6a7;color:#2d8a4e;';
+    info.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><div><strong>${ag}</strong>组 — ${age}岁 — ${age <= 8 ? 'U8' : age <= 10 ? 'U8/U10' : age <= 12 ? 'U8/U10/U12' : age <= 15 ? 'U8~U15' : 'U8~U18'}均可参赛</div>`;
+  } else {
+    el.textContent = dob ? '超龄' : '—';
+    if (dob && !ag) {
+      info.style.cssText = 'background:#ffebee;border-color:#ef9a9a;color:#c0392b;';
+      info.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><div><strong>年龄超出参赛范围</strong>，当前系统仅支持 U8-U18 组别球员注册</div>`;
+    } else {
+      info.style.cssText = 'background:#e8f5e9;border-color:#a5d6a7;color:#2d8a4e;';
+      info.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div>请先填写出生日期，系统将自动计算参赛组别</div>`;
+    }
+  }
+}
+
+// ========================================================
+// STATS
+// ========================================================
+function updateStats() {
+  const total = players.length;
+  const approved = players.filter(p => p.regStatus === 'approved').length;
+  const pending = players.filter(p => p.regStatus === 'pending').length;
+  const counts = { all: total, U8: 0, U10: 0, U12: 0, U15: 0, U18: 0 };
+  players.forEach(p => {
+    const ag = calcAgeGroup(p.dob, currentYear);
+    if (ag && counts[ag] !== undefined) counts[ag]++;
+  });
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statApproved').textContent = approved;
+  document.getElementById('statPending').textContent = pending;
+  document.getElementById('cnt-all').textContent = total;
+  document.getElementById('cnt-u8').textContent = counts.U8;
+  document.getElementById('cnt-u10').textContent = counts.U10;
+  document.getElementById('cnt-u12').textContent = counts.U12;
+  document.getElementById('cnt-u15').textContent = counts.U15;
+  document.getElementById('cnt-u18').textContent = counts.U18;
+}
+
+function updateClubFilter() {
+  const clubs = [...new Set(players.map(p => p.clubName))].sort();
+  const sel = document.getElementById('filterClub');
+  sel.innerHTML = '<option value="">全部俱乐部</option>' + clubs.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+// ========================================================
+// TABLE RENDERING
+// ========================================================
+function filterByAge(ag) {
+  currentFilter = ag;
+  document.getElementById('filterAge').value = ag;
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active-filter'));
+  if (ag === '') event.currentTarget?.classList.add('active-filter') || document.querySelector('.stat-card').classList.add('active-filter');
+  const cards = document.querySelectorAll('.stat-card');
+  cards.forEach(c => {
+    c.classList.toggle('active-filter', c.onclick.toString().includes(ag) || (ag === '' && c.querySelector('.stat-label').textContent === '全部球员'));
+  });
+  // fix active state
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active-filter'));
+  if (ag === '') document.querySelector('.stat-card').classList.add('active-filter');
+  renderTable();
+}
+
+function renderTable() {
+  const search = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filterAge = document.getElementById('filterAge').value;
+  const filterStatus = document.getElementById('filterStatus').value;
+  const filterClub = document.getElementById('filterClub').value;
+  const filterPos = document.getElementById('filterPosition').value;
+
+  let filtered = players.filter(p => {
+    if (search && !p.name.toLowerCase().includes(search) && !(p.nameEn || '').toLowerCase().includes(search) && !(p.idNum || '').toLowerCase().includes(search) && !(p.clubName || '').toLowerCase().includes(search)) return false;
+    const ag = calcAgeGroup(p.dob, currentYear);
+    if (filterAge && ag !== filterAge) return false;
+    if (filterStatus && p.regStatus !== filterStatus) return false;
+    if (filterClub && p.clubName !== filterClub) return false;
+    if (filterPos && p.mainPos !== filterPos && !(p.subPos || []).includes(filterPos)) return false;
+    return true;
+  });
+
+  // Sort: approved first, then pending
+  filtered.sort((a, b) => {
+    if (a.regStatus === 'pending' && b.regStatus !== 'pending') return -1;
+    if (a.regStatus !== 'pending' && b.regStatus === 'pending') return 1;
+    return (b.createdAt || '').localeCompare(a.createdAt || '');
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  if (currentPage > totalPages) currentPage = totalPages;
+  const start = (currentPage - 1) * pageSize;
+  const page = filtered.slice(start, start + pageSize);
+
+  const tbody = document.getElementById('playerTableBody');
+  if (page.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--text-light);">
+      <div style="font-size:32px;margin-bottom:8px;opacity:0.4;">⚾</div>
+      暂无球员记录，请新增或调整筛选条件
+    </td></tr>`;
+  } else {
+    tbody.innerHTML = page.map(p => {
+      const ag = calcAgeGroup(p.dob, currentYear);
+      const isSelected = selectedIds.has(p.id);
+      const mainPosLabel = POSITIONS.find(x => x.code === p.mainPos)?.full || p.mainPos || '—';
+      return `<tr class="${isSelected ? 'selected-row' : ''}" style="${isSelected ? 'background:#e3f2fd;' : ''}">
+        <td><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleRow('${p.id}')"></td>
+        <td><div style="font-weight:600;">${p.name}</div><div style="font-size:11px;color:var(--text-light);">${p.nameEn || ''}</div></td>
+        <td>${ag ? `<span class="badge ${getAgeGroupBadgeClass(ag)}">${ag}</span>` : '<span class="badge badge-rejected">超龄</span>'}</td>
+        <td>${GENDER_MAP[p.gender]}</td>
+        <td>${p.dob || '—'}</td>
+        <td><div style="font-size:12.5px;">${p.clubName || '—'}</div><div style="font-size:11px;color:var(--text-light);">${ROLE_MAP[p.role] || ''}</div></td>
+        <td><span class="badge" style="background:#f0f4f8;color:var(--primary);font-size:11px;">${mainPosLabel}</span></td>
+        <td style="font-size:12px;color:var(--text-light);">${PITCH_ARM_MAP[p.pitchArm]}/${BAT_SIDE_MAP[p.batSide]}</td>
+        <td><span class="badge badge-${p.regStatus}">${REG_STATUS_MAP[p.regStatus]}</span></td>
+        <td>${p.activeStatus === 'active' ? '<span class="badge badge-active">在籍</span>' : p.activeStatus === 'paused' ? '<span class="badge badge-paused">暂停</span>' : '<span class="badge badge-retired">退役</span>'}</td>
+        <td>
+          <div class="row-actions">
+            <button class="action-btn view" title="查看档案" onclick="showDetail('${p.id}')">👁️</button>
+            <button class="action-btn edit" title="编辑" onclick="showEditModal('${p.id}')">✏️</button>
+            <button class="action-btn delete" title="删除" onclick="deletePlayer('${p.id}')">🗑️</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('paginationInfo').textContent = `显示 ${page.length} 条，共 ${filtered.length} 条（第 ${currentPage}/${totalPages} 页）`;
+  renderPagination(totalPages);
+  updateBatchBar();
+}
+
+function renderPagination(total) {
+  const pc = document.getElementById('paginationControls');
+  if (total <= 1) { pc.innerHTML = ''; return; }
+  let html = `<button class="page-btn" ${currentPage === 1 ? 'disabled style="opacity:0.3;"' : ''} onclick="goPage(${currentPage - 1})">‹</button>`;
+  for (let i = 1; i <= total; i++) {
+    if (i === 1 || i === total || (i >= currentPage - 2 && i <= currentPage + 2)) {
+      html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+    } else if (i === currentPage - 3 || i === currentPage + 3) {
+      html += `<span style="padding:0 4px;color:var(--text-light);">…</span>`;
+    }
+  }
+  html += `<button class="page-btn" ${currentPage === total ? 'disabled style="opacity:0.3;"' : ''} onclick="goPage(${currentPage + 1})">›</button>`;
+  pc.innerHTML = html;
+}
+
+function goPage(n) { currentPage = n; renderTable(); }
+
+// ========================================================
+// CRUD
+// ========================================================
+function showAddModal() {
+  editingPlayerId = null;
+  document.getElementById('modalTitle').textContent = '新增球员';
+  document.getElementById('editId').value = '';
+  clearForm();
+  openModal('playerModal');
+  document.getElementById('fName').focus();
+}
+
+function showEditModal(id) {
+  editingPlayerId = id;
+  const p = players.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('modalTitle').textContent = '编辑球员';
+  document.getElementById('editId').value = id;
+  document.getElementById('fName').value = p.name;
+  document.getElementById('fNameEn').value = p.nameEn || '';
+  document.querySelector(`input[name="fGender"][value="${p.gender}"]`).checked = true;
+  document.getElementById('fDob').value = p.dob || '';
+  document.getElementById('fIdType').value = p.idType || 'hkid';
+  document.getElementById('fIdNum').value = p.idNum || '';
+  document.getElementById('fClubType').value = p.clubType || 'club';
+  document.getElementById('fClubName').value = p.clubName || '';
+  document.getElementById('fTeam').value = p.team || '';
+  document.getElementById('fRole').value = p.role || 'official';
+  document.querySelector(`input[name="fPitchArm"][value="${p.pitchArm || 'R'}"]`).checked = true;
+  document.querySelector(`input[name="fBatSide"][value="${p.batSide || 'R'}"]`).checked = true;
+  document.getElementById('fParentName').value = p.parentName || '';
+  document.getElementById('fPhone').value = p.phone || '';
+  document.getElementById('fEmergency').value = p.emergency || '';
+  document.getElementById('fRegStatus').value = p.regStatus || 'pending';
+  // Positions
+  selectedMainPos = p.mainPos || '';
+  selectedSubPos = new Set(p.subPos || []);
+  document.querySelectorAll('#mainPosGrid .position-chip').forEach(c => {
+    c.classList.remove('main-pos');
+    if (c.textContent.startsWith(p.mainPos)) c.classList.add('main-pos');
+  });
+  document.querySelectorAll('#subPosGrid .position-chip').forEach(c => {
+    c.classList.remove('selected');
+    const code = POSITIONS.find(x => x.label === c.textContent)?.code;
+    if (selectedSubPos.has(code)) c.classList.add('selected');
+  });
+  updateAgeGroupDisplay();
+  openModal('playerModal');
+}
+
+function editFromDetail() {
+  closeModal('detailModal');
+  showEditModal(editingPlayerId);
+}
+
+function clearForm() {
+  ['fName','fNameEn','fDob','fIdNum','fClubName','fTeam','fParentName','fPhone','fEmergency'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fIdType').value = 'hkid';
+  document.getElementById('fClubType').value = 'club';
+  document.getElementById('fRole').value = 'official';
+  document.querySelector('input[name="fGender"][value="M"]').checked = true;
+  document.querySelector('input[name="fPitchArm"][value="R"]').checked = true;
+  document.querySelector('input[name="fBatSide"][value="R"]').checked = true;
+  document.getElementById('fRegStatus').value = 'pending';
+  document.getElementById('fYear').value = currentYear;
+  selectedMainPos = '';
+  selectedSubPos.clear();
+  document.querySelectorAll('#mainPosGrid .position-chip').forEach(c => c.classList.remove('main-pos'));
+  document.querySelectorAll('#subPosGrid .position-chip').forEach(c => c.classList.remove('selected'));
+  updateAgeGroupDisplay();
+}
+
+function savePlayer() {
+  const name = document.getElementById('fName').value.trim();
+  const dob = document.getElementById('fDob').value;
+  const clubName = document.getElementById('fClubName').value.trim();
+  if (!name) { toast('请填写球员姓名', 'error'); return; }
+  if (!dob) { toast('请填写出生日期', 'error'); return; }
+  if (!clubName) { toast('请填写单位名称', 'error'); return; }
+
+  const ag = calcAgeGroup(dob, currentYear);
+  const data = {
+    id: editingPlayerId || genId(),
+    name,
+    nameEn: document.getElementById('fNameEn').value.trim(),
+    gender: document.querySelector('input[name="fGender"]:checked').value,
+    dob,
+    idType: document.getElementById('fIdType').value,
+    idNum: document.getElementById('fIdNum').value.trim(),
+    clubType: document.getElementById('fClubType').value,
+    clubName,
+    team: document.getElementById('fTeam').value.trim(),
+    role: document.getElementById('fRole').value,
+    pitchArm: document.querySelector('input[name="fPitchArm"]:checked').value,
+    batSide: document.querySelector('input[name="fBatSide"]:checked').value,
+    mainPos: selectedMainPos,
+    subPos: [...selectedSubPos],
+    regStatus: document.getElementById('fRegStatus').value,
+    activeStatus: 'active',
+    parentName: document.getElementById('fParentName').value.trim(),
+    phone: document.getElementById('fPhone').value.trim(),
+    emergency: document.getElementById('fEmergency').value.trim(),
+    createdAt: editingPlayerId ? players.find(x => x.id === editingPlayerId)?.createdAt : new Date().toISOString().split('T')[0],
+  };
+
+  if (editingPlayerId) {
+    const idx = players.findIndex(x => x.id === editingPlayerId);
+    if (idx >= 0) players[idx] = data;
+    toast('球员信息已更新');
+  } else {
+    players.unshift(data);
+    toast('球员已新增');
+  }
+  saveData();
+  updateStats();
+  updateClubFilter();
+  renderTable();
+  closeModal('playerModal');
+}
+
+function deletePlayer(id) {
+  if (!confirm('确定删除该球员记录？')) return;
+  players = players.filter(x => x.id !== id);
+  selectedIds.delete(id);
+  saveData();
+  updateStats();
+  renderTable();
+  toast('已删除');
+}
+
+// ========================================================
+// DETAIL VIEW
+// ========================================================
+function showDetail(id) {
+  editingPlayerId = id;
+  const p = players.find(x => x.id === id);
+  if (!p) return;
+  const ag = calcAgeGroup(p.dob, currentYear);
+  const age = calcAge(p.dob, currentYear);
+  const mainPosLabel = POSITIONS.find(x => x.code === p.mainPos)?.full || p.mainPos || '—';
+  const subPosLabels = (p.subPos || []).map(c => POSITIONS.find(x => x.code === c)?.full || c).join('、');
+  document.getElementById('detailContent').innerHTML = `
+    <div class="player-detail">
+      <div class="player-detail-left">
+        <div class="player-avatar-lg">⚾</div>
+        <div style="margin-top:12px;text-align:center;">
+          <div class="badge ${getAgeGroupBadgeClass(ag)}" style="font-size:13px;padding:5px 16px;">${ag || '超龄'}</div>
+        </div>
+      </div>
+      <div class="player-detail-right">
+        <div class="player-name-row">
+          <div class="player-name">${p.name}</div>
+          <span class="badge badge-${p.regStatus}">${REG_STATUS_MAP[p.regStatus]}</span>
+          ${p.activeStatus === 'active' ? '<span class="badge badge-active">在籍</span>' : '<span class="badge badge-paused">暂停</span>'}
+        </div>
+        <div class="player-en">${p.nameEn || '—'}</div>
+        <div class="player-meta">
+          <div class="meta-item"><div class="meta-label">性别</div><div class="meta-value">${GENDER_MAP[p.gender]}</div></div>
+          <div class="meta-item"><div class="meta-label">出生日期</div><div class="meta-value">${p.dob || '—'}</div></div>
+          <div class="meta-item"><div class="meta-label">年龄（${currentYear}年）</div><div class="meta-value">${age || '—'}岁</div></div>
+          <div class="meta-item"><div class="meta-label">证件类型</div><div class="meta-value">${p.idType === 'hkid' ? '香港身份证' : p.idType === 'mhp' ? '回乡证' : '护照'}</div></div>
+          <div class="meta-item"><div class="meta-label">证件号码</div><div class="meta-value" style="font-size:13px;">${p.idNum || '—'}</div></div>
+          <div class="meta-item"><div class="meta-label">所属单位</div><div class="meta-value">${CLUB_TYPE_MAP[p.clubType]} · ${p.clubName || '—'}</div></div>
+          <div class="meta-item"><div class="meta-label">代表队伍</div><div class="meta-value">${p.team || '—'}</div></div>
+          <div class="meta-item"><div class="meta-label">队内身份</div><div class="meta-value">${ROLE_MAP[p.role] || '—'}</div></div>
+          <div class="meta-item"><div class="meta-label">注册日期</div><div class="meta-value">${p.createdAt || '—'}</div></div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:12px;color:var(--text-light);margin-bottom:8px;font-weight:600;">⚾ 运动信息</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div style="background:#f8fafc;padding:10px 12px;border-radius:7px;font-size:13px;"><span style="color:var(--text-light);">投手：</span><strong>${PITCH_ARM_MAP[p.pitchArm]}</strong></div>
+            <div style="background:#f8fafc;padding:10px 12px;border-radius:7px;font-size:13px;"><span style="color:var(--text-light);">打击：</span><strong>${BAT_SIDE_MAP[p.batSide]}</strong></div>
+            <div style="background:#f8fafc;padding:10px 12px;border-radius:7px;font-size:13px;"><span style="color:var(--text-light);">主力位置：</span><strong>${mainPosLabel}</strong></div>
+            <div style="background:#f8fafc;padding:10px 12px;border-radius:7px;font-size:13px;"><span style="color:var(--text-light);">备选位置：</span><strong>${subPosLabels || '—'}</strong></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--text-light);margin-bottom:8px;font-weight:600;">👨‍👩‍👧 联系人信息 <span style="font-weight:400;">（仅管理员可见）</span></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+            <div style="background:#f8fafc;padding:10px 12px;border-radius:7px;font-size:13px;"><span style="color:var(--text-light);">家长：</span><strong>${p.parentName || '—'}</strong></div>
+            <div style="background:#f8fafc;padding:10px 12px;border-radius:7px;font-size:13px;"><span style="color:var(--text-light);">电话：</span><strong>${p.phone || '—'}</strong></div>
+            <div style="background:#f8fafc;padding:10px 12px;border-radius:7px;font-size:13px;"><span style="color:var(--text-light);">紧急联系：</span><strong>${p.emergency || '—'}</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  openModal('detailModal');
+}
+
+// ========================================================
+// BATCH & SELECTION
+// ========================================================
+function toggleRow(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  renderTable();
+}
+
+function toggleAll(el) {
+  if (el.checked) {
+    players.forEach(p => selectedIds.add(p.id));
+  } else {
+    selectedIds.clear();
+  }
+  renderTable();
+}
+
+function clearSelection() { selectedIds.clear(); renderTable(); }
+
+function updateBatchBar() {
+  const bar = document.getElementById('batchBar');
+  const count = document.getElementById('batchCount');
+  if (selectedIds.size > 0) {
+    bar.classList.add('show');
+    count.textContent = selectedIds.size;
+  } else {
+    bar.classList.remove('show');
+  }
+}
+
+function batchApprove() {
+  selectedIds.forEach(id => {
+    const p = players.find(x => x.id === id);
+    if (p) p.regStatus = 'approved';
+  });
+  saveData();
+  selectedIds.clear();
+  updateStats();
+  renderTable();
+  toast('批量审核完成');
+}
+
+function batchExport() {
+  const selected = players.filter(p => selectedIds.has(p.id));
+  exportPlayersData(selected);
+  toast(`已导出 ${selected.length} 条球员记录`);
+}
+
+// ========================================================
+// IMPORT / EXPORT
+// ========================================================
+function showImportModal() {
+  document.getElementById('importResult').style.display = 'none';
+  openModal('importModal');
+}
+
+function downloadTemplate() {
+  const headers = ['姓名', '英文名', '性别', '出生日期', '证件类型', '证件号码', '单位类型', '单位名称', '代表队伍', '队内身份', '投手习惯', '打击习惯', '主力位置', '备选位置', '家长姓名', '联系电话', '紧急联系人'];
+  const sample = ['陈小明', 'CHAN Ming', 'M', '2018-05-01', '香港身份证', 'Z1234567', '俱乐部', '香港少年棒球会', 'U8 Tigers', '正式队员', '右投', '右打', '投手', '捕手;一垒', '陈先生', '91234567', '陈先生'];
+  let csv = '\uFEFF' + headers.join(',') + '\n' + sample.join(',');
+  downloadFile(csv, 'HKBA_球员导入模板.csv', 'text/csv;charset=utf-8');
+}
+
+function handleFileImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const lines = e.target.result.split('\n').filter(l => l.trim());
+    if (lines.length < 2) { toast('文件格式错误', 'error'); return; }
+    const resultDiv = document.getElementById('importResult');
+    const contentDiv = document.getElementById('importResultContent');
+    resultDiv.style.display = 'block';
+    contentDiv.innerHTML = `<div style="font-size:14px;font-weight:600;margin-bottom:8px;">✅ 文件读取成功，准备导入 ${lines.length - 1} 条记录</div><div style="font-size:12px;color:var(--text-light);">实际导入需要后端支持，前端仅展示模板预览</div>`;
+    toast(`检测到 ${lines.length - 1} 条待导入记录`);
+  };
+  reader.readAsText(file);
+}
+
+function exportPlayers() {
+  const filtered = players.filter(p => {
+    const search = document.getElementById('searchInput').value.trim().toLowerCase();
+    const filterAge = document.getElementById('filterAge').value;
+    const filterStatus = document.getElementById('filterStatus').value;
+    if (search && !p.name.toLowerCase().includes(search)) return false;
+    if (filterAge && calcAgeGroup(p.dob, currentYear) !== filterAge) return false;
+    if (filterStatus && p.regStatus !== filterStatus) return false;
+    return true;
+  });
+  exportPlayersData(filtered);
+  toast(`已导出 ${filtered.length} 条球员记录`);
+}
+
+function exportPlayersData(data) {
+  const headers = ['球员姓名', '英文名', '性别', '出生日期', '参赛组别', '证件类型', '证件号码', '单位类型', '单位名称', '代表队伍', '队内身份', '投手', '打击', '主力位置', '备选位置', '注册状态', '在队状态'];
+  const rows = data.map(p => {
+    const ag = calcAgeGroup(p.dob, currentYear);
+    return [
+      p.name, p.nameEn || '', GENDER_MAP[p.gender] || '', p.dob || '',
+      ag || '', p.idType === 'hkid' ? '香港身份证' : p.idType === 'mhp' ? '回乡证' : '护照',
+      p.idNum || '', CLUB_TYPE_MAP[p.clubType] || '', p.clubName || '', p.team || '',
+      ROLE_MAP[p.role] || '', PITCH_ARM_MAP[p.pitchArm] || '', BAT_SIDE_MAP[p.batSide] || '',
+      POSITIONS.find(x => x.code === p.mainPos)?.full || '', (p.subPos || []).map(c => POSITIONS.find(x => x.code === c)?.full || c).join('、'),
+      REG_STATUS_MAP[p.regStatus] || '', p.activeStatus === 'active' ? '在籍' : p.activeStatus === 'paused' ? '暂停' : '退役'
+    ];
+  });
+  let csv = '\uFEFF' + headers.join(',') + '\n' + rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  downloadFile(csv, `HKBA_球员名单_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv;charset=utf-8');
+}
+
+function downloadFile(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ========================================================
+// NAVIGATION
+// ========================================================
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${page}`).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector(`.nav-item[data-page="${page}"]`)?.classList.add('active');
+  const titles = { players: '🏉 球员资料库', teams: '🏟️ 球队 & 梯队管理', competition: '🏆 赛事管理 & 记分', stats: '📊 球员技术数据', admin: '⚙️ 权限 & 后台管理' };
+  document.getElementById('topbarTitle').textContent = titles[page] || page;
+  if (page === 'players') renderTable();
+}
+
+// ========================================================
+// MODAL HELPERS
+// ========================================================
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+  document.body.classList.add('modal-open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+  document.body.classList.remove('modal-open');
+}
+
+function printDetail() { window.print(); }
+
+// ========================================================
+// UTILS
+// ========================================================
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+}
+
+function toast(msg, type = 'success') {
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span> ${msg}`;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ========================================================
+// INIT
+// ========================================================
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
