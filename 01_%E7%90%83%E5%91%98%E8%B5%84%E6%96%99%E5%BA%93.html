@@ -307,7 +307,13 @@ document.addEventListener('DOMContentLoaded', async function() {
       html += `</div>`;
     }
 
-    container.innerHTML = html;
+    try {
+      container.innerHTML = html;
+      console.log('[Module01] ✅ innerHTML set OK | childCount:', container.children.length, '| playerGrid:', !!container.querySelector('.player-grid'));
+    } catch(e) {
+      console.error('[Module01] ❌ innerHTML failed:', e);
+      document.body.insertAdjacentHTML('beforeend', '<div style="color:red;padding:20px">渲染失败: ' + e + '</div>');
+    }
   }
 
   function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
