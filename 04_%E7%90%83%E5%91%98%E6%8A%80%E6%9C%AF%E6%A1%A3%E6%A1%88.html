@@ -142,11 +142,17 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   function renderProfiles(profiles) {
     var container = document.getElementById('page-content');
-    initNav({
-      title: '技术档案',
-      subtitle: 'Module 04 · Player Profiles',
-      stats: [{ label: '注册球员', value: allPlayers.length }, { label: '已建档', value: profiles.length }]
-    });
+    // Update topbar stats without rebuilding nav
+    var topbar = document.querySelector('.topbar');
+    if (topbar) {
+      var statsBar = topbar.querySelector('.topbar-stats');
+      if (statsBar) {
+        statsBar.innerHTML = [
+          '<div class="topbar-stat"><div class="num">' + allPlayers.length + '</div><div class="label">注册球员</div></div>',
+          '<div class="topbar-stat"><div class="num">' + profiles.length + '</div><div class="label">已建档</div></div>'
+        ].join('');
+      }
+    }
 
     var html = `
     <div class="page-header">
