@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>诊断页面 — BaseAI</title>
+<style>
+  body { font-family: system-ui; padding: 40px; background: #1a1a2e; color: #e0e0e0; }
+  h1 { color: #f97316; }
+  .test { padding: 12px 16px; margin: 8px 0; border-radius: 8px; font-size: 14px; }
+  .pass { background: #065f46; color: #6ee7b7; }
+  .fail { background: #7f1d1d; color: #fca5a5; }
+  .warn { background: #78350f; color: #fde68a; }
+  pre { background: #111; padding: 16px; border-radius: 8px; overflow: auto; font-size: 12px; max-height: 200px; }
+  .data-section { margin-top: 20px; }
+  button { padding: 10px 20px; background: #f97316; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 16px; }
+  button:hover { background: #ea580c; }
+</style>
+</head>
+<body>
+<h1>⚾ BaseAI 诊断页面</h1>
+
+<div id="results"></div>
+
+<script src="db.js"></script>
+<script>
+var r = document.getElementById('results');
+
+function test(name, pass, detail) {
+  var cls = pass ? 'pass' : 'fail';
+  var icon = pass ? '✅' : '❌';
+  r.innerHTML += '<div class="test ' + cls + '">' + icon + ' ' + name + (detail ? '<br><small>' + detail + '</small>' : '') + '</div>';
+}
+
+function run() {
+  // Test 1: DB exists
+  test('DB 对象已加载', typeof window.DB !== 'undefined');
+
+  if (typeof window.DB === 'undefined') {
+    r.innerHTML += '<p style="color:#fca5a5;margin-top:16px;">❌ DB 对象不存在！db.js 加载失败。请检查网络和控制台错误。</p>';
+    return;
+  }
+
+  // Test 2: DB methods
+  test('DB.getPlayers() 可调用', typeof window.DB.getPlayers === 'function');
+  test('DB.upsertPlayer() 可调用', typeof window.DB.upsertPlayer === 'function');
+  test('DB.getMode() = ' + window.DB.getMode(), true);
+
+  // Test 3: Storage
+  var storageType = window.DB.getMode();
+  test('存储类型: ' + storageType, true);
+
+  // Test 4: Try loading players
+  window.DB.getPlayers().then(function(result) {
+    var count = (result.data || []).length;
+    test('球员数据数量: ' + count, count > 0, '数据: ' + JSON.stringify(result.data).substring(0, 200));
+  }).catch(function(e) {
+    test('球员数据加载失败', false, e.message);
+  });
+
+  // Test 5: Teams
+  window.DB.getTeams().then(function(result) {
+    var count = (result.data || []).length;
+    test('球队数据数量: ' + count, count > 0, '数据: ' + JSON.stringify(result.data).substring(0, 200));
+  });
+
+  // Test 6: Games
+  window.DB.getGames().then(function(result) {
+    var count = (result.data || []).length;
+    test('比赛数据数量: ' + count, count > 0, '数据: ' + JSON.stringify(result.data).substring(0, 200));
+  });
+
+  // Show storage content
+  setTimeout(function() {
+    var html = '<div class="data-section"><h2>📦 存储内容</h2>';
+    ['players', 'teams', 'games'].forEach(function(table) {
+      var key = 'baseai_db_' + table;
+      var val = localStorage ? localStorage.getItem(key) : null;
+      html += '<div style="margin-top:8px;"><strong>' + table + ':</strong> ' + (val ? val.substring(0, 200) : 'null/undefined') + '</div>';
+    });
+    html += '</div>';
+    r.innerHTML += html;
+  }, 500);
+}
+run();
+</script>
+
+<button onclick="location.reload()">🔄 重新诊断</button>
+</body>
+</html>
