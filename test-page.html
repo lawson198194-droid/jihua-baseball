@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BaseAI 测试页</title>
+<style>
+:root {
+  --bg: #0b0e14;
+  --bg-card: #151923;
+  --border: rgba(255,255,255,0.08);
+  --text: #e2e8f0;
+  --text-muted: #64748b;
+  --primary: #6366f1;
+  --radius-lg: 14px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 24px; }
+
+.app { display: flex; min-height: 100vh; }
+.main { flex: 1; padding: 28px; }
+.page-header { margin-bottom: 24px; }
+.page-header h2 { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+.page-header p { color: var(--text-muted); font-size: 13px; }
+
+#db-status { background: #1a1a2e; border: 1px solid #6366f1; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: #818cf8; }
+#db-status.fail { border-color: #ef4444; background: #1a0a0a; color: #f87171; }
+
+.player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
+.player-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+  cursor: pointer;
+}
+.player-card:hover { transform: translateY(-3px); border-color: var(--primary); }
+.player-card-header { display: flex; align-items: center; gap: 14px; padding: 16px 18px 12px; }
+.player-avatar {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800; color: white;
+  flex-shrink: 0;
+}
+.player-info h3 { font-size: 15px; font-weight: 700; }
+.player-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.player-card-body { padding: 0 18px 14px; }
+.player-stats { display: flex; gap: 8px; margin-bottom: 12px; }
+.player-stat { flex: 1; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px; text-align: center; }
+.player-stat .val { font-size: 15px; font-weight: 700; }
+.player-stat .lbl { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.player-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.badge {
+  padding: 3px 8px; border-radius: 6px;
+  font-size: 11px; font-weight: 600;
+  background: rgba(99,102,241,0.15); color: #818cf8;
+}
+.badge-success { background: rgba(16,185,129,0.15); color: #34d399; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="main">
+    <div class="page-header">
+      <h2>⚾ BaseAI 球员资料库 - 测试页</h2>
+      <p>完全自包含测试页面，无外部依赖</p>
+    </div>
+
+    <div id="db-status">正在检查数据库...</div>
+
+    <div class="player-grid" id="player-grid">
+      <!-- Players will be rendered here -->
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// MINIMAL IN-MEMORY DB (copied from db.js, simplified)
+// ============================================================
+(function() {
+  var _mem = { players: [], teams: [], games: [], profiles: [] };
+
+  function genId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2,9); }
+
+  // Seed demo data ONCE
+  var DEMO = [
+    { id: 'P001', player_id: 'P001', name: '罗莀安', gender: 'F', position: '投手', age: 11, height: 148, weight: 42, school: 'SISHK', batting: 'R', throwing: 'R', status: 'active' },
+    { id: 'P002', player_id: 'P002', name: '陈伟霆', gender: 'M', position: '捕手', age: 12, height: 155, weight: 50, school: '男拔附小', batting: 'R', throwing: 'R', status: 'active' },
+    { id: 'P003', player_id: 'P003', name: '李芷晴', gender: 'F', position: '内野', age: 11, height: 143, weight: 38, school: '协恩附小', batting: 'L', throwing: 'R', status: 'active' },
+    { id: 'P004', player_id: 'P004', name: '张浩然', gender: 'M', position: '外野', age: 12, height: 160, weight: 55, school: '喇沙附小', batting: 'R', throwing: 'R', status: 'active' },
+    { id: 'P005', player_id: 'P005', name: '王心怡', gender: 'F', position: '游击手', age: 11, height: 145, weight: 40, school: '拔萃女小', batting: 'S', throwing: 'R', status: 'active' },
+    { id: 'P006', player_id: 'P006', name: '刘建华', gender: 'M', position: '投手', age: 12, height: 158, weight: 52, school: '圣保禄附小', batting: 'R', throwing: 'R', status: 'active' },
+    { id: 'P007', player_id: 'P007', name: '周雅文', gender: 'F', position: '一垒手', age: 11, height: 150, weight: 44, school: '英华女校', batting: 'R', throwing: 'R', status: 'active' },
+    { id: 'P008', player_id: 'P008', name: '吴俊豪', gender: 'M', position: '中外野', age: 12, height: 162, weight: 58, school: '福德附小', batting: 'L', throwing: 'R', status: 'active' }
+  ];
+
+  _mem.players = DEMO;
+
+  window.TestDB = {
+    getPlayers: function() { return Promise.resolve({ data: _mem.players, error: null }); },
+    getMode: function() { return 'in-memory'; }
+  };
+})();
+
+// ============================================================
+// RENDER
+// ============================================================
+var colors = ['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899','#f59e0b','#06b6d4','#84cc16'];
+var statusEl = document.getElementById('db-status');
+var gridEl = document.getElementById('player-grid');
+
+window.TestDB.getPlayers().then(function(result) {
+  var players = result.data || [];
+  statusEl.textContent = '✅ 数据库就绪 | ' + players.length + ' 名球员 | 模式: ' + window.TestDB.getMode();
+  statusEl.className = '';
+
+  if (players.length === 0) {
+    gridEl.innerHTML = '<p style="color:var(--text-muted);padding:40px;text-align:center;">暂无数据</p>';
+    return;
+  }
+
+  var html = '';
+  players.forEach(function(p) {
+    var color = colors[(p.name||'A').charCodeAt(0) % colors.length];
+    html += '<div class="player-card">\
+      <div class="player-card-header">\
+        <div class="player-avatar" style="background:' + color + '">' + (p.name||'?').charAt(0) + '</div>\
+        <div class="player-info">\
+          <h3>' + p.name + '</h3>\
+          <div class="player-meta">' + p.player_id + ' · ' + p.age + '岁 · ' + (p.gender==='M'?'男':'女') + '</div>\
+        </div>\
+      </div>\
+      <div class="player-card-body">\
+        <div class="player-stats">\
+          <div class="player-stat"><div class="val">' + p.height + '</div><div class="lbl">身高cm</div></div>\
+          <div class="player-stat"><div class="val">' + p.weight + '</div><div class="lbl">体重kg</div></div>\
+          <div class="player-stat"><div class="val" style="font-size:13px;">' + (p.batting==='L'?'左':p.batting==='R'?'右':'双') + '</div><div class="lbl">打击</div></div>\
+        </div>\
+        <div class="player-tags">\
+          <span class="badge">' + p.position + '</span>\
+          <span class="badge badge-success">' + (p.status==='active'?'活跃':'非活跃') + '</span>\
+        </div>\
+      </div>\
+    </div>';
+  });
+  gridEl.innerHTML = html;
+}).catch(function(e) {
+  statusEl.textContent = '❌ 加载失败: ' + e.message;
+  statusEl.className = 'fail';
+});
+</script>
+</body>
+</html>
