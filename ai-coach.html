@@ -387,13 +387,32 @@ document.addEventListener('DOMContentLoaded', function() {
   loadPlayers();
 });
 
+// 备用演示球员数据（当 DB 不可用时使用）
+var DEMO_PLAYERS = [
+  { id: 'p1', player_id: 'p1', name: '罗莀安', position: '投手', number: 7, age: 11, team: 'U12 精英队' },
+  { id: 'p2', player_id: 'p2', name: '陈小明', position: '捕手', number: 12, age: 12, team: 'U12 精英队' },
+  { id: 'p3', player_id: 'p3', name: '王大伟', position: '一垒手', number: 23, age: 11, team: 'U12 精英队' },
+  { id: 'p4', player_id: 'p4', name: '李小强', position: '游击手', number: 5, age: 12, team: 'U12 精英队' },
+  { id: 'p5', player_id: 'p5', name: '张小龙', position: '外野手', number: 18, age: 11, team: 'U12 精英队' },
+  { id: 'p6', player_id: 'p6', name: '刘小虎', position: '三垒手', number: 9, age: 12, team: 'U12 精英队' }
+];
+
 async function loadPlayers() {
   try {
-    var res = await DB.getPlayers();
-    allPlayers = res.data || [];
+    // 尝试从 DB 加载
+    if (typeof DB !== 'undefined' && DB.getPlayers) {
+      var res = await DB.getPlayers();
+      allPlayers = res.data || [];
+    }
+    // 如果 DB 没数据或失败，使用演示数据
+    if (!allPlayers || allPlayers.length === 0) {
+      allPlayers = DEMO_PLAYERS;
+    }
     renderStep1();
   } catch(e) {
-    document.getElementById('main-content').innerHTML = '<div class="panel"><div class="panel-body"><div class="empty-state"><div class="icon">⚠️</div><div class="title">无法加载球员数据</div><div class="sub">请先在「球员资料库」中添加球员</div></div></div></div>';
+    // DB 完全失败，用演示数据继续
+    allPlayers = DEMO_PLAYERS;
+    renderStep1();
   }
 }
 
