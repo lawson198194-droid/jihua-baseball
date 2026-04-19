@@ -3,1256 +3,356 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>模块3 · 赛事管理与记分系统 — 香港棒垒球总会</title>
-<script src="database.js"></script>
+<title>模块3 · 赛事管理与记分 — BaseAI</title>
+<link rel="stylesheet" href="assets/design-system.css">
+<script src="db.js"></script>
 <style>
-  :root {
-    --primary: #1B4F72;
-    --primary-light: #2E86C1;
-    --accent: #E67E22;
-    --bg: #F2F3F4;
-    --white: #FFFFFF;
-    --border: #D5D8DC;
-    --text: #1C2833;
-    --text-light: #707B7C;
-    --success: #1E8449;
-    --danger: #C0392B;
-    --warning: #D68910;
-    --info: #2980B9;
-    --diamond-red: #E74C3C;
-    --diamond-blue: #2980B9;
+  .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .page-header h2 { font-size:22px; font-weight:800; }
+  .page-header p { font-size:13px; color:var(--text-muted); margin-top:2px; }
+  .page-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+  .game-tabs { display:flex; gap:4px; margin-bottom:20px; }
+  .game-tab { padding:8px 18px; border-radius:var(--radius); font-size:13px; font-weight:600; cursor:pointer; border:none; background:var(--bg-card); color:var(--text-secondary); border:1px solid var(--border); transition:all 0.15s; }
+  .game-tab.active { background:var(--primary); color:white; border-color:var(--primary); }
+
+  .scoreboard-card {
+    background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg);
+    overflow:hidden; margin-bottom:16px; transition:all 0.2s; cursor:pointer;
   }
+  .scoreboard-card:hover { border-color:rgba(249,115,22,0.4); box-shadow:0 4px 16px rgba(0,0,0,0.3); }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    font-size: 14px;
+  .score-header {
+    display:flex; align-items:center; padding:14px 20px;
+    border-bottom:1px solid var(--border-light);
+    justify-content:space-between; flex-wrap:wrap; gap:8px;
   }
+  .score-date { font-size:12px; color:var(--text-muted); }
+  .score-teams { display:flex; align-items:center; justify-content:center; gap:20px; flex-wrap:wrap; }
+  .score-team { text-align:center; min-width:120px; }
+  .score-team-name { font-size:14px; font-weight:700; color:var(--text-primary); }
+  .score-team-scr { font-size:36px; font-weight:900; font-family:var(--font-mono); color:var(--text-primary); }
+  .score-vs { font-size:20px; font-weight:700; color:var(--text-muted); }
+  .score-center { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .score-info { font-size:11px; color:var(--text-muted); text-align:center; }
 
-  /* ─── Header ─── */
-  header {
-    background: var(--primary);
-    color: white;
-    padding: 0 24px;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  }
-  .header-brand { display: flex; align-items: center; gap: 12px; }
-  .header-logo { width: 36px; height: 36px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; color: white; }
-  .header-title { font-size: 16px; font-weight: 600; letter-spacing: 0.5px; }
-  .header-sub { font-size: 11px; opacity: 0.75; letter-spacing: 0.3px; }
-  .header-right { display: flex; align-items: center; gap: 12px; }
-  .header-badge { background: var(--accent); padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-  .header-user { font-size: 13px; opacity: 0.9; }
+  .inning-bar { padding:8px 20px; display:flex; gap:4px; align-items:center; overflow-x:auto; }
+  .inning-cell { min-width:36px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; background:var(--bg-secondary); color:var(--text-secondary); }
+  .inning-cell.home { background:var(--accent-glow); color:var(--accent); }
+  .inning-cell.away { background:var(--primary-glow); color:var(--primary); }
+  .inning-cell.total { background:var(--border-light); font-size:12px; font-weight:800; }
 
-  /* ─── Nav Tabs ─── */
-  .nav-tabs {
-    background: var(--white);
-    display: flex;
-    gap: 0;
-    border-bottom: 2px solid var(--border);
-    padding: 0 24px;
-    overflow-x: auto;
-  }
-  .nav-tab {
-    padding: 14px 20px;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-light);
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
-    transition: all 0.2s;
-    white-space: nowrap;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-  }
-  .nav-tab:hover { color: var(--primary); }
-  .nav-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+  .score-footer { padding:10px 20px; border-top:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center; }
+  .game-status-badge { font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; }
+  .status-completed { background:var(--success-bg); color:var(--success); }
+  .status-in-progress { background:var(--warning-bg); color:var(--warning); }
+  .status-scheduled { background:var(--info-bg); color:var(--info); }
 
-  /* ─── Main Content ─── */
-  .main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+  .live-badge { display:inline-flex; align-items:center; gap:5px; background:var(--danger); color:white; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; animation:pulse-badge 1s infinite; }
+  @keyframes pulse-badge { 0%,100%{opacity:1;} 50%{opacity:0.7;} }
 
-  /* ─── Section Panel ─── */
-  .panel {
-    background: var(--white);
-    border-radius: 12px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    overflow: hidden;
-    margin-bottom: 24px;
-  }
+  /* Inning detail */
+  .innings-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(60px,1fr)); gap:6px; margin:16px 0; }
+  .inning-box { padding:10px 6px; background:var(--bg-secondary); border-radius:8px; text-align:center; border:1px solid var(--border-light); }
+  .inning-box .num { font-size:10px; color:var(--text-muted); }
+  .inning-box .runs { font-size:20px; font-weight:800; font-family:var(--font-mono); }
 
-  .panel-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .panel-title { font-size: 15px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
-  .panel-body { padding: 20px; }
+  .modal-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .modal-form-grid .full { grid-column:span 2; }
+  .modal-form-grid label { display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:5px; }
+  .modal-form-grid input, .modal-form-grid select { width:100%; }
 
-  /* ─── Toolbar ─── */
-  .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .toolbar-right { margin-left: auto; }
-
-  /* ─── Buttons ─── */
-  .btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    white-space: nowrap;
-  }
-  .btn-primary { background: var(--primary); color: white; }
-  .btn-primary:hover { background: var(--primary-light); }
-  .btn-accent { background: var(--accent); color: white; }
-  .btn-accent:hover { background: #D35400; }
-  .btn-outline { background: white; color: var(--primary); border: 1.5px solid var(--primary); }
-  .btn-outline:hover { background: #EBF5FB; }
-  .btn-success { background: var(--success); color: white; }
-  .btn-success:hover { background: #239B56; }
-  .btn-danger { background: var(--danger); color: white; }
-  .btn-danger:hover { background: #A93226; }
-  .btn-sm { padding: 5px 10px; font-size: 12px; }
-  .btn-xs { padding: 3px 8px; font-size: 11px; border-radius: 6px; }
-
-  /* ─── Form Elements ─── */
-  input, select {
-    padding: 8px 12px;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    font-size: 13px;
-    color: var(--text);
-    background: white;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  input:focus, select:focus { border-color: var(--primary); }
-  input::placeholder { color: var(--text-light); }
-
-  /* ─── Table ─── */
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; }
-  thead th {
-    background: #EBF5FB;
-    padding: 10px 12px;
-    text-align: left;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--primary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 2px solid var(--border);
-    white-space: nowrap;
-  }
-  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
-  tbody tr:hover { background: #F8FBFD; }
-  td { padding: 10px 12px; font-size: 13px; vertical-align: middle; }
-  .td-center { text-align: center; }
-
-  /* ─── Badge ─── */
-  .badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  .badge-done { background: #D5F5E3; color: var(--success); }
-  .badge-pending { background: #FDEBD0; color: var(--warning); }
-  .badge-live { background: #FADBD8; color: var(--danger); }
-  .badge-draft { background: #EAECEE; color: var(--text-light); }
-  .badge-u8 { background: #D6EAF8; color: #1A5276; }
-  .badge-u10 { background: #D5F5E3; color: #1E8449; }
-  .badge-u12 { background: #FDEBD0; color: #9A7D0A; }
-  .badge-u15 { background: #F5EEF8; color: #6C3483; }
-  .badge-u18 { background: #FDEDEC; color: #922B21; }
-
-  /* ─── Cards ─── */
-  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-  .card {
-    background: white;
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    padding: 16px;
-    transition: all 0.2s;
-    cursor: pointer;
-  }
-  .card:hover { border-color: var(--primary); box-shadow: 0 4px 16px rgba(27,79,114,0.12); transform: translateY(-1px); }
-  .card.live { border-color: var(--danger); }
-  .card.live .card-status { color: var(--danger); font-weight: 700; }
-
-  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-  .card-title { font-size: 14px; font-weight: 700; color: var(--text); }
-  .card-sub { font-size: 12px; color: var(--text-light); margin-top: 2px; }
-  .card-status { font-size: 11px; font-weight: 600; }
-  .card-meta { display: flex; flex-direction: column; gap: 6px; }
-  .card-meta-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-light); }
-  .card-meta-row strong { color: var(--text); }
-  .card-footer { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-
-  /* ─── Scoreboard ─── */
-  .scoreboard {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    background: #1C2833;
-    border-radius: 10px;
-    overflow: hidden;
-    margin: 16px 0;
-  }
-  .sb-team {
-    padding: 12px 16px;
-    color: white;
-    text-align: center;
-    min-width: 100px;
-  }
-  .sb-team-name { font-size: 12px; font-weight: 600; opacity: 0.8; }
-  .sb-team-score { font-size: 32px; font-weight: 800; color: #F7DC6F; line-height: 1; margin-top: 4px; }
-  .sb-center {
-    flex: 1;
-    padding: 10px;
-    text-align: center;
-    background: #2C3E50;
-    color: white;
-  }
-  .sb-inning { font-size: 12px; opacity: 0.8; }
-  .sb-status { font-size: 11px; font-weight: 600; margin-top: 2px; }
-
-  /* ─── Modal ─── */
-  .modal-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 1000; display: none;
-  }
-  .modal-overlay.show { display: flex; }
-  .modal {
-    background: white;
-    border-radius: 16px;
-    width: 560px;
-    max-width: 95vw;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-  }
-  .modal-header {
-    padding: 20px 24px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .modal-title { font-size: 16px; font-weight: 700; color: var(--primary); }
-  .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-light); line-height: 1; }
-  .modal-body { padding: 20px 24px; }
-  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
-
-  /* ─── Form Group ─── */
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
-  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 14px; }
-  .form-group { display: flex; flex-direction: column; gap: 5px; }
-  .form-label { font-size: 12px; font-weight: 600; color: var(--text); }
-  .form-label span { color: var(--danger); }
-  .form-full { grid-column: 1 / -1; }
-
-  /* ─── Live Inning Board ─── */
-  .inning-board {
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
-  }
-  .inning-cell {
-    width: 36px;
-    height: 28px;
-    border: 1.5px solid var(--border);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .inning-cell:hover { border-color: var(--primary); }
-  .inning-cell.active { background: var(--primary); color: white; border-color: var(--primary); }
-  .inning-cell.hit { background: #D5F5E3; color: var(--success); border-color: var(--success); }
-
-  /* ─── Lineup ─── */
-  .lineup-team {
-    background: #EBF5FB;
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 16px;
-  }
-  .lineup-team-title { font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 12px; }
-  .lineup-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .lineup-pos { width: 28px; height: 28px; background: var(--primary); color: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
-  .lineup-pos.catcher { background: var(--diamond-red); }
-  .lineup-num { width: 32px; font-size: 12px; font-weight: 600; color: var(--text-light); text-align: center; }
-  .lineup-name { font-size: 13px; font-weight: 500; flex: 1; }
-  .lineup-hand { font-size: 11px; color: var(--text-light); }
-
-  /* ─── Stats Table ─── */
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 16px; }
-  .stat-box { background: #EBF5FB; border-radius: 10px; padding: 12px; text-align: center; }
-  .stat-num { font-size: 22px; font-weight: 800; color: var(--primary); }
-  .stat-label { font-size: 11px; color: var(--text-light); margin-top: 2px; }
-
-  /* ─── Search Bar ─── */
-  .search-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #F8F9FA;
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    padding: 6px 12px;
-    width: 260px;
-  }
-  .search-bar input { border: none; background: transparent; flex: 1; padding: 4px; }
-  .search-bar input:focus { border: none; }
-
-  /* ─── Tab Content ─── */
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
-
-  /* ─── Empty State ─── */
-  .empty-state {
-    text-align: center;
-    padding: 48px 24px;
-    color: var(--text-light);
-  }
-  .empty-state-icon { font-size: 48px; margin-bottom: 12px; }
-  .empty-state-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
-  .empty-state-sub { font-size: 13px; }
-
-  /* ─── Standings ─── */
-  .standings-table .pos { font-weight: 800; color: var(--primary); }
-  .standings-table .pos-top3 { color: #F39C12; }
-
-  /* ─── Utility ─── */
-  .mt-8 { margin-top: 8px; }
-  .mt-16 { margin-top: 16px; }
-  .flex { display: flex; }
-  .flex-center { display: flex; align-items: center; }
-  .gap-8 { gap: 8px; }
-  .text-danger { color: var(--danger); }
-  .text-success { color: var(--success); }
-  .text-muted { color: var(--text-light); font-size: 12px; }
-  .divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
-  .highlight { background: #FEF9E7; border: 1px solid #F9E79F; border-radius: 8px; padding: 12px; font-size: 13px; }
-
-  /* ─── Filter Bar ─── */
-  .filter-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 20px; background: #F8F9FA; border-bottom: 1px solid var(--border); }
-  .filter-group { display: flex; align-items: center; gap: 6px; }
-  .filter-label { font-size: 12px; color: var(--text-light); font-weight: 500; }
-
-  /* ─── Section label ─── */
-  .section-label {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--text-light);
-    padding: 0 20px;
-    margin-top: 16px;
-    margin-bottom: 8px;
-  }
-
-  /* ─── Live pulse ─── */
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity: 0.3; } }
-  .live-dot {
-    display: inline-block;
-    width: 8px; height: 8px;
-    background: var(--danger);
-    border-radius: 50%;
-    animation: pulse 1.2s infinite;
-    margin-right: 4px;
-  }
-
-  /* ─── Score input row ─── */
-  .score-inputs { display: flex; align-items: center; gap: 8px; justify-content: center; }
-  .score-inputs input[type="number"] {
-    width: 56px; text-align: center;
-    font-size: 18px; font-weight: 700;
-    padding: 6px; border-radius: 8px;
-  }
+  .empty-state { text-align:center; padding:80px 20px; }
+  .empty-state .empty-icon { font-size:64px; margin-bottom:16px; opacity:0.3; }
 </style>
 </head>
 <body>
-
-<!-- Header -->
-<header>
-  <div class="header-brand">
-    <div class="header-logo">⚾</div>
-    <div>
-      <div class="header-title">香港棒垒球总会 · 赛事管理后台</div>
-      <div class="header-sub">Hong Kong Baseball & Softball Association · Official System</div>
-    </div>
-  </div>
-  <div class="header-right">
-    <div class="header-badge">⚡ 模块 3</div>
-    <div class="header-user">👤 棒总管理员</div>
-  </div>
-</header>
-
-<!-- Nav -->
-<div class="nav-tabs">
-  <div class="nav-tab active" onclick="switchTab(this, 'events')">📅 赛事列表</div>
-  <div class="nav-tab" onclick="switchTab(this, 'live')">🔴 赛事记分台</div>
-  <div class="nav-tab" onclick="switchTab(this, 'stats')">📊 数据统计</div>
-  <div class="nav-tab" onclick="switchTab(this, 'standings')">🏆 积分榜</div>
-</div>
-
-<div class="main">
-
-  <!-- ── Tab 1: 赛事列表 ── -->
-  <div class="tab-content active" id="tab-events">
-
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">📅 赛事列表 <span style="font-weight:400;font-size:12px;color:var(--text-light)">— 香港棒垒球总会官方赛事总览</span></div>
-        <div class="toolbar">
-          <div class="toolbar-right">
-            <button class="btn btn-outline btn-sm" onclick="exportEvents()">📤 导出Excel</button>
-            <button class="btn btn-primary btn-sm" onclick="openNewEvent()">+ 新建赛事</button>
-          </div>
-        </div>
-      </div>
-      <div class="filter-row">
-        <div class="filter-group">
-          <span class="filter-label">组别：</span>
-          <select id="filter-group" onchange="renderEvents()">
-            <option value="">全部组别</option>
-            <option value="U8">U8</option><option value="U10">U10</option>
-            <option value="U12">U12</option><option value="U15">U15</option><option value="U18">U18</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <span class="filter-label">状态：</span>
-          <select id="filter-status" onchange="renderEvents()">
-            <option value="">全部</option>
-            <option value="进行中">进行中</option>
-            <option value="已结束">已结束</option>
-            <option value="报名中">报名中</option>
-            <option value="筹备中">筹备中</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <span class="filter-label">搜索：</span>
-          <input type="text" id="search-events" placeholder="赛事名称 / 地点" oninput="renderEvents()" style="width:180px;">
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table id="events-table">
-          <thead><tr>
-            <th>ID</th><th>赛事名称</th><th>组别</th><th>日期</th><th>地点</th><th>参赛队伍</th><th>赛制</th><th>状态</th><th>操作</th>
-          </tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header"><div class="panel-title">📋 待办事项 — 近期需确认的工作</div></div>
-      <div class="panel-body">
-        <div class="card-grid" id="todos-list"></div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ── Tab 2: 赛事记分台 ── -->
-  <div class="tab-content" id="tab-live">
-
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">🔴 赛事记分台</div>
-        <div class="toolbar">
-          <select id="live-event-select" onchange="loadLiveGame()" style="min-width:240px;">
-            <option value="">— 选择赛事 —</option>
-          </select>
-          <button class="btn btn-accent btn-sm" onclick="openNewGame()">+ 新建比赛</button>
-        </div>
-      </div>
-      <div class="panel-body" id="scoreboard-area">
-        <div class="empty-state">
-          <div class="empty-state-icon">📋</div>
-          <div class="empty-state-title">请选择一场赛事</div>
-          <div class="empty-state-sub">从上方下拉菜单选择，或新建一场比赛</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header"><div class="panel-title">📝 比赛记录表 — 本场比赛所有打席记录</div></div>
-      <div class="panel-body">
-        <div class="table-wrap" id="atbat-log"></div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header"><div class="panel-title">⚾ 投手数据卡 — 本场比赛投手表现</div></div>
-      <div class="panel-body">
-        <div class="table-wrap" id="pitcher-log"></div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ── Tab 3: 数据统计 ── -->
-  <div class="tab-content" id="tab-stats">
-
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">📊 赛季数据统计</div>
-        <div class="toolbar">
-          <select id="stats-season" onchange="renderStats()">
-            <option value="2025-2026">2025-2026 赛季</option>
-            <option value="2024-2025">2024-2025 赛季</option>
-          </select>
-        </div>
-      </div>
-      <div class="panel-body">
-        <div class="stats-grid" id="stats-overview"></div>
-        <hr class="divider">
-        <div class="card-grid" id="stats-cards"></div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ── Tab 4: 积分榜 ── -->
-  <div class="tab-content" id="tab-standings">
-
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">🏆 联赛积分榜</div>
-        <div class="toolbar">
-          <select id="standings-season" onchange="renderStandings()">
-            <option value="2025-2026">2025-2026 赛季</option>
-            <option value="2024-2025">2024-2025 赛季</option>
-          </select>
-          <select id="standings-div" onchange="renderStandings()">
-            <option value="">全组别</option>
-            <option value="U8">U8</option><option value="U10">U10</option>
-            <option value="U12">U12</option><option value="U15">U15</option><option value="U18">U18</option>
-          </select>
-        </div>
-      </div>
-      <div class="panel-body">
-        <div class="table-wrap">
-          <table class="standings-table" id="standings-table">
-            <thead><tr>
-              <th>排名</th><th>球队</th><th>组别</th><th>胜</th><th>负</th><th>平</th><th>胜率</th><th>得分</th><th>失分</th><th>净胜分</th><th>已赛</th>
-            </tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header"><div class="panel-title">🎯 投手排行榜</div></div>
-      <div class="panel-body">
-        <div class="table-wrap">
-          <table id="pitcher-stats">
-            <thead><tr><th>排名</th><th>球员</th><th>球队</th><th>组别</th><th>局数</th><th>失分</th><th>自责分</th><th>ERA</th><th>三振</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-</div>
-
-<!-- ── Modal: 新建赛事 ── -->
-<div class="modal-overlay" id="modal-event">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-event-title">新建赛事</div>
-      <button class="modal-close" onclick="closeModal('modal-event')">×</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="event-id">
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">赛事名称 <span>*</span></label>
-          <input type="text" id="ev-name" placeholder="如：2026年香港春季少棒锦标赛">
-        </div>
-        <div class="form-group">
-          <label class="form-label">组别 <span>*</span></label>
-          <select id="ev-group">
-            <option value="">选择组别</option>
-            <option>U8</option><option>U10</option><option>U12</option><option>U15</option><option>U18</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">开始日期 <span>*</span></label>
-          <input type="date" id="ev-start">
-        </div>
-        <div class="form-group">
-          <label class="form-label">结束日期</label>
-          <input type="date" id="ev-end">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">比赛地点</label>
-          <input type="text" id="ev-venue" placeholder="如：香港仔黄竹坑运动场">
-        </div>
-        <div class="form-group">
-          <label class="form-label">赛制</label>
-          <select id="ev-format">
-            <option>循环赛</option><option>淘汰赛</option><option>混合赛制</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">状态</label>
-          <select id="ev-status">
-            <option>筹备中</option><option>报名中</option><option>进行中</option><option>已结束</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">参赛队伍数</label>
-          <input type="number" id="ev-teams" value="4" min="2" max="16">
-        </div>
-      </div>
-      <div class="form-group form-full">
-        <label class="form-label">备注</label>
-        <input type="text" id="ev-note" placeholder="补充说明">
-      </div>
-      <div class="highlight">
-        <strong>📌 参赛球队确认：</strong>球队名单可在赛事详情中单独添加，支持 Excel 批量导入。
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-event')">取消</button>
-      <button class="btn btn-primary" onclick="saveEvent()">保存赛事</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── Modal: 新建比赛 ── -->
-<div class="modal-overlay" id="modal-game">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">新建比赛记录</div>
-      <button class="modal-close" onclick="closeModal('modal-game')">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">所属赛事 <span>*</span></label>
-          <select id="gk-event"><option value="">选择赛事</option></select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">比赛日期</label>
-          <input type="date" id="gk-date">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">主队 <span>*</span></label>
-          <select id="gk-home"><option value="">选择主队</option></select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">客队 <span>*</span></label>
-          <select id="gk-away"><option value="">选择客队</option></select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">场地</label>
-          <input type="text" id="gk-venue" placeholder="比赛地点">
-        </div>
-        <div class="form-group">
-          <label class="form-label">主审裁判</label>
-          <input type="text" id="gk-umpire" placeholder="裁判姓名">
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-game')">取消</button>
-      <button class="btn btn-accent" onclick="saveGame()">开始记分</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── Modal: 确认删除 ── -->
-<div class="modal-overlay" id="modal-confirm">
-  <div class="modal" style="width:400px;">
-    <div class="modal-header">
-      <div class="modal-title">⚠️ 确认操作</div>
-      <button class="modal-close" onclick="closeModal('modal-confirm')">×</button>
-    </div>
-    <div class="modal-body">
-      <p id="confirm-msg" style="font-size:14px;line-height:1.6;">确定要执行此操作吗？</p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-confirm')">取消</button>
-      <button class="btn btn-danger" id="confirm-btn" onclick="doConfirm()">确认</button>
-    </div>
-  </div>
-</div>
-
+<script src="assets/nav.js"></script>
 <script>
-// ═══════════════════════════════════════════════
-// DATA STORE
-// ═══════════════════════════════════════════════
-const SAMPLE_EVENTS = [
-  {id:'E001', name:'2026年香港春季少棒锦标赛', group:'U12', start:'2026-03-15', end:'2026-04-05', venue:'香港仔黄竹坑运动场', teams:8, format:'循环赛+淘汰赛', status:'进行中', note:'春季杯正赛'},
-  {id:'E002', name:'香港青棒联赛 2025-26 赛季', group:'U18', start:'2025-10-01', end:'2026-06-30', venue:'多个场地', teams:6, format:'主客场循环赛', status:'进行中', note:'联赛积分制'},
-  {id:'E003', name:'香港少棒联赛 2025-26 赛季', group:'U12', start:'2025-10-01', end:'2026-06-30', venue:'多个场地', teams:10, format:'主客场循环赛', status:'进行中', note:'联赛积分制'},
-  {id:'E004', name:'U8 趣味棒球邀请赛', group:'U8', start:'2026-05-01', end:'2026-05-01', venue:'南华会棒球场', teams:4, format:'友谊赛', status:'报名中', note:'T-ball组别'},
-  {id:'E005', name:'2025年秋季青少棒锦标赛', group:'U15', start:'2025-09-01', end:'2025-11-30', venue:'多个场地', teams:6, format:'混合赛制', status:'已结束', note:'秋季杯'},
-  {id:'E006', name:'新界区U10选拔赛', group:'U10', start:'2026-06-15', end:'2026-06-15', venue:'沙田马鞍山运动场', teams:8, format:'淘汰赛', status:'筹备中', note:'代表队选拔'},
-  {id:'E007', name:'香港女子垒球邀请赛', group:'U15', start:'2026-04-20', end:'2026-04-20', venue:'铜锣湾运动场', teams:5, format:'单循环', status:'报名中', note:'特别组别'},
-];
+document.addEventListener('DOMContentLoaded', async function() {
+  initNav({ title:'赛事与记分', subtitle:'Module 03 · Game Management' });
 
-const SAMPLE_GAMES = [
-  {id:'G001', event:'E001', date:'2026-04-12', home:'香港老虎少棒队', away:'九龙天使队', homeScore:7, awayScore:3, status:'已结束', venue:'黄竹坑', umpire:'张志明', innings:[3,2,0,1,1,0,0,'X',''], awayInnings:[1,0,0,1,0,0,1,'',''], inningIndex:7},
-  {id:'G002', event:'E002', date:'2026-04-18', home:'港岛红雀队', away:'新界野马队', homeScore:2, awayScore:2, status:'进行中', venue:'香港仔', umpire:'李文辉', innings:[0,1,1,0,'',''], awayInnings:[1,0,0,1,'',''], inningIndex:4},
-  {id:'G003', event:'E001', date:'2026-04-05', home:'九龙天使队', away:'新界飓风队', homeScore:5, awayScore:8, status:'已结束', venue:'沙田', umpire:'陈大文', innings:[1,0,2,0,2,'X','',''], awayInnings:[0,2,1,3,2,'','',''], inningIndex:6},
-  {id:'G004', event:'E003', date:'2026-03-28', home:'香港老虎少棒队', away:'港岛蓝鸟队', homeScore:12, awayScore:0, status:'已结束', venue:'黄竹坑', umpire:'张志明', innings:[2,3,4,3,'X','',''], awayInnings:[0,0,0,0,'','','',''], inningIndex:4},
-];
+  var allGames = [];
+  var allTeams = [];
+  var currentTab = 'all';
 
-const SAMPLE_STANDINGS = [
-  {team:'香港老虎少棒队', div:'U12', w:6, l:1, t:0, ra:38, rd:12},
-  {team:'九龙天使队', div:'U12', w:5, l:2, t:0, ra:32, rd:18},
-  {team:'港岛红雀队', div:'U12', w:4, l:3, t:0, ra:28, rd:22},
-  {team:'新界飓风队', div:'U12', w:3, l:4, t:0, ra:22, rd:30},
-  {team:'港岛蓝鸟队', div:'U12', w:1, l:6, t:0, ra:10, ra2:48},
-  {team:'新界野马队', div:'U18', w:7, l:0, t:1, ra:52, rd:8},
-  {team:'九龙力量队', div:'U18', w:5, l:2, t:1, ra:38, rd:20},
-  {team:'港岛红雀青棒', div:'U18', w:4, l:3, t:1, ra:30, rd:28},
-  {team:'新界飓风青棒', div:'U18', w:2, l:5, t:1, ra:18, rd:42},
-  {team:'香港海盗队', div:'U18', w:1, l:7, t:0, ra:12, rd:52},
-  {team:'屯门小龙队', div:'U10', w:5, l:0, t:0, ra:35, rd:5},
-  {team:'沙田幼虎队', div:'U10', w:4, l:1, t:0, ra:28, rd:12},
-  {team:'东区小鹰队', div:'U10', w:3, l:2, t:0, ra:20, rd:18},
-  {team:'荃湾小将队', div:'U10', w:1, l:4, t:0, ra:10, rd:32},
-  {team:'元朗小狼队', div:'U10', w:0, l:5, t:0, ra:5, rd:42},
-];
+  function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 
-const SAMPLE_TEAMS = ['香港老虎少棒队','九龙天使队','港岛红雀队','新界飓风队','港岛蓝鸟队','新界野马队','九龙力量队','港岛红雀青棒','新界飓风青棒','香港海盗队','屯门小龙队','沙田幼虎队','东区小鹰队','荃湾小将队','元朗小狼队'];
-const SAMPLE_PLAYERS = [
-  {name:'陈俊轩', num:'7', pos:'游击手', hand:'右投右打'},
-  {name:'林可晴', num:'12', pos:'投手', hand:'右投左打'},
-  {name:'张浩然', num:'3', pos:'捕手', hand:'右投右打'},
-  {name:'王家耀', num:'21', pos:'中外野', hand:'左投左打'},
-  {name:'李芷晴', num:'5', pos:'一垒手', hand:'右投右打'},
-  {name:'周柏豪', num:'9', pos:'左外野', hand:'右投右打'},
-];
-
-const TODOS = [
-  {text:'确认2026年春季少棒锦标赛决赛时间及场地', priority:'high', done:false},
-  {text:'发送U18青棒联赛第7轮对阵表至各队教练', priority:'medium', done:false},
-  {text:'收集新界区U10选拔赛参赛名单', priority:'medium', done:false},
-  {text:'更新港岛红雀 vs 新界野马 比赛记分（进行中）', priority:'high', done:false},
-  {text:'U8趣味赛报名截止提醒（4月25日）', priority:'low', done:false},
-  {text:'审核新界飓风队新球员注册申请', priority:'medium', done:false},
-];
-
-// ─── State ───
-let events = JSON.parse(localStorage.getItem('hkba_events') || 'null') || [...SAMPLE_EVENTS];
-let games = JSON.parse(localStorage.getItem('hkba_games') || 'null') || [...SAMPLE_GAMES];
-let todos = [...TODOS];
-let currentGame = null;
-let atBats = [];
-let pitchers = [];
-let confirmCallback = null;
-
-// ─── Tab Switch ───
-function switchTab(el, id) {
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  document.getElementById('tab-' + id).classList.add('active');
-  if (id === 'stats') renderStats();
-  if (id === 'standings') renderStandings();
-}
-
-// ─── Events ───
-function renderEvents() {
-  const g = document.getElementById('filter-group').value;
-  const s = document.getElementById('filter-status').value;
-  const q = document.getElementById('search-events').value.toLowerCase();
-  const filtered = events.filter(e => {
-    if (g && e.group !== g) return false;
-    if (s && e.status !== s) return false;
-    if (q && !e.name.toLowerCase().includes(q) && !e.venue.toLowerCase().includes(q)) return false;
-    return true;
-  });
-
-  const tbody = document.querySelector('#events-table tbody');
-  if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-light)">暂无赛事记录</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = filtered.map(e => {
-    const statusMap = {'进行中':'badge-live','已结束':'badge-done','报名中':'badge-pending','筹备中':'badge-draft'};
-    const badgeClass = statusMap[e.status] || 'badge-draft';
-    return `<tr>
-      <td><span class="text-muted">${e.id}</span></td>
-      <td><strong>${e.name}</strong>${e.note ? '<br><span class="text-muted">'+e.note+'</span>' : ''}</td>
-      <td><span class="badge badge-${e.group.toLowerCase()}">${e.group}</span></td>
-      <td>${e.start}${e.end && e.end !== e.start ? ' ~ ' + e.end.slice(5) : ''}</td>
-      <td>${e.venue}</td>
-      <td class="td-center">${e.teams} 队</td>
-      <td class="td-center">${e.format}</td>
-      <td><span class="badge ${badgeClass}">${e.status === '进行中' ? '<span class="live-dot"></span>进行中' : e.status}</span></td>
-      <td>
-        <button class="btn btn-xs btn-outline" onclick="editEvent('${e.id}')">✏️</button>
-        <button class="btn btn-xs btn-outline" onclick="viewEventGames('${e.id}')">📋</button>
-        <button class="btn btn-xs btn-danger" onclick="deleteEvent('${e.id}')">🗑️</button>
-      </td>
-    </tr>`;
-  }).join('');
-}
-
-function openNewEvent() {
-  document.getElementById('event-id').value = '';
-  document.getElementById('ev-name').value = '';
-  document.getElementById('ev-group').value = '';
-  document.getElementById('ev-start').value = '';
-  document.getElementById('ev-end').value = '';
-  document.getElementById('ev-venue').value = '';
-  document.getElementById('ev-format').value = '循环赛';
-  document.getElementById('ev-status').value = '筹备中';
-  document.getElementById('ev-teams').value = '4';
-  document.getElementById('ev-note').value = '';
-  document.getElementById('modal-event-title').textContent = '新建赛事';
-  openModal('modal-event');
-}
-
-function editEvent(id) {
-  const e = events.find(ev => ev.id === id);
-  if (!e) return;
-  document.getElementById('event-id').value = e.id;
-  document.getElementById('ev-name').value = e.name;
-  document.getElementById('ev-group').value = e.group;
-  document.getElementById('ev-start').value = e.start;
-  document.getElementById('ev-end').value = e.end;
-  document.getElementById('ev-venue').value = e.venue;
-  document.getElementById('ev-format').value = e.format;
-  document.getElementById('ev-status').value = e.status;
-  document.getElementById('ev-teams').value = e.teams;
-  document.getElementById('ev-note').value = e.note || '';
-  document.getElementById('modal-event-title').textContent = '编辑赛事';
-  openModal('modal-event');
-}
-
-function saveEvent() {
-  const id = document.getElementById('event-id').value;
-  const name = document.getElementById('ev-name').value.trim();
-  const group = document.getElementById('ev-group').value;
-  if (!name || !group) { alert('请填写赛事名称和组别'); return; }
-  const data = {
-    name, group,
-    start: document.getElementById('ev-start').value,
-    end: document.getElementById('ev-end').value,
-    venue: document.getElementById('ev-venue').value,
-    format: document.getElementById('ev-format').value,
-    status: document.getElementById('ev-status').value,
-    teams: parseInt(document.getElementById('ev-teams').value),
-    note: document.getElementById('ev-note').value,
-  };
-  if (id) {
-    const idx = events.findIndex(e => e.id === id);
-    if (idx !== -1) events[idx] = {...events[idx], ...data};
-  } else {
-    data.id = 'E' + String(events.length + 1).padStart(3,'0');
-    events.unshift(data);
-  }
-  localStorage.setItem('hkba_events', JSON.stringify(events));
-  closeModal('modal-event');
-  renderEvents();
-  populateLiveSelect();
-}
-
-function deleteEvent(id) {
-  showConfirm('确定删除赛事 ' + id + '？此操作不可撤销。', () => {
-    events = events.filter(e => e.id !== id);
-    localStorage.setItem('hkba_events', JSON.stringify(events));
-    renderEvents();
-    populateLiveSelect();
-  });
-}
-
-function viewEventGames(eventId) {
-  const eventGames = games.filter(g => g.event === eventId);
-  alert(`赛事 ${eventId} 共有 ${eventGames.length} 场比赛记录\n可进入「赛事记分台」标签查看详细。`);
-  document.querySelectorAll('.nav-tab')[1].click();
-}
-
-// ─── Games / Live Scoring ───
-function populateLiveSelect() {
-  const ongoing = events.filter(e => e.status === '进行中' || e.status === '报名中');
-  const sel = document.getElementById('live-event-select');
-  sel.innerHTML = '<option value="">— 选择赛事（显示进行中比赛）—</option>' +
-    ongoing.map(e => `<option value="${e.id}">${e.name} [${e.group}]</option>`).join('');
-  const gkSel = document.getElementById('gk-event');
-  gkSel.innerHTML = '<option value="">选择赛事</option>' +
-    events.map(e => `<option value="${e.id}">${e.name} [${e.group}]</option>`).join('');
-}
-
-function loadLiveGame() {
-  const eventId = document.getElementById('live-event-select').value;
-  if (!eventId) {
-    document.getElementById('scoreboard-area').innerHTML = `<div class="empty-state">
-      <div class="empty-state-icon">📋</div><div class="empty-state-title">请选择赛事</div>
-      <div class="empty-state-sub">从上方下拉菜单选择赛事，查看或新建比赛记分</div></div>`;
-    document.getElementById('atbat-log').innerHTML = '';
-    document.getElementById('pitcher-log').innerHTML = '';
-    return;
-  }
-  const eventGames = games.filter(g => g.event === eventId);
-  const ongoingGame = eventGames.find(g => g.status === '进行中');
-  if (ongoingGame) {
-    currentGame = ongoingGame;
-    renderScoreboard(ongoingGame);
-  } else if (eventGames.length > 0) {
-    currentGame = eventGames[0];
-    renderScoreboard(currentGame);
-  } else {
-    currentGame = null;
-    document.getElementById('scoreboard-area').innerHTML = `<div class="empty-state">
-      <div class="empty-state-icon">⚾</div><div class="empty-state-title">暂无比赛记录</div>
-      <div class="empty-state-sub">点击右上角「+ 新建比赛」开始记分</div>
-      <button class="btn btn-accent mt-16" onclick="openNewGame()">+ 新建比赛</button></div>`;
-    document.getElementById('atbat-log').innerHTML = '';
-    document.getElementById('pitcher-log').innerHTML = '';
-  }
-  renderAtBatLog();
-  renderPitcherLog();
-}
-
-function renderScoreboard(g) {
-  const isLive = g.status === '进行中';
-  const totalInnings = Math.max(g.innings.length, g.awayInnings.length);
-  const inningLabel = g.inningIndex < totalInnings ? `第 ${g.inningIndex + 1} 局上` :
-    (g.inningIndex === totalInnings - 1 ? '比赛结束' : `第 ${g.inningIndex + 1} 局`);
-
-  let inningHTML = '';
-  for (let i = 0; i < Math.max(g.innings.length, g.awayInnings.length); i++) {
-    const hv = g.innings[i] !== undefined && g.innings[i] !== '' ? g.innings[i] : '—';
-    const av = g.awayInnings[i] !== undefined && g.awayInnings[i] !== '' ? g.awayInnings[i] : '—';
-    inningHTML += `<div style="min-width:44px;padding:6px 4px;text-align:center;border-right:1px solid rgba(255,255,255,0.1);">
-      <div style="font-size:10px;opacity:0.6;margin-bottom:4px;">${i+1}</div>
-      <div style="font-size:16px;font-weight:700;color:#F7DC6F;">${hv}</div>
-      <div style="font-size:16px;font-weight:700;color:#85C1E9;">${av}</div>
-    </div>`;
+  function getStatusBadge(status, game_date) {
+    if (status === 'completed') return '<span class="game-status-badge status-completed">✓ 已结束</span>';
+    if (status === 'in_progress') return '<span class="live-badge"><span>●</span>进行中</span>';
+    var d = new Date(game_date);
+    var today = new Date();
+    today.setHours(0,0,0,0);
+    if (d.toDateString() === today.toDateString()) return '<span class="live-badge">今日比赛</span>';
+    return '<span class="game-status-badge status-scheduled">📅 待赛</span>';
   }
 
-  const html = `
-    ${isLive ? `<div style="background:#C0392B;color:white;padding:8px 16px;font-size:13px;font-weight:600;border-radius:8px 8px 0 0;text-align:center;">
-      <span class="live-dot"></span>比赛进行中 — ${inningLabel}
-    </div>` : `<div style="background:#1E8449;color:white;padding:8px 16px;font-size:13px;font-weight:600;border-radius:8px 8px 0 0;text-align:center;">🏆 比赛结束</div>`}
-    <div class="scoreboard" style="border-radius:${isLive ? '0 0 10px 10px' : '10px'};">
-      <div class="sb-team">
-        <div class="sb-team-name">🏠 ${g.home}</div>
-        <div class="sb-team-score">${g.homeScore}</div>
-      </div>
-      <div class="sb-center">
-        <div class="sb-inning">${inningLabel}</div>
-        <div class="sb-status">VS</div>
-        <div class="inning-board mt-8">${inningHTML}</div>
-      </div>
-      <div class="sb-team">
-        <div class="sb-team-name">✈️ ${g.away}</div>
-        <div class="sb-team-score">${g.awayScore}</div>
+  function getStatusBtn(status, id) {
+    if (status === 'scheduled') return '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();startGame(\'' + id + '\')">▶ 开始</button>';
+    if (status === 'in_progress') return '<button class="btn btn-sm btn-warning" style="background:var(--warning);color:white" onclick="event.stopPropagation();endGame(\'' + id + '\')">■ 结束</button>';
+    return '<button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();editGame(\'' + id + '\')">✏️</button>';
+  }
+
+  function renderGames(games) {
+    var pc = {
+      total: allGames.length,
+      completed: allGames.filter(function(g){ return g.status==='completed'; }).length,
+      live: allGames.filter(function(g){ return g.status==='in_progress'; }).length,
+      scheduled: allGames.filter(function(g){ return g.status==='scheduled'; }).length
+    };
+    initNav({
+      title: '赛事与记分',
+      subtitle: 'Module 03 · Game Management',
+      stats: [
+        { label: '总赛事', value: pc.total },
+        { label: '已结束', value: pc.completed },
+        { label: '进行中', value: pc.live },
+        { label: '待赛', value: pc.scheduled }
+      ]
+    });
+
+    var container = document.getElementById('page-content');
+    var html = `
+    <div class="page-header">
+      <div><h2>📊 赛事管理与记分</h2><p>联赛管理、实时记分、数据统计</p></div>
+      <div class="page-actions">
+        <button class="btn btn-secondary btn-sm" onclick="exportGames()">📤 导出</button>
+        <button class="btn btn-primary" onclick="openGameModal()">+ 新增比赛</button>
       </div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-      ${isLive ? `
-        <button class="btn btn-success btn-sm" onclick="scoreRun('home')">🏃 主队得分 +1</button>
-        <button class="btn btn-info btn-sm" onclick="scoreRun('away')">🏃 客队得分 +1</button>
-        <button class="btn btn-outline btn-sm" onclick="addInning()">➕ 新增局数</button>
-        <button class="btn btn-danger btn-sm" onclick="endGame()">🏁 结束比赛</button>
-      ` : ''}
-      <button class="btn btn-outline btn-sm" onclick="addAtBat()">📝 记录打席</button>
-      <button class="btn btn-outline btn-sm" onclick="addPitcher()">⚾ 记录投手</button>
-    </div>
-    <div style="margin-top:12px;padding:12px;background:#F8F9FA;border-radius:8px;font-size:13px;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;">
-      <div><strong>日期：</strong>${g.date}</div>
-      <div><strong>场地：</strong>${g.venue}</div>
-      <div><strong>主审：</strong>${g.umpire || '待定'}</div>
-      <div><strong>状态：</strong>${g.status}</div>
+
+    <div class="game-tabs">
+      <button class="game-tab ${currentTab==='all'?'active':''}" onclick="switchTab('all')">全部 (${pc.total})</button>
+      <button class="game-tab ${currentTab==='in_progress'?'active':''}" onclick="switchTab('in_progress')">🔴 进行中 (${pc.live})</button>
+      <button class="game-tab ${currentTab==='scheduled'?'active':''}" onclick="switchTab('scheduled')">📅 待赛 (${pc.scheduled})</button>
+      <button class="game-tab ${currentTab==='completed'?'active':''}" onclick="switchTab('completed')">✓ 已结束 (${pc.completed})</button>
     </div>`;
 
-  document.getElementById('scoreboard-area').innerHTML = html;
-}
+    if (games.length === 0) {
+      html += `<div class="empty-state"><div class="empty-icon">📊</div><h3>暂无比赛数据</h3><p>点击右上角「新增比赛」创建第一场比赛</p><button class="btn btn-primary" onclick="openGameModal()" style="margin-top:16px;">+ 新增比赛</button></div>`;
+    } else {
+      games.forEach(function(g) {
+        var statusBadge = getStatusBadge(g.status, g.game_date);
+        var homeScore = g.home_score || 0;
+        var awayScore = g.away_score || 0;
+        var winner = homeScore > awayScore ? 'home' : homeScore < awayScore ? 'away' : 'tie';
+        var league = g.league || '';
+        var venue = g.venue || '';
 
-function scoreRun(team) {
-  if (!currentGame) return;
-  const totalInnings = Math.max(currentGame.innings.length, currentGame.awayInnings.length);
-  if (team === 'home') {
-    currentGame.homeScore++;
-    if (currentGame.inningIndex < currentGame.innings.length) {
-      const cur = parseInt(currentGame.innings[currentGame.inningIndex]) || 0;
-      currentGame.innings[currentGame.inningIndex] = cur + 1;
+        html += `
+        <div class="scoreboard-card" onclick="openGameDetail('${g.id || g.game_id}')">
+          <div class="score-header">
+            <div>
+              <div class="score-date">${formatDate(g.game_date)} ${g.game_time||''} · ${escHtml(league)}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">📍 ${escHtml(venue)}</div>
+            </div>
+            ${statusBadge}
+          </div>
+          <div class="score-teams">
+            <div class="score-team">
+              <div class="score-team-name" style="color:${winner==='home'?'var(--primary)':'var(--text-primary)'}">${g.home_team_name || '主队'}</div>
+              <div class="score-team-scr" style="color:${winner==='home'?'var(--primary)':'var(--text-primary)'}">${homeScore}</div>
+            </div>
+            <div class="score-vs">VS</div>
+            <div class="score-team">
+              <div class="score-team-name" style="color:${winner==='away'?'var(--accent)':'var(--text-primary)'}">${g.away_team_name || '客队'}</div>
+              <div class="score-team-scr" style="color:${winner==='away'?'var(--accent)':'var(--text-primary)'}">${awayScore}</div>
+            </div>
+          </div>
+          <div class="score-footer">
+            <div style="font-size:12px;color:var(--text-muted);">${g.innings_total || 7}局 · 已赛${g.innings_played || 0}局</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();editGame('${g.id || g.game_id}')">✏️</button>
+              ${getStatusBtn(g.status, g.id || g.game_id)}
+            </div>
+          </div>
+        </div>`;
+      });
     }
-  } else {
-    currentGame.awayScore++;
-    if (currentGame.inningIndex < currentGame.awayInnings.length) {
-      const cur = parseInt(currentGame.awayInnings[currentGame.inningIndex]) || 0;
-      currentGame.awayInnings[currentGame.inningIndex] = cur + 1;
-    }
+
+    container.innerHTML = html;
   }
-  saveGames();
-  renderScoreboard(currentGame);
-}
 
-function addInning() {
-  if (!currentGame) return;
-  currentGame.innings.push('');
-  currentGame.awayInnings.push('');
-  currentGame.inningIndex = currentGame.innings.length - 1;
-  saveGames();
-  renderScoreboard(currentGame);
-}
-
-function endGame() {
-  if (!currentGame) return;
-  showConfirm('确认结束本场比赽？结束后状态将变更为「已结束」。', () => {
-    currentGame.status = '已结束';
-    currentGame.inningIndex = Math.max(currentGame.innings.length, currentGame.awayInnings.length) - 1;
-    saveGames();
-    renderScoreboard(currentGame);
-    renderAtBatLog();
-    renderPitcherLog();
-  });
-}
-
-function openNewGame() {
-  const gkHome = document.getElementById('gk-home');
-  const gkAway = document.getElementById('gk-away');
-  gkHome.innerHTML = '<option value="">选择主队</option>' + SAMPLE_TEAMS.map(t => `<option value="${t}">${t}</option>`).join('');
-  gkAway.innerHTML = '<option value="">选择客队</option>' + SAMPLE_TEAMS.map(t => `<option value="${t}">${t}</option>`).join('');
-  document.getElementById('gk-event').value = document.getElementById('live-event-select').value;
-  document.getElementById('gk-date').value = new Date().toISOString().slice(0,10);
-  document.getElementById('gk-venue').value = '';
-  document.getElementById('gk-umpire').value = '';
-  openModal('modal-game');
-}
-
-function saveGame() {
-  const evId = document.getElementById('gk-event').value;
-  const home = document.getElementById('gk-home').value;
-  const away = document.getElementById('gk-away').value;
-  if (!evId || !home || !away) { alert('请选择赛事和两支参赛队伍'); return; }
-  const ev = events.find(e => e.id === evId);
-  const g = {
-    id: 'G' + String(games.length + 1).padStart(3,'0'),
-    event: evId, date: document.getElementById('gk-date').value || new Date().toISOString().slice(0,10),
-    home, away, homeScore: 0, awayScore: 0,
-    status: '进行中', venue: document.getElementById('gk-venue').value || '',
-    umpire: document.getElementById('gk-umpire').value || '',
-    innings: ['',''], awayInnings: ['',''], inningIndex: 0
-  };
-  games.unshift(g);
-  localStorage.setItem('hkba_games', JSON.stringify(games));
-  closeModal('modal-game');
-  document.getElementById('live-event-select').value = evId;
-  loadLiveGame();
-  renderEvents();
-}
-
-function saveGames() {
-  const idx = games.findIndex(g => g.id === currentGame.id);
-  if (idx !== -1) games[idx] = currentGame;
-  localStorage.setItem('hkba_games', JSON.stringify(games));
-}
-
-// ─── At-Bat Log ───
-function addAtBat() {
-  const player = SAMPLE_PLAYERS[Math.floor(Math.random() * SAMPLE_PLAYERS.length)];
-  const result = ['一垒安打','二垒安打','三振','内野飞球','外野飞球','地滚球','全垒打','触身球','高飞牺牲打'][Math.floor(Math.random()*9)];
-  const resultClass = result === '三振' ? 'text-danger' : result === '全垒打' ? 'text-success' : '';
-  atBats.unshift({...player, result, resultClass, time: new Date().toLocaleTimeString()});
-  if (atBats.length > 50) atBats.pop();
-  renderAtBatLog();
-}
-
-function renderAtBatLog() {
-  if (atBats.length === 0) {
-    document.getElementById('atbat-log').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">暂无打席记录</div><div class="empty-state-sub">点击「记录打席」添加本场比赛打席数据</div></div>';
-    return;
+  function switchTab(tab) {
+    currentTab = tab;
+    var filtered = tab === 'all' ? allGames : allGames.filter(function(g){ return g.status === tab; });
+    renderGames(filtered);
   }
-  document.getElementById('atbat-log').innerHTML = `<table>
-    <thead><tr><th>#</th><th>打者</th><th>背号</th><th>位置</th><th>打击习惯</th><th>打席结果</th><th>时间</th></tr></thead>
-    <tbody>${atBats.map((b,i) => `<tr>
-      <td>${i+1}</td><td><strong>${b.name}</strong></td><td>${b.num}</td><td>${b.pos}</td><td>${b.hand}</td>
-      <td class="${b.resultClass}"><strong>${b.result}</strong></td><td class="text-muted">${b.time}</td>
-    </tr>`).join('')}</tbody></table>`;
-}
 
-// ─── Pitcher Log ───
-function addPitcher() {
-  const pitcher = {name: SAMPLE_PLAYERS[1].name, num: SAMPLE_PLAYERS[1].num, outs: Math.floor(Math.random()*6), strikeouts: Math.floor(Math.random()*4), walks: Math.floor(Math.random()*3), hits: Math.floor(Math.random()*4), runs: Math.floor(Math.random()*3), era: (Math.random()*4).toFixed(2)};
-  pitchers.unshift({...pitcher, time: new Date().toLocaleTimeString()});
-  if (pitchers.length > 10) pitchers.pop();
-  renderPitcherLog();
-}
-
-function renderPitcherLog() {
-  if (pitchers.length === 0) {
-    document.getElementById('pitcher-log').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚾</div><div class="empty-state-title">暂无投手记录</div><div class="empty-state-sub">点击「记录投手」添加投手数据</div></div>';
-    return;
-  }
-  document.getElementById('pitcher-log').innerHTML = `<table>
-    <thead><tr><th>投手</th><th>背号</th><th>投球数</th><th>三振</th><th>保送</th><th>被安打</th><th>失分</th><th>ERA</th><th>时间</th></tr></thead>
-    <tbody>${pitchers.map(p => `<tr>
-      <td><strong>${p.name}</strong></td><td>${p.num}</td><td>${p.outs * 3 + Math.floor(Math.random()*3)}</td>
-      <td>${p.strikeouts}</td><td>${p.walks}</td><td>${p.hits}</td><td>${p.runs}</td>
-      <td><strong>${p.era}</strong></td><td class="text-muted">${p.time}</td>
-    </tr>`).join('')}</tbody></table>`;
-}
-
-// ─── Stats ───
-function renderStats() {
-  const overview = [
-    {num: events.length, label:'赛事总数'},
-    {num: games.length, label:'比赛记录'},
-    {num: SAMPLE_STANDINGS.length, label:'参赛球队'},
-    {num: atBats.length, label:'打席记录'},
-  ];
-  document.getElementById('stats-overview').innerHTML = overview.map(s => `<div class="stat-box"><div class="stat-num">${s.num}</div><div class="stat-label">${s.label}</div></div>`).join('');
-
-  const cards = [
-    {title:'📅 按组别赛事分布', content:['U12：3个赛季赛事', 'U18：2个赛季赛事', 'U10：1个赛事（筹备中）', 'U15：1个赛事（已结束）'].join('<br>')},
-    {title:'🏆 赛季积分领先', content:['U12：香港老虎少棒队（6胜1负）', 'U18：新界野马队（7胜0负1平）', 'U10：屯门小龙队（5胜0负）'].join('<br>')},
-    {title:'⚾ 投手ERA领先', content:['第1：林可晴 ERA 1.23', '第2：陈俊轩 ERA 2.10', '第3：张浩然 ERA 2.85'].join('<br>')},
-    {title:'📊 打击数据领先', content:['本垒打：陈俊轩（3支）', '盗垒：王家耀（8次）', '打点：周柏豪（22分）'].join('<br>')},
-  ];
-  document.getElementById('stats-cards').innerHTML = cards.map(c => `<div class="card"><div class="card-title">${c.title}</div><div class="card-sub mt-8">${c.content}</div></div>`).join('');
-}
-
-// ─── Standings ───
-function renderStandings() {
-  const div = document.getElementById('standings-div').value;
-  let data = div ? SAMPLE_STANDINGS.filter(s => s.div === div) : SAMPLE_STANDINGS;
-  data = [...data].sort((a,b) => b.w/(b.w+b.l+0.5) - a.w/(a.w+b.l+0.5));
-  const tbody = document.querySelector('#standings-table tbody');
-  tbody.innerHTML = data.map((s, i) => {
-    const played = s.w + s.l + s.t;
-    const pct = played > 0 ? (s.w / played * 100).toFixed(1) + '%' : '—';
-    const net = s.ra - s.rd;
-    const posClass = i < 3 ? 'pos-top3' : 'pos';
-    return `<tr>
-      <td class="${posClass}">${i+1}</td><td><strong>${s.team}</strong></td>
-      <td><span class="badge badge-${s.div.toLowerCase()}">${s.div}</span></td>
-      <td class="text-success">${s.w}</td><td class="text-danger">${s.l}</td><td>${s.t}</td>
-      <td><strong>${pct}</strong></td><td>${s.ra}</td><td>${s.rd}</td>
-      <td class="${net > 0 ? 'text-success' : net < 0 ? 'text-danger' : ''}">${net > 0 ? '+'+net : net}</td>
-      <td>${played}</td>
-    </tr>`;
-  }).join('');
-
-  // Pitcher leaderboard
-  const phData = [
-    {rank:1,name:'林可晴',team:'九龙天使队',div:'U12',ip:42,er:5,era:1.23,k:38},
-    {rank:2,name:'陈俊轩',team:'香港老虎少棒队',div:'U12',ip:38,er:8,era:2.10,k:32},
-    {rank:3,name:'张浩然',team:'港岛红雀队',div:'U12',ip:35,er:10,era:2.85,k:28},
-    {rank:4,name:'王家耀',team:'香港老虎少棒队',div:'U12',ip:30,er:12,era:3.50,k:22},
-    {rank:5,name:'李芷晴',team:'九龙天使队',div:'U12',ip:28,er:14,era:4.50,k:18},
-  ];
-  document.getElementById('pitcher-stats').querySelector('tbody').innerHTML = phData.map(p => `<tr>
-    <td class="pos-top3">${p.rank}</td><td><strong>${p.name}</strong></td><td>${p.team}</td>
-    <td><span class="badge badge-${p.div.toLowerCase()}">${p.div}</span></td><td>${p.ip}</td><td>${p.er}</td><td>${p.era}</td><td><strong>${p.era.toFixed(2)}</strong></td><td>${p.k}</td>
-  </tr>`).join('');
-}
-
-// ─── Todos ───
-function renderTodos() {
-  document.getElementById('todos-list').innerHTML = TODOS.map((t, i) => `
-    <div class="card" style="${t.done ? 'opacity:0.5' : ''}">
-      <div class="flex" style="align-items:flex-start;gap:10px;">
-        <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodo(${i})" style="width:16px;height:16px;margin-top:2px;cursor:pointer;">
-        <div style="flex:1">
-          <div style="text-decoration:${t.done?'line-through':''};font-size:13px;font-weight:500;">${t.text}</div>
-          <div style="margin-top:4px;">
-            <span class="badge ${t.priority==='high'?'badge-live':t.priority==='medium'?'badge-pending':'badge-draft'}" style="font-size:10px;">
-              ${t.priority==='high'?'高优':t.priority==='medium'?'中优':'低优'}
-            </span>
+  // Modals
+  function openGameModal(game) {
+    game = game || {};
+    var isEdit = !!(game.id || game.game_id);
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'game-modal';
+    var teamOptions = allTeams.map(function(t){ return '<option value="' + (t.id||'') + '" ' + (game.home_team_id===t.id||game.away_team_id===t.id?'selected':'') + '>' + escHtml(t.name) + '</option>'; }).join('');
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-header"><div class="modal-title">${isEdit?'✏️ 编辑比赛':'➕ 新增比赛'}</div><button class="modal-close" onclick="closeGameModal()">✕</button></div>
+        <div class="modal-body">
+          <div class="modal-form-grid">
+            <div><label>比赛日期</label><input type="date" id="g-date" value="${game.game_date||''}"></div>
+            <div><label>比赛时间</label><input type="time" id="g-time" value="${game.game_time||''}"></div>
+            <div><label>主场球队</label><select id="g-home">${teamOptions?'<option value="">选择球队</option>'+teamOptions:'<option value="">暂无球队</option>'}</select></div>
+            <div><label>客场球队</label><select id="g-away">${teamOptions?'<option value="">选择球队</option>'+teamOptions:'<option value="">暂无球队</option>'}</select></div>
+            <div><label>联赛名称</label><input id="g-league" value="${escHtml(game.league||'')}" placeholder="香港U12联赛"></div>
+            <div><label>赛季</label><input id="g-season" value="${escHtml(game.season||'')}" placeholder="2026春季"></div>
+            <div><label>比赛类型</label><select id="g-type"><option value="">请选择</option><option value="league" ${(game.game_type==='league')?'selected':''}>联赛</option><option value="cup" ${(game.game_type==='cup')?'selected':''}>杯赛</option><option value="friendly" ${(game.game_type==='friendly')?'selected':''}>友谊赛</option></select></div>
+            <div><label>比赛场地</label><input id="g-venue" value="${escHtml(game.venue||'')}" placeholder="比赛场地"></div>
+            <div><label>主场得分</label><input type="number" id="g-hs" value="${game.home_score||0}" min="0"></div>
+            <div><label>客场得分</label><input type="number" id="g-as" value="${game.away_score||0}" min="0"></div>
+            <div><label>总局数</label><input type="number" id="g-innings" value="${game.innings_total||7}" min="1" max="20"></div>
+            <div class="full"><label>备注</label><input id="g-notes" value="${escHtml(game.notes||'')}" placeholder="其他备注"></div>
           </div>
         </div>
-      </div>
-    </div>`).join('');
-}
-
-function toggleTodo(i) {
-  todos[i].done = !todos[i].done;
-  renderTodos();
-}
-
-// ─── Utilities ───
-function openModal(id) { document.getElementById(id).classList.add('show'); }
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-function showConfirm(msg, cb) {
-  document.getElementById('confirm-msg').innerHTML = msg;
-  confirmCallback = cb;
-  openModal('modal-confirm');
-}
-function doConfirm() {
-  if (confirmCallback) confirmCallback();
-  closeModal('modal-confirm');
-}
-function exportEvents() {
-  const headers = ['ID','赛事名称','组别','开始日期','结束日期','地点','参赛队伍','赛制','状态','备注'];
-  const rows = events.map(e => [e.id,e.name,e.group,e.start,e.end,e.venue,e.teams,e.format,e.status,e.note]);
-  const csv = [headers,...rows].map(r => r.join(',')).join('\n');
-  downloadFile(csv, '赛事列表.csv', 'text/csv;charset=utf-8');
-}
-function downloadFile(content, name, type) {
-  const blob = new Blob(['\uFEFF'+content], {type});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = name; a.click();
-}
-
-// ─── Init ───
-(async function init() {
-  await DB.load();
-  const dbGames = DB.cache().games;
-  const dbTeams = DB.cache().teams;
-  if (dbGames && dbGames.length > 0) {
-    localStorage.setItem('hkba_games', JSON.stringify(dbGames));
-    games = dbGames;
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="closeGameModal()">取消</button>
+          <button class="btn btn-primary" onclick="saveGame('${escHtml(game.id||game.game_id||'')}')">${isEdit?'保存':'新增'}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e){ if(e.target===overlay) closeGameModal(); });
   }
-  if (dbTeams && dbTeams.length > 0) {
-    localStorage.setItem('hkba_teams', JSON.stringify(dbTeams));
+
+  window.closeGameModal = function(){ var m=document.getElementById('game-modal'); if(m)m.remove(); };
+  window.openGameModal = openGameModal;
+
+  window.editGame = function(id) {
+    var g = allGames.find(function(x){ return (x.id||x.game_id)===id; });
+    if (g) openGameModal(g);
+  };
+
+  window.saveGame = async function(existingId) {
+    var data = {
+      game_date: document.getElementById('g-date').value,
+      game_time: document.getElementById('g-time').value,
+      home_team_id: document.getElementById('g-home').value || null,
+      away_team_id: document.getElementById('g-away').value || null,
+      league: document.getElementById('g-league').value.trim(),
+      season: document.getElementById('g-season').value.trim(),
+      game_type: document.getElementById('g-type').value,
+      venue: document.getElementById('g-venue').value.trim(),
+      innings_total: parseInt(document.getElementById('g-innings').value) || 7,
+      home_score: parseInt(document.getElementById('g-hs').value) || 0,
+      away_score: parseInt(document.getElementById('g-as').value) || 0,
+      notes: document.getElementById('g-notes').value.trim()
+    };
+    if (!data.game_date) { showToast('请选择比赛日期', 'warning'); return; }
+    if (existingId) {
+      var g = allGames.find(function(x){ return (x.id||x.game_id)===existingId; });
+      if (g) { data.id = g.id; data.game_id = g.game_id; }
+    } else {
+      data.game_id = genGameId();
+      data.status = 'scheduled';
+    }
+    // Resolve team names
+    if (data.home_team_id) {
+      var ht = allTeams.find(function(t){ return t.id===data.home_team_id; });
+      data.home_team_name = ht ? ht.name : '主队';
+    }
+    if (data.away_team_id) {
+      var at = allTeams.find(function(t){ return t.id===data.away_team_id; });
+      data.away_team_name = at ? at.name : '客队';
+    }
+    try {
+      await DB.upsertGame(data);
+      closeGameModal();
+      showToast(existingId?'比赛已更新':'比赛已创建', 'success');
+      loadAll();
+    } catch(e) { showToast('保存失败: '+e.message, 'error'); }
+  };
+
+  window.startGame = async function(id) {
+    var g = allGames.find(function(x){ return (x.id||x.game_id)===id; });
+    if (!g) return;
+    try {
+      await DB.updateGame(g.id, { status: 'in_progress' });
+      showToast('比赛已开始！', 'success');
+      loadAll();
+    } catch(e) { showToast('操作失败', 'error'); }
+  };
+
+  window.endGame = async function(id) {
+    var g = allGames.find(function(x){ return (x.id||x.game_id)===id; });
+    if (!g) return;
+    try {
+      await DB.updateGame(g.id, { status: 'completed', innings_played: g.innings_total || 7 });
+      showToast('比赛已结束', 'success');
+      loadAll();
+    } catch(e) { showToast('操作失败', 'error'); }
+  };
+
+  window.openGameDetail = function(id) {
+    var g = allGames.find(function(x){ return (x.id||x.game_id)===id; });
+    if (!g) return;
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    var statusBadge = getStatusBadge(g.status, g.game_date);
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:560px;">
+        <div class="modal-header">
+          <div class="modal-title">📊 ${formatDate(g.game_date)}</div>
+          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="text-align:center;padding:20px 0;background:var(--bg-secondary);border-radius:12px;margin-bottom:20px;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:30px;">
+              <div><div style="font-size:16px;font-weight:700;">${escHtml(g.home_team_name||'主队')}</div><div style="font-size:48px;font-weight:900;font-family:var(--font-mono);color:var(--primary);margin-top:8px;">${g.home_score||0}</div></div>
+              <div style="font-size:24px;color:var(--text-muted);">VS</div>
+              <div><div style="font-size:16px;font-weight:700;">${escHtml(g.away_team_name||'客队')}</div><div style="font-size:48px;font-weight:900;font-family:var(--font-mono);color:var(--accent);margin-top:8px;">${g.away_score||0}</div></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="view-item"><div class="v-label">联赛</div><div class="v-value">${g.league || '-'}</div></div>
+            <div class="view-item"><div class="v-label">赛季</div><div class="v-value">${g.season || '-'}</div></div>
+            <div class="view-item"><div class="v-label">场地</div><div class="v-value">${g.venue || '-'}</div></div>
+            <div class="view-item"><div class="v-label">总局数</div><div class="v-value">${g.innings_total || 7}</div></div>
+            <div class="view-item"><div class="v-label">状态</div><div class="v-value">${statusBadge}</div></div>
+            <div class="view-item"><div class="v-label">已赛</div><div class="v-value">${g.innings_played || 0} 局</div></div>
+          </div>
+          ${g.notes ? '<div style="margin-top:12px;padding:10px;background:var(--bg-secondary);border-radius:8px;font-size:13px;color:var(--text-secondary);">📝 ' + escHtml(g.notes) + '</div>' : ''}
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">关闭</button>
+          <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove();editGame('${id}')">✏️ 编辑</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+  };
+
+  window.exportGames = function() {
+    var blob = new Blob([JSON.stringify(allGames, null, 2)], { type:'application/json' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'baseai_games_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click(); URL.revokeObjectURL(a.href);
+    showToast('已导出 ' + allGames.length + ' 条记录', 'success');
+  };
+
+  async function loadAll() {
+    try {
+      var gres = await DB.getGames();
+      var tres = await DB.getTeams();
+      allGames = gres.data || [];
+      allTeams = tres.data || [];
+      // Resolve team names
+      allGames.forEach(function(g) {
+        var ht = allTeams.find(function(t){ return t.id === g.home_team_id; });
+        var at = allTeams.find(function(t){ return t.id === g.away_team_id; });
+        g.home_team_name = ht ? ht.name : (g.home_team_name || '主队');
+        g.away_team_name = at ? at.name : (g.away_team_name || '客队');
+      });
+      // Sort by date desc
+      allGames.sort(function(a,b){ return new Date(b.game_date) - new Date(a.game_date); });
+      var filtered = currentTab === 'all' ? allGames : allGames.filter(function(g){ return g.status === currentTab; });
+      renderGames(filtered);
+    } catch(e) { showToast('加载失败: '+e.message, 'error'); }
   }
-  renderEvents();
-  populateLiveSelect();
-  renderTodos();
-})();
+
+  loadAll();
+});
 </script>
 </body>
 </html>
