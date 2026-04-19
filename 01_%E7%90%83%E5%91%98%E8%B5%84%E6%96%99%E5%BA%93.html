@@ -163,13 +163,19 @@
 
 <script src="assets/nav.js"></script>
 <script>
+console.log('[Module01] Script starting...');
+console.log('[Module01] window.DB exists:', typeof window.DB !== 'undefined');
+console.log('[Module01] window.initNav exists:', typeof window.initNav !== 'undefined');
+
 document.addEventListener('DOMContentLoaded', async function() {
+  console.log('[Module01] DOMContentLoaded fired');
   // Init navigation
   initNav({
     title: '球员资料库',
     subtitle: 'Module 01 · Player Registry',
     stats: []
   });
+  console.log('[Module01] initNav called, #page-content:', !!document.getElementById('page-content'));
 
   // State
   let allPlayers = [];
@@ -203,6 +209,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   function renderPlayers(players) {
     var container = document.getElementById('page-content');
+    console.log('[Module01] renderPlayers called, players count:', players.length, '| container:', !!container);
     var pc = getPlayerCount();
     // Update topbar stats without rebuilding nav
     var topbar = document.querySelector('.topbar');
@@ -345,9 +352,11 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Load data
   async function loadPlayers() {
     try {
+      console.log('[Module01] loadPlayers called');
       var result = await DB.getPlayers();
       allPlayers = result.data || [];
       filteredPlayers = allPlayers;
+      console.log('[Module01] Players loaded:', allPlayers.length);
       renderPlayers(filteredPlayers);
     } catch (e) {
       showToast('加载失败: ' + e.message, 'error');
