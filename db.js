@@ -17,8 +17,22 @@
     supabaseKey: window.SUPABASE_ANON_KEY || '',
     useSupabase: !!(window.SUPABASE_URL && window.SUPABASE_ANON_KEY),
     debug: false,
-    lsPrefix: 'baseai_db_'
+    lsPrefix: 'baseai_db_',
+    dbVersion: '2'           // Bump this to force-clear old cache & re-seed
   };
+
+  // Version gate: if schema changed, wipe old data and re-seed
+  (function() {
+    var verKey = CONFIG.lsPrefix + '_version';
+    var prev = localStorage.getItem(verKey);
+    if (prev !== CONFIG.dbVersion) {
+      // Wipe all known tables
+      ['players','teams','games','game_innings','player_stats','player_profiles','users','system_settings'].forEach(function(t) {
+        localStorage.removeItem(CONFIG.lsPrefix + t);
+      });
+      localStorage.setItem(verKey, CONFIG.dbVersion);
+    }
+  })();
 
   if (CONFIG.debug) console.log('[DB] Initializing, Supabase:', CONFIG.useSupabase);
 
