@@ -235,7 +235,7 @@
 <!-- TOPBAR -->
 <div class="topbar">
   <div>
-    <div class="logo"><span>JIHUA</span> 棒垒球数字化管理系统</div>
+    <div class="logo"><span>BaseAI</span> 棒垒球数字化管理系统</div>
     <div class="subtitle">香港棒垒球总会官方平台 · 球员与梯队管理系统</div>
   </div>
   <div class="topbar-right">
@@ -732,11 +732,11 @@
 
 <script>
 // ==================== DATA ====================
-const STORAGE_KEY_TEAMS = 'jihua_teams_v2';
-const STORAGE_KEY_PLAYERS = 'jihua_players_v2';
-const STORAGE_KEY_ROSTER = 'jihua_roster_v2';
-const STORAGE_KEY_SQUAD = 'jihua_squad_v2';
-const STORAGE_KEY_COACHES = 'jihua_coaches_v2';
+const STORAGE_KEY_TEAMS = 'baseai_teams_v2';
+const STORAGE_KEY_PLAYERS = 'baseai_players_v2';
+const STORAGE_KEY_ROSTER = 'baseai_roster_v2';
+const STORAGE_KEY_SQUAD = 'baseai_squad_v2';
+const STORAGE_KEY_COACHES = 'baseai_coaches_v2';
 
 function load(key, fallback) {
   try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : fallback; } catch { return fallback; }

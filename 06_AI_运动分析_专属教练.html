@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JIHUA · AI 运动分析 & 专属教练</title>
+<title>BaseAI · AI 运动分析 & 专属教练</title>
 <style>
   :root {
     --primary: #1B4F72;
@@ -380,7 +380,7 @@
   <div class="header-brand">
     <div class="header-logo">🤖</div>
     <div>
-      <div class="header-title">JIHUA · AI 运动分析 & 专属教练</div>
+      <div class="header-title">BaseAI · AI 运动分析 & 专属教练</div>
       <div class="header-sub">Swing & Pitcher AI Analysis with Personal Coach</div>
     </div>
   </div>
@@ -711,7 +711,7 @@ const SAMPLE_PITCHER = {
 };
 
 // Analysis history with coach data
-let aiHistory = JSON.parse(localStorage.getItem('jihua_ai_history_v2') || 'null') || [];
+let aiHistory = JSON.parse(localStorage.getItem('baseai_ai_history_v2') || 'null') || [];
 let currentSwingData = null;
 let currentPitcherData = null;
 let currentCoachData = null;
@@ -938,7 +938,7 @@ function generateSwingReport(playerName) {
         <div style="margin-top:6px;">
           <span class="badge badge-done">分析完成</span>
           <span class="badge badge-coach" style="margin-left:8px;">🤖 AI教练已就绪</span>
-          <span style="font-size:12px;color:var(--text-light);margin-left:8px;">JIHUA AI v2.0</span>
+          <span style="font-size:12px;color:var(--text-light);margin-left:8px;">BaseAI AI v2.0</span>
         </div>
       </div>
     </div>
@@ -1097,7 +1097,7 @@ function saveSwingToHistory() {
     time: new Date().toLocaleString('zh-CN')
   };
   aiHistory.unshift(entry);
-  localStorage.setItem('jihua_ai_history_v2', JSON.stringify(aiHistory));
+  localStorage.setItem('baseai_ai_history_v2', JSON.stringify(aiHistory));
   showToast('已保存分析记录到历史', 'success');
 }
 
@@ -1224,7 +1224,7 @@ function generatePitcherReport(playerName) {
         <div style="margin-top:6px;">
           <span class="badge badge-done">分析完成</span>
           <span class="badge badge-coach" style="margin-left:8px;">🤖 AI教练已就绪</span>
-          <span style="font-size:12px;color:var(--text-light);margin-left:8px;">JIHUA AI v2.0</span>
+          <span style="font-size:12px;color:var(--text-light);margin-left:8px;">BaseAI AI v2.0</span>
         </div>
       </div>
     </div>
@@ -1353,7 +1353,7 @@ function savePitcherToHistory() {
     time: new Date().toLocaleString('zh-CN')
   };
   aiHistory.unshift(entry);
-  localStorage.setItem('jihua_ai_history_v2', JSON.stringify(aiHistory));
+  localStorage.setItem('baseai_ai_history_v2', JSON.stringify(aiHistory));
   showToast('已保存分析记录到历史', 'success');
 }
 
@@ -1408,8 +1408,8 @@ function openCoachWithPitcher() {
 function updateCoachStats() {
   const analyzed = aiHistory.length;
   const plans = analyzed > 0 ? 3 : 0;
-  const completed = parseInt(localStorage.getItem('jihua_coach_completed') || '0');
-  const streak = parseInt(localStorage.getItem('jihua_coach_streak') || '0');
+  const completed = parseInt(localStorage.getItem('baseai_coach_completed') || '0');
+  const streak = parseInt(localStorage.getItem('baseai_coach_streak') || '0');
   
   document.getElementById('coach-analyzed').textContent = analyzed;
   document.getElementById('coach-plans').textContent = plans;
@@ -1557,8 +1557,8 @@ function markPlanComplete(planId) {
       progress.textContent = current + 1;
       
       // Update overall stats
-      const completed = parseInt(localStorage.getItem('jihua_coach_completed') || '0') + 1;
-      localStorage.setItem('jihua_coach_completed', completed);
+      const completed = parseInt(localStorage.getItem('baseai_coach_completed') || '0') + 1;
+      localStorage.setItem('baseai_coach_completed', completed);
       
       showToast('任务已完成！继续保持 💪', 'success');
       updateCoachStats();

@@ -1,5 +1,5 @@
 /**
- * JIHUA 棒球管理系统 · Supabase 数据库模块 (安全版)
+ * BaseAI 棒球管理系统 · Supabase 数据库模块 (安全版)
  * secret key 不存放于前端，仅使用 anon public key
  * RLS 策略控制读写权限
  */
@@ -81,7 +81,7 @@
     } catch (e) {
       console.warn('[DB] Supabase 连接失败，使用本地数据:', e.message);
       try {
-        const local = JSON.parse(localStorage.getItem('jihua_db') || '{}');
+        const local = JSON.parse(localStorage.getItem('baseai_db') || '{}');
         _cache = { players: local.players || [], teams: local.teams || [], games: local.games || [], stats: local.stats || [] };
       } catch () { _cache = { players: [], teams: [], games: [], stats: [] }; }
       _ready = true;
@@ -100,7 +100,7 @@
     } catch (e) {
       const item = { id: 'P' + Date.now(), ...data, created_at: new Date().toISOString() };
       _cache.players.unshift(item);
-      localStorage.setItem('jihua_db', JSON.stringify(_cache));
+      localStorage.setItem('baseai_db', JSON.stringify(_cache));
       return item;
     }
   }
@@ -109,14 +109,14 @@
     try { await apiPatch('players', { id: 'eq.' + id }, data); } catch (e) {}
     const idx = _cache.players.findIndex(p => p.id === id);
     if (idx >= 0) _cache.players[idx] = { ..._cache.players[idx], ...data };
-    localStorage.setItem('jihua_db', JSON.stringify(_cache));
+    localStorage.setItem('baseai_db', JSON.stringify(_cache));
     return _cache.players[idx];
   }
 
   async function deletePlayer(id) {
     try { await apiDelete('players', { id: 'eq.' + id }); } catch (e) {}
     _cache.players = _cache.players.filter(p => p.id !== id);
-    localStorage.setItem('jihua_db', JSON.stringify(_cache));
+    localStorage.setItem('baseai_db', JSON.stringify(_cache));
   }
 
   // Teams
@@ -130,7 +130,7 @@
     } catch (e) {
       const item = { id: 'T' + Date.now(), ...data, created_at: new Date().toISOString() };
       _cache.teams.push(item);
-      localStorage.setItem('jihua_db', JSON.stringify(_cache));
+      localStorage.setItem('baseai_db', JSON.stringify(_cache));
       return item;
     }
   }
@@ -191,6 +191,6 @@
     export: exportAll, import: importAll
   };
 
-  console.log('[DB] JIHUA 云端数据库模块已加载 ✓  (Supabase + 本地备援)');
+  console.log('[DB] BaseAI 云端数据库模块已加载 ✓  (Supabase + 本地备援)');
 
 })();
