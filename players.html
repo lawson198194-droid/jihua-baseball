@@ -282,10 +282,10 @@ function initNav(opts) {
   opts = opts || {};
   var modules = [
     { id: 'm1', name: '球员资料库', icon: '👥', href: 'players.html', active: true },
-    { id: 'm2', name: '球队梯队', icon: '🏆', href: '02_teams.html' },
-    { id: 'm3', name: '赛事记分', icon: '📊', href: '03_games.html' },
-    { id: 'm4', name: '技术档案', icon: '📈', href: '04_profiles.html' },
-    { id: 'm5', name: '权限后台', icon: '⚙️', href: '05_admin.html' }
+    { id: 'm2', name: '球队梯队', icon: '🏆', href: 'teams.html' },
+    { id: 'm3', name: '赛事记分', icon: '📊', href: 'games.html' },
+    { id: 'm4', name: '技术档案', icon: '📈', href: 'profiles.html' },
+    { id: 'm5', name: '权限后台', icon: '⚙️', href: 'admin.html' }
   ];
   var html = '<div class="sidebar-logo"><div class="logo-mark">⚾</div><h1>BaseAI</h1><div class="subtitle">BASEBALL SYSTEM</div></div>';
   html += '<div class="sidebar-section"><div class="sidebar-section-label">核心模块</div>';
@@ -293,7 +293,7 @@ function initNav(opts) {
   html += '</div><div class="sidebar-section"><div class="sidebar-section-label">智能模块</div>';
   html += '<a href="06_AI_运动分析_专属教练.html" class="nav-item"><div class="nav-icon">🤖</div><span>AI 专属教练</span><span class="nav-badge">AI</span></a>';
   html += '</div><div class="sidebar-section" style="margin-top:auto;"><a href="index.html" class="nav-item" style="border-top:1px solid var(--border);"><div class="nav-icon">🏠</div><span>返回首页</span></a></div>';
-  html += '<div class="sidebar-footer"><div class="db-indicator"><div class="db-dot"></div><span>运行中 · 内存模式</span></div><div style="margin-top:4px;font-size:10px;color:var(--text-muted);">v3 · 2026-04-19</div></div>';
+  html += '<div class="sidebar-footer"><div class="db-indicator"><span>⚡ 内置数据</span></div><div style="margin-top:4px;font-size:10px;">v2.0 · 2026-04-19</div></div>';
   document.getElementById('app-sidebar').innerHTML = html;
   if (opts.title) document.getElementById('topbar-title').textContent = opts.title;
   if (opts.subtitle) document.getElementById('topbar-subtitle').textContent = opts.subtitle;
