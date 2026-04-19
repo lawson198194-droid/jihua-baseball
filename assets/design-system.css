@@ -240,6 +240,24 @@ body {
 }
 
 /* Topbar */
+.topbar-home-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 18px;
+  text-decoration: none;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+.topbar-home-btn:hover {
+  background: var(--primary-glow);
+  border-color: var(--primary);
+  transform: scale(1.1);
+}
+
 .topbar {
   height: var(--topbar-h);
   background: rgba(10, 14, 26, 0.8);
@@ -251,7 +269,7 @@ body {
   position: sticky; top: 0; z-index: 100;
 }
 
-.topbar-left { display: flex; align-items: center; gap: 16px; }
+.topbar-left { display: flex; align-items: center; gap: 12px; }
 
 .menu-toggle {
   width: 36px; height: 36px;
