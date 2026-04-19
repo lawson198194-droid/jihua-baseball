@@ -262,37 +262,72 @@
 
     getMode() { return CONFIG.useSupabase ? 'Supabase' : 'localStorage'; },
 
-    async seedDemoData() {
-      const { data: ep } = await this.getPlayers();
-      if (ep && ep.length > 0) return;
+    // Synchronous seeding - runs immediately when db.js loads
+    _seedSync() {
+      // Read current players
+      var existing = [];
+      try { existing = JSON.parse(localStorage.getItem(CONFIG.lsPrefix + 'players') || '[]'); } catch(e) {}
+      if (existing.length > 0) return; // Already seeded
 
-      const demoPlayers = [
-        { player_id: 'P001', name: '罗莀安', name_en: 'LUO Chen\'an', gender: 'F', birth_date: '2014-03-15', age: 12, position: '投手/内野', batting_hand: 'R', throwing_hand: 'R', height_cm: 148, weight_kg: 42, school: '香港国际学校', status: 'active' },
-        { player_id: 'P002', name: '陈伟豪', name_en: 'CHAN Wai Ho', gender: 'M', birth_date: '2013-07-22', age: 12, position: '捕手', batting_hand: 'R', throwing_hand: 'R', height_cm: 155, weight_kg: 48, school: '圣保罗小学', status: 'active' },
-        { player_id: 'P003', name: '张芷晴', name_en: 'CHEUNG Chi Ching', gender: 'F', birth_date: '2014-01-08', age: 12, position: '中外野', batting_hand: 'L', throwing_hand: 'R', height_cm: 145, weight_kg: 40, school: '拔萃女小学', status: 'active' },
-        { player_id: 'P004', name: '李浩然', name_en: 'LEE Ho Yin', gender: 'M', birth_date: '2013-11-30', age: 12, position: '游击手', batting_hand: 'R', throwing_hand: 'R', height_cm: 152, weight_kg: 45, school: '喇沙小学', status: 'active' },
-        { player_id: 'P005', name: '王晓琳', name_en: 'WONG Hiu Lam', gender: 'F', birth_date: '2014-05-18', age: 11, position: '一垒手', batting_hand: 'S', throwing_hand: 'L', height_cm: 143, weight_kg: 38, school: '协恩中学附属小学', status: 'active' },
-        { player_id: 'P006', name: '刘健文', name_en: 'LAU Kin Man', gender: 'M', birth_date: '2013-09-12', age: 12, position: '三垒手', batting_hand: 'R', throwing_hand: 'R', height_cm: 158, weight_kg: 50, school: '英华小学', status: 'active' },
-        { player_id: 'P007', name: '何美琪', name_en: 'HO Mei Ki', gender: 'F', birth_date: '2014-02-28', age: 12, position: '左外野', batting_hand: 'L', throwing_hand: 'L', height_cm: 146, weight_kg: 41, school: '玛利诺小学', status: 'active' },
-        { player_id: 'P008', name: '周俊杰', name_en: 'CHOW Chun Kit', gender: 'M', birth_date: '2013-06-05', age: 12, position: '二垒手', batting_hand: 'R', throwing_hand: 'R', height_cm: 150, weight_kg: 44, school: '圣公会小学', status: 'active' }
+      var demoPlayers = [
+        { player_id: 'P001', name: '罗莀安', gender: 'F', birth_date: '2014-03-15', age: 12, position: '投手/内野', batting_hand: 'R', throwing_hand: 'R', height_cm: 148, weight_kg: 42, school: '香港国际学校', status: 'active' },
+        { player_id: 'P002', name: '陈伟豪', gender: 'M', birth_date: '2013-07-22', age: 12, position: '捕手', batting_hand: 'R', throwing_hand: 'R', height_cm: 155, weight_kg: 48, school: '圣保罗小学', status: 'active' },
+        { player_id: 'P003', name: '张芷晴', gender: 'F', birth_date: '2014-01-08', age: 12, position: '中外野', batting_hand: 'L', throwing_hand: 'R', height_cm: 145, weight_kg: 40, school: '拔萃女小学', status: 'active' },
+        { player_id: 'P004', name: '李浩然', gender: 'M', birth_date: '2013-11-30', age: 12, position: '游击手', batting_hand: 'R', throwing_hand: 'R', height_cm: 152, weight_kg: 45, school: '喇沙小学', status: 'active' },
+        { player_id: 'P005', name: '王晓琳', gender: 'F', birth_date: '2014-05-18', age: 11, position: '一垒手', batting_hand: 'S', throwing_hand: 'L', height_cm: 143, weight_kg: 38, school: '协恩中学附属小学', status: 'active' },
+        { player_id: 'P006', name: '刘健文', gender: 'M', birth_date: '2013-09-12', age: 12, position: '三垒手', batting_hand: 'R', throwing_hand: 'R', height_cm: 158, weight_kg: 50, school: '英华小学', status: 'active' },
+        { player_id: 'P007', name: '何美琪', gender: 'F', birth_date: '2014-02-28', age: 12, position: '左外野', batting_hand: 'L', throwing_hand: 'L', height_cm: 146, weight_kg: 41, school: '玛利诺小学', status: 'active' },
+        { player_id: 'P008', name: '周俊杰', gender: 'M', birth_date: '2013-06-05', age: 12, position: '二垒手', batting_hand: 'R', throwing_hand: 'R', height_cm: 150, weight_kg: 44, school: '圣公会小学', status: 'active' }
       ];
 
-      const demoTeams = [
+      var demoTeams = [
         { team_id: 'T001', name: '香港青少棒红狮队', name_en: 'HK Youth Red Lions', category: 'u12', gender: 'M', coach_name: '陈志明', coach_phone: '+852 9123 4567', founded_year: 2020, home_venue: '香港仔运动场', status: 'active' },
         { team_id: 'T002', name: '香港女子青棒凤凰队', name_en: 'HK Girls Baseball Phoenix', category: 'u12', gender: 'F', coach_name: '李婉华', coach_phone: '+852 9876 5432', founded_year: 2021, home_venue: '九龙公园棒球场', status: 'active' },
         { team_id: 'T003', name: '香港国际学校校队', name_en: 'Hong Kong International School', category: 'u12', gender: 'coed', coach_name: 'MR. Johnson', coach_phone: '+852 2345 6789', founded_year: 2019, home_venue: '清水湾运动场', status: 'active' }
       ];
 
-      const demoGames = [
-        { game_id: 'G001', game_date: '2026-04-05', home_score: 8, away_score: 5, venue: '香港仔运动场', league: '香港U12联赛', season: '2026春季', game_type: 'league', status: 'completed', innings_total: 7, innings_played: 7 },
-        { game_id: 'G002', game_date: '2026-04-12', home_score: 12, away_score: 3, venue: '九龙公园棒球场', league: '香港U12联赛', season: '2026春季', game_type: 'league', status: 'completed', innings_total: 7, innings_played: 7 },
-        { game_id: 'G003', game_date: '2026-04-19', home_score: 0, away_score: 0, venue: '香港仔运动场', league: '香港U12联赛', season: '2026春季', game_type: 'league', status: 'scheduled', innings_total: 7, innings_played: 0 }
+      var demoGames = [
+        { game_id: 'G001', game_date: '2026-04-05', home_team_name: '香港青少棒红狮队', away_team_name: '香港国际学校校队', home_score: 8, away_score: 5, venue: '香港仔运动场', league: '香港U12联赛', season: '2026春季', game_type: 'league', status: 'completed', innings_total: 7, innings_played: 7 },
+        { game_id: 'G002', game_date: '2026-04-12', home_team_name: '香港女子青棒凤凰队', away_team_name: '香港国际学校校队', home_score: 12, away_score: 3, venue: '九龙公园棒球场', league: '香港U12联赛', season: '2026春季', game_type: 'league', status: 'completed', innings_total: 7, innings_played: 7 },
+        { game_id: 'G003', game_date: '2026-04-19', home_team_name: '香港青少棒红狮队', away_team_name: '香港女子青棒凤凰队', home_score: 0, away_score: 0, venue: '香港仔运动场', league: '香港U12联赛', season: '2026春季', game_type: 'league', status: 'scheduled', innings_total: 7, innings_played: 0 }
       ];
 
+      try {
+        localStorage.setItem(CONFIG.lsPrefix + 'players', JSON.stringify(demoPlayers));
+        localStorage.setItem(CONFIG.lsPrefix + 'teams', JSON.stringify(demoTeams));
+        localStorage.setItem(CONFIG.lsPrefix + 'games', JSON.stringify(demoGames));
+      } catch(e) {}
+    },
+
+    async seedDemoData() {
+      // Already seeded by _seedSync()
+      var existing = [];
+      try { existing = JSON.parse(localStorage.getItem(CONFIG.lsPrefix + 'players') || '[]'); } catch(e) {}
+      if (existing.length > 0) return;
+      // Fallback async seed if sync didn't run
+      const demoPlayers = [
+        { player_id: 'P001', name: '罗莀安', gender: 'F', birth_date: '2014-03-15', age: 12, position: '投手/内野', batting_hand: 'R', throwing_hand: 'R', height_cm: 148, weight_kg: 42, school: '香港国际学校', status: 'active' },
+        { player_id: 'P002', name: '陈伟豪', gender: 'M', birth_date: '2013-07-22', age: 12, position: '捕手', batting_hand: 'R', throwing_hand: 'R', height_cm: 155, weight_kg: 48, school: '圣保罗小学', status: 'active' },
+        { player_id: 'P003', name: '张芷晴', gender: 'F', birth_date: '2014-01-08', age: 12, position: '中外野', batting_hand: 'L', throwing_hand: 'R', height_cm: 145, weight_kg: 40, school: '拔萃女小学', status: 'active' },
+        { player_id: 'P004', name: '李浩然', gender: 'M', birth_date: '2013-11-30', age: 12, position: '游击手', batting_hand: 'R', throwing_hand: 'R', height_cm: 152, weight_kg: 45, school: '喇沙小学', status: 'active' },
+        { player_id: 'P005', name: '王晓琳', gender: 'F', birth_date: '2014-05-18', age: 11, position: '一垒手', batting_hand: 'S', throwing_hand: 'L', height_cm: 143, weight_kg: 38, school: '协恩中学附属小学', status: 'active' },
+        { player_id: 'P006', name: '刘健文', gender: 'M', birth_date: '2013-09-12', age: 12, position: '三垒手', batting_hand: 'R', throwing_hand: 'R', height_cm: 158, weight_kg: 50, school: '英华小学', status: 'active' },
+        { player_id: 'P007', name: '何美琪', gender: 'F', birth_date: '2014-02-28', age: 12, position: '左外野', batting_hand: 'L', throwing_hand: 'L', height_cm: 146, weight_kg: 41, school: '玛利诺小学', status: 'active' },
+        { player_id: 'P008', name: '周俊杰', gender: 'M', birth_date: '2013-06-05', age: 12, position: '二垒手', batting_hand: 'R', throwing_hand: 'R', height_cm: 150, weight_kg: 44, school: '圣公会小学', status: 'active' }
+      ];
+      const demoTeams = [
+        { team_id: 'T001', name: '香港青少棒红狮队', category: 'u12', gender: 'M', coach_name: '陈志明', founded_year: 2020, home_venue: '香港仔运动场', status: 'active' },
+        { team_id: 'T002', name: '香港女子青棒凤凰队', category: 'u12', gender: 'F', coach_name: '李婉华', founded_year: 2021, home_venue: '九龙公园棒球场', status: 'active' },
+        { team_id: 'T003', name: '香港国际学校校队', category: 'u12', gender: 'coed', coach_name: 'MR. Johnson', founded_year: 2019, home_venue: '清水湾运动场', status: 'active' }
+      ];
+      const demoGames = [
+        { game_id: 'G001', game_date: '2026-04-05', home_team_name: '香港青少棒红狮队', away_team_name: '香港国际学校校队', home_score: 8, away_score: 5, venue: '香港仔运动场', league: '香港U12联赛', season: '2026春季', game_type: 'league', status: 'completed', innings_total: 7, innings_played: 7 },
+        { game_id: 'G002', game_date: '2026-04-12', home_team_name: '香港女子青棒凤凰队', away_team_name: '香港国际学校校队', home_score: 12, away_score: 3, venue: '九龙公园棒球场', league: '香港U12联赛', season: '2026春季', game_type: 'league', status: 'completed', innings_total: 7, innings_played: 7 },
+        { game_id: 'G003', game_date: '2026-04-19', home_team_name: '香港青少棒红狮队', away_team_name: '香港女子青棒凤凰队', home_score: 0, away_score: 0, venue: '香港仔运动场', league: '香港U12联赛', season: '2026春季', game_type: 'league', status: 'scheduled', innings_total: 7, innings_played: 0 }
+      ];
       await Promise.all(demoPlayers.map(p => this.upsertPlayer(p)));
       await Promise.all(demoTeams.map(t => this.upsertTeam(t)));
       await Promise.all(demoGames.map(g => this.upsertGame(g)));
-      if (CONFIG.debug) console.log('[DB] Demo data seeded');
     },
 
     async exportAll() {
@@ -312,6 +347,6 @@
   };
 
   window.DB = DB;
-  DB.seedDemoData();
+  DB._seedSync(); // Synchronous seeding - runs immediately before any module loads
 
 })();
