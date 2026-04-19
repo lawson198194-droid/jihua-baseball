@@ -204,16 +204,19 @@ document.addEventListener('DOMContentLoaded', async function() {
   function renderPlayers(players) {
     var container = document.getElementById('page-content');
     var pc = getPlayerCount();
-    initNav({
-      title: '球员资料库',
-      subtitle: 'Module 01 · Player Registry',
-      stats: [
-        { label: '注册球员', value: pc.total },
-        { label: '活跃球员', value: pc.active },
-        { label: '男生', value: pc.male },
-        { label: '女生', value: pc.female }
-      ]
-    });
+    // Update topbar stats without rebuilding nav
+    var topbar = document.querySelector('.topbar');
+    if (topbar) {
+      var statsBar = topbar.querySelector('.topbar-stats');
+      if (statsBar) {
+        statsBar.innerHTML = [
+          '<div class="topbar-stat"><div class="num">' + pc.total + '</div><div class="label">注册球员</div></div>',
+          '<div class="topbar-stat"><div class="num">' + pc.active + '</div><div class="label">活跃球员</div></div>',
+          '<div class="topbar-stat"><div class="num">' + pc.male + '</div><div class="label">男生</div></div>',
+          '<div class="topbar-stat"><div class="num">' + pc.female + '</div><div class="label">女生</div></div>'
+        ].join('');
+      }
+    }
 
     var html = `
     <div class="page-header">
