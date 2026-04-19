@@ -234,6 +234,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     renderTeams(allTeams);
   }
 
+  // Expose to window so inline on* handlers can find them
+  window.applyFilters = applyFilters;
+  window.resetFilters = resetFilters;
+
   function handleCSVFile(file) {
     if (!file) return;
     var reader = new FileReader();
