@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>权限与后台管理 — BaseAI</title>
+<style>
+:root{--bg:#0b0e14;--bg-card:#151923;--bg-secondary:#0f1319;--border:rgba(255,255,255,0.08);--border-light:rgba(255,255,255,0.04);--text:#e2e8f0;--text-muted:#64748b;--text-secondary:#94a3b8;--primary:#6366f1;--primary-light:#818cf8;--primary-glow:rgba(99,102,241,0.1);--success:#10b981;--success-bg:rgba(16,185,129,0.15);--warning:#f59e0b;--warning-bg:rgba(245,158,11,0.15);--danger:#ef4444;--danger-bg:rgba(239,68,68,0.15);--info:#3b82f6;--info-bg:rgba(14,165,233,0.15);--font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--font-mono:'JetBrains Mono','Fira Code',ui-monospace,monospace;--radius:8px;--radius-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-height:100vh}
+.app{display:flex;min-height:100vh}
+.sidebar{width:240px;flex-shrink:0;background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sidebar-logo{padding:28px 20px 20px;border-bottom:1px solid var(--border);text-align:center}
+.logo-mark{font-size:32px;margin-bottom:8px}
+.sidebar-logo h1{font-size:20px;font-weight:900;letter-spacing:2px}
+.subtitle{font-size:9px;color:var(--text-muted);letter-spacing:3px;margin-top:2px}
+.sidebar-section{padding:16px 12px 8px}
+.sidebar-section-label{font-size:10px;color:var(--text-muted);letter-spacing:1px;padding:0 8px 8px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);color:var(--text-muted);text-decoration:none;font-size:14px;font-weight:500;transition:all 0.15s;border-left:3px solid transparent;margin-bottom:2px}
+.nav-item:hover{background:var(--bg-secondary);color:var(--text)}
+.nav-item.active{background:rgba(99,102,241,0.12);color:var(--primary-light);border-left-color:var(--primary)}
+.nav-item.ai-item.active{background:rgba(245,158,11,0.12);color:#fbbf24;border-left-color:#f59e0b}
+.nav-icon{font-size:18px;width:24px;text-align:center}
+.nav-badge{margin-left:auto;background:#f59e0b;color:#000;font-size:9px;font-weight:800;padding:2px 5px;border-radius:4px;letter-spacing:0.5px}
+.sidebar-footer{margin-top:auto;padding:16px 12px;border-top:1px solid var(--border)}
+.topbar{height:60px;background:var(--bg-card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px}
+.topbar-left{display:flex;align-items:center;gap:12px;flex:1}
+.topbar-title{font-size:15px;font-weight:700}
+.topbar-user{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted)}
+.user-avatar{width:30px;height:30px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px}
+.topbar-stats{display:flex;align-items:center;height:100%}
+.topbar-stat{display:flex;flex-direction:column;justify-content:center;padding:0 16px;border-right:1px solid var(--border);min-width:70px;text-align:center}
+.topbar-stat .num{font-size:18px;font-weight:800;font-family:var(--font-mono)}
+.topbar-stat .label{font-size:10px;color:var(--text-muted);letter-spacing:0.5px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.page-content{padding:28px;flex:1;overflow-y:auto}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.page-header h2{font-size:22px;font-weight:800}
+.page-header p{font-size:13px;color:var(--text-muted);margin-top:2px}
+.page-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:var(--radius);font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.btn-primary{background:var(--primary);color:white}
+.btn-primary:hover{background:var(--primary-light)}
+.btn-success{background:var(--success);color:white}
+.btn-danger{background:var(--danger);color:white}
+.btn-ghost{background:none;color:var(--text-muted)}
+.btn-ghost:hover{color:var(--text);background:var(--bg-secondary)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.dash-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;text-align:center;position:relative;overflow:hidden}
+.dash-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.dash-card.orange::before{background:linear-gradient(90deg,#f97316,#ea580c)}
+.dash-card.blue::before{background:linear-gradient(90deg,#3b82f6,#2563eb)}
+.dash-card.green::before{background:linear-gradient(90deg,#10b981,#059669)}
+.dash-card.purple::before{background:linear-gradient(90deg,#8b5cf6,#7c3aed)}
+.dash-card .icon{font-size:32px;margin-bottom:8px}
+.dash-card .num{font-size:40px;font-weight:900;font-family:var(--font-mono)}
+.dash-card .label{font-size:12px;color:var(--text-muted);margin-top:4px}
+.admin-section{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:20px;overflow:hidden}
+.admin-section-header{padding:16px 20px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between}
+.admin-section-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.admin-section-body{padding:20px}
+.action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.action-card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:12px}
+.action-card:hover{border-color:rgba(99,102,241,0.4);transform:translateY(-2px)}
+.action-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.action-info h4{font-size:14px;font-weight:700}
+.action-info p{font-size:12px;color:var(--text-muted);margin-top:2px}
+.log-list{max-height:300px;overflow-y:auto}
+.log-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-light);font-size:13px}
+.log-item:last-child{border-bottom:none}
+.log-time{font-size:11px;color:var(--text-muted);font-family:var(--font-mono);min-width:140px}
+.log-msg{flex:1;color:var(--text-secondary)}
+.log-type{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px}
+.log-type.info{background:var(--info-bg);color:var(--info)}
+.log-type.success{background:var(--success-bg);color:var(--success)}
+.log-type.warning{background:var(--warning-bg);color:var(--warning)}
+.log-type.danger{background:var(--danger-bg);color:var(--danger)}
+.data-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.data-stat{background:var(--bg-secondary);padding:14px;border-radius:10px}
+.data-stat .name{font-size:12px;color:var(--text-muted)}
+.data-stat .count{font-size:24px;font-weight:800;font-family:var(--font-mono);color:var(--text-primary);margin-top:4px}
+.data-stat .sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+.user-list{overflow-x:auto}
+.user-table{width:100%;border-collapse:collapse}
+.user-table th{text-align:left;padding:10px 14px;font-size:11px;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.user-table td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--border-light)}
+.user-table tr:last-child td{border-bottom:none}
+.user-table tr:hover td{background:rgba(255,255,255,0.02)}
+.role-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.role-admin{background:rgba(239,68,68,0.15);color:#f87171}
+.role-coach{background:rgba(99,102,241,0.15);color:#818cf8}
+.role-user{background:rgba(16,185,129,0.15);color:#34d399}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.status-dot.online{background:var(--success)}
+.status-dot.offline{background:var(--text-muted)}
+</style>
+</head>
+<body>
+<script>
+(function(){
+var _users=[
+{id:'U001',name:'罗哥',username:'lawson',role:'admin',email:'lawson@baseai.hk',dept:'管理层',last:'2026-04-19 20:45',status:'online'},
+{id:'U002',name:'陈教练',username:'coach_chen',role:'coach',email:'c.chen@baseai.hk',dept:'U12教练组',last:'2026-04-19 18:30',status:'online'},
+{id:'U003',name:'李教练',username:'coach_li',role:'coach',email:'l.li@baseai.hk',dept:'U15教练组',last:'2026-04-19 16:00',status:'offline'},
+{id:'U004',name:'张教练',username:'coach_zhang',role:'coach',email:'z.zhang@baseai.hk',dept:'U18教练组',last:'2026-04-19 14:20',status:'offline'},
+{id:'U005',name:'王管理',username:'admin_wang',role:'user',email:'w.wang@baseai.hk',dept:'运营部',last:'2026-04-18 22:00',status:'offline'},
+];
+var _logs=[
+{time:'2026-04-19 20:45',type:'info',msg:'管理员 罗哥 登录系统'},
+{time:'2026-04-19 20:44',type:'success',msg:'球员资料库更新：新增球员记录'},
+{time:'2026-04-19 19:30',type:'info',msg:'球队梯队数据导入完成（6支球队）'},
+{time:'2026-04-19 18:15',type:'success',msg:'赛事 G001 比分更新：老虎 U12 8:5 SISHK'},
+{time:'2026-04-19 17:00',type:'info',msg:'陈教练 查看 U12 梯队球员数据'},
+{time:'2026-04-19 16:45',type:'warning',msg:'存储空间使用率达 65%'},
+{time:'2026-04-19 15:30',type:'success',msg:'技术档案生成：罗莀安 雷达评分 83分'},
+{time:'2026-04-19 14:00',type:'info',msg:'系统备份完成，下次自动备份：2026-04-20 02:00'},
+{time:'2026-04-19 12:00',type:'danger',msg:'API 调用异常：Cloudflare Pages 推送超时'},
+{time:'2026-04-19 10:00',type:'success',msg:'BaseAI 系统启动成功'},
+];
+window.DB={getUsers:function(){return Promise.resolve({data:_users,error:null});},getLogs:function(){return Promise.resolve({data:_logs,error:null});},getMode:function(){return'in-memory';}};
+})();
+var MODULES=[{id:'m1',name:'球员资料库',icon:'👥',href:'players.html'},{id:'m2',name:'球队梯队',icon:'🏆',href:'teams.html'},{id:'m3',name:'赛事记分',icon:'📊',href:'games.html'},{id:'m4',name:'技术档案',icon:'📈',href:'profiles.html'},{id:'m5',name:'权限后台',icon:'⚙️',href:'admin.html'}];
+var CURRENT=window.location.pathname.split('/').pop()||'admin.html';
+function buildNav(){var h='<aside class="sidebar"><div class="sidebar-logo"><div class="logo-mark">⚾</div><h1>BaseAI</h1><div class="subtitle">BASEBALL SYSTEM</div></div><div class="sidebar-section"><div class="sidebar-section-label">📋 核心模块</div>';MODULES.forEach(function(m){var a=CURRENT===m.href?' active':'';h+='<a href="'+m.href+'" class="nav-item'+a+'"><div class="nav-icon">'+m.icon+'</div><span>'+m.name+'</span></a>';});h+='</div><div class="sidebar-section"><div class="sidebar-section-label">🧠 智能模块</div><a href="06_AI_运动分析_专属教练.html" class="nav-item ai-item'+(CURRENT.includes('06_')?' active':'')+'"><div class="nav-icon">🤖</div><span>AI 专属教练</span><span class="nav-badge">AI</span></a></div><div class="sidebar-section" style="margin-top:auto;"><a href="index.html" class="nav-item" style="border-top:1px solid var(--border);border-left:none;border-radius:0;"><div class="nav-icon">🏠</div><span>返回首页</span></a></div><div class="sidebar-footer" style="padding:16px 12px;border-top:1px solid var(--border)"><span style="font-size:11px;color:var(--text-muted)">⚡ 内置数据</span></div></aside>';return h;}
+function buildTopbar(){return'<header class="topbar"><div class="topbar-left"><div><div class="topbar-title">权限与后台管理</div><div style="font-size:11px;color:var(--text-muted)">Module 05 · Admin Panel</div></div></div><div class="topbar-right"><div class="topbar-stats" id="topbar-stats"></div><div class="topbar-user"><div class="user-avatar" style="background:var(--danger)">👑</div><span style="color:var(--text)">罗哥</span></div></div></header>';}
+document.body.innerHTML=buildNav()+'<main class="main">'+buildTopbar()+'<div class="page-content" id="page-content"></div></main>';
+function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+function getRoleBadge(r){var m={admin:'管理员',coach:'教练',user:'普通用户'};var cls={admin:'role-admin',coach:'role-coach',user:'role-user'};return'<span class="role-badge '+cls[r]+'">'+m[r]+'</span>';}
+function render(){var el=document.getElementById('topbar-stats');if(el){el.innerHTML='<div class="topbar-stat"><div class="num" style="color:var(--success)">'+'v2.0'+'</div><div class="label">系统版本</div></div><div class="topbar-stat"><div class="num" style="color:var(--primary)">'+'2026-04-19'+'</div><div class="label">部署日期</div></div>';}var container=document.getElementById('page-content');var html='<div class="page-header"><div><h2>⚙️ 权限与后台管理</h2><p>系统配置、用户权限、审计日志、数据管理</p></div><div class="page-actions"><button class="btn btn-primary" onclick="alert(\'用户管理功能即将上线\')">+ 添加用户</button></div></div>';html+='<div class="dashboard-grid"><div class="dash-card orange"><div class="icon">👥</div><div class="num">5</div><div class="label">系统用户</div></div><div class="dash-card blue"><div class="icon">📊</div><div class="num">34.5KB</div><div class="label">内存数据</div></div><div class="dash-card green"><div class="icon">✅</div><div class="num">65%</div><div class="label">存储使用率</div></div><div class="dash-card purple"><div class="icon">🔐</div><div class="num">3</div><div class="label">权限角色</div></div></div>';html+='<div class="admin-section"><div class="admin-section-header"><div class="admin-section-title">🎯 快捷操作</div></div><div class="admin-section-body"><div class="action-grid"><div class="action-card" onclick="alert(\'数据导出功能即将上线\')"><div class="action-icon" style="background:rgba(16,185,129,0.15)">📤</div><div class="action-info"><h4>导出所有数据</h4><p>导出 JSON/CSV 格式</p></div></div><div class="action-card" onclick="alert(\'数据导入功能即将上线\')"><div class="action-icon" style="background:rgba(99,102,241,0.15)">📥</div><div class="action-info"><h4>导入球员数据</h4><p>CSV 批量导入</p></div></div><div class="action-card" onclick="alert(\'系统设置即将上线\')"><div class="action-icon" style="background:rgba(245,158,11,0.15)">⚡</div><div class="action-info"><h4>系统设置</h4><p>配置参数与接口</p></div></div><div class="action-card" onclick="alert(\'备份功能即将上线\')"><div class="action-icon" style="background:rgba(239,68,68,0.15)">💾</div><div class="action-info"><h4>立即备份</h4><p>备份到本地存储</p></div></div></div></div></div>';html+='<div class="admin-section"><div class="admin-section-header"><div class="admin-section-title">👥 用户管理</div></div><div class="admin-section-body"><div class="user-list"><table class="user-table"><thead><tr><th>用户</th><th>角色</th><th>部门</th><th>最后登录</th><th>状态</th><th>操作</th></tr></thead><tbody>';var users=[{id:'U001',name:'罗哥',username:'lawson',role:'admin',dept:'管理层',last:'2026-04-19 20:45',status:'online'},{id:'U002',name:'陈教练',username:'coach_chen',role:'coach',dept:'U12教练组',last:'2026-04-19 18:30',status:'online'},{id:'U003',name:'李教练',username:'coach_li',role:'coach',dept:'U15教练组',last:'2026-04-19 16:00',status:'offline'},{id:'U004',name:'张教练',username:'coach_zhang',role:'coach',dept:'U18教练组',last:'2026-04-19 14:20',status:'offline'},{id:'U005',name:'王管理',username:'admin_wang',role:'user',dept:'运营部',last:'2026-04-18 22:00',status:'offline'}];users.forEach(function(u){html+='<tr><td><strong>'+escHtml(u.name)+'</strong><br><span style="font-size:11px;color:var(--text-muted)">@'+escHtml(u.username)+'</span></td><td>'+getRoleBadge(u.role)+'</td><td style="color:var(--text-muted)">'+escHtml(u.dept)+'</td><td><span style="font-size:11px;font-family:var(--font-mono);color:var(--text-muted)">'+escHtml(u.last)+'</span></td><td><span class="status-dot '+u.status+'"></span>'+(u.status==='online'?'<span style="font-size:12px;color:var(--success)">在线</span>':'<span style="font-size:12px;color:var(--text-muted)">离线</span>')+'</td><td><button class="btn btn-ghost btn-sm" onclick="alert(\'编辑用户功能即将上线\')">✏️</button></td></tr>';});html+='</tbody></table></div></div></div>';html+='<div class="admin-section"><div class="admin-section-header"><div class="admin-section-title">📋 操作日志</div></div><div class="admin-section-body"><div class="log-list">';var logs=[{time:'2026-04-19 20:45',type:'info',msg:'管理员 罗哥 登录系统'},{time:'2026-04-19 20:44',type:'success',msg:'球员资料库更新：新增球员记录'},{time:'2026-04-19 19:30',type:'info',msg:'球队梯队数据导入完成（6支球队）'},{time:'2026-04-19 18:15',type:'success',msg:'赛事 G001 比分更新：老虎 U12 8:5 SISHK'},{time:'2026-04-19 17:00',type:'info',msg:'陈教练 查看 U12 梯队球员数据'},{time:'2026-04-19 16:45',type:'warning',msg:'存储空间使用率达 65%'},{time:'2026-04-19 15:30',type:'success',msg:'技术档案生成：罗莀安 雷达评分 83分'},{time:'2026-04-19 14:00',type:'info',msg:'系统备份完成，下次自动备份：2026-04-20 02:00'},{time:'2026-04-19 12:00',type:'danger',msg:'API 调用异常：Cloudflare Pages 推送超时'},{time:'2026-04-19 10:00',type:'success',msg:'BaseAI 系统启动成功'}];logs.forEach(function(l){html+='<div class="log-item"><span class="log-time">'+escHtml(l.time)+'</span><span class="log-type '+l.type+'">'+{info:'信息',success:'成功',warning:'警告',danger:'错误'}[l.type]+'</span><span class="log-msg">'+escHtml(l.msg)+'</span></div>';});html+='</div></div></div>';html+='<div class="admin-section"><div class="admin-section-header"><div class="admin-section-title">💾 数据统计</div></div><div class="admin-section-body"><div class="data-stats"><div class="data-stat"><div class="name">球员资料库</div><div class="count">8</div><div class="sub">注册球员</div></div><div class="data-stat"><div class="name">球队梯队</div><div class="count">6</div><div class="sub">支球队</div></div><div class="data-stat"><div class="name">赛事记录</div><div class="count">5</div><div class="sub">场比赛</div></div><div class="data-stat"><div class="name">技术档案</div><div class="count">6</div><div class="sub">份档案</div></div></div></div></div>';container.innerHTML=html;}
+render();
+</script>
+</body>
+</html>
