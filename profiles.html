@@ -5,107 +5,424 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>球员技术档案 — BaseAI</title>
 <style>
-:root{--bg:#0b0e14;--bg-card:#151923;--bg-secondary:#0f1319;--border:rgba(255,255,255,0.08);--border-light:rgba(255,255,255,0.04);--text:#e2e8f0;--text-muted:#64748b;--text-secondary:#94a3b8;--primary:#6366f1;--primary-light:#818cf8;--primary-glow:rgba(99,102,241,0.1);--success:#10b981;--success-bg:rgba(16,185,129,0.15);--warning:#f59e0b;--warning-bg:rgba(245,158,11,0.15);--danger:#ef4444;--info:#3b82f6;--info-bg:rgba(14,165,233,0.15);--font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--font-mono:'JetBrains Mono','Fira Code',ui-monospace,monospace;--radius:8px;--radius-lg:14px;}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-height:100vh}
-.app{display:flex;min-height:100vh}
-.sidebar{width:240px;flex-shrink:0;background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column}
-.sidebar-logo{padding:28px 20px 20px;border-bottom:1px solid var(--border);text-align:center}
-.logo-mark{font-size:32px;margin-bottom:8px}
-.sidebar-logo h1{font-size:20px;font-weight:900;letter-spacing:2px}
-.subtitle{font-size:9px;color:var(--text-muted);letter-spacing:3px;margin-top:2px}
-.sidebar-section{padding:16px 12px 8px}
-.sidebar-section-label{font-size:10px;color:var(--text-muted);letter-spacing:1px;padding:0 8px 8px;text-transform:uppercase}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);color:var(--text-muted);text-decoration:none;font-size:14px;font-weight:500;transition:all 0.15s;border-left:3px solid transparent;margin-bottom:2px}
-.nav-item:hover{background:var(--bg-secondary);color:var(--text)}
-.nav-item.active{background:rgba(99,102,241,0.12);color:var(--primary-light);border-left-color:var(--primary)}
-.nav-item.ai-item.active{background:rgba(245,158,11,0.12);color:#fbbf24;border-left-color:#f59e0b}
-.nav-icon{font-size:18px;width:24px;text-align:center}
-.nav-badge{margin-left:auto;background:#f59e0b;color:#000;font-size:9px;font-weight:800;padding:2px 5px;border-radius:4px;letter-spacing:0.5px}
-.sidebar-footer{margin-top:auto;padding:16px 12px;border-top:1px solid var(--border)}
-.topbar{height:60px;background:var(--bg-card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px}
-.topbar-left{display:flex;align-items:center;gap:12px;flex:1}
-.topbar-title{font-size:15px;font-weight:700}
-.topbar-user{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted)}
-.user-avatar{width:30px;height:30px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px}
-.topbar-stats{display:flex;align-items:center;height:100%}
-.topbar-stat{display:flex;flex-direction:column;justify-content:center;padding:0 16px;border-right:1px solid var(--border);min-width:70px;text-align:center}
-.topbar-stat .num{font-size:18px;font-weight:800;font-family:var(--font-mono)}
-.topbar-stat .label{font-size:10px;color:var(--text-muted);letter-spacing:0.5px}
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.page-content{padding:28px;flex:1;overflow-y:auto}
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
-.page-header h2{font-size:22px;font-weight:800}
-.page-header p{font-size:13px;color:var(--text-muted);margin-top:2px}
-.page-actions{display:flex;gap:8px;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:var(--radius);font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all 0.15s;font-family:inherit}
-.btn-primary{background:var(--primary);color:white}
-.btn-primary:hover{background:var(--primary-light)}
-.btn-ghost{background:none;color:var(--text-muted)}
-.btn-ghost:hover{color:var(--text);background:var(--bg-secondary)}
-.btn-sm{padding:6px 12px;font-size:12px}
-.filter-bar{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-.filter-bar input[type="text"]{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;color:var(--text);font-size:14px;outline:none;flex:1;min-width:200px}
-.filter-bar input[type="text"]:focus{border-color:var(--primary)}
-.filter-bar select{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;color:var(--text);font-size:14px;outline:none;cursor:pointer}
-.filter-search{flex:1;min-width:200px}
-.profiles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
-.profile-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:all 0.2s}
-.profile-card:hover{transform:translateY(-3px);border-color:rgba(249,115,22,0.4);box-shadow:0 8px 24px rgba(0,0,0,0.3)}
-.profile-header{padding:16px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border-light)}
-.profile-avatar{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:white;flex-shrink:0}
-.profile-name{font-size:16px;font-weight:700}
-.profile-meta{font-size:12px;color:var(--text-muted);margin-top:2px}
-.profile-body{padding:16px 20px}
-.radar-wrap{display:flex;justify-content:center;margin-bottom:12px}
-.profile-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
-.profile-stat{text-align:center;padding:8px;background:var(--bg-secondary);border-radius:8px}
-.profile-stat .val{font-size:15px;font-weight:800;font-family:var(--font-mono)}
-.profile-stat .lbl{font-size:9px;color:var(--text-muted);margin-top:2px;text-transform:uppercase}
-.radar-legend{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
-.radar-legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted)}
-.radar-legend-dot{width:8px;height:8px;border-radius:50%}
-.badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;background:rgba(99,102,241,0.15);color:#818cf8}
-.badge-success{background:var(--success-bg);color:#34d399}
-.badge-info{background:var(--info-bg);color:#38bdf8}
-.profile-footer{padding:10px 20px;border-top:1px solid var(--border-light);display:flex;gap:8px;justify-content:flex-end}
-.empty-state{text-align:center;padding:80px 20px}
-.empty-state .empty-icon{font-size:64px;margin-bottom:16px;opacity:0.3}
-.empty-state h3{font-size:18px;color:var(--text-secondary);margin-bottom:8px}
+:root {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: #1a2235;
+  --bg-card-hover: #1f2a42;
+  --bg-input: #141a2e;
+  --primary: #f97316;
+  --primary-light: #fb923c;
+  --accent: #3b82f6;
+  --success: #10b981;
+  --success-bg: rgba(16, 185, 129, 0.12);
+  --warning: #f59e0b;
+  --warning-bg: rgba(245, 158, 11, 0.12);
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --info: #06b6d4;
+  --info-bg: rgba(6, 182, 212, 0.12);
+  --purple: #8b5cf6;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border: rgba(255,255,255,0.08);
+  --border-light: rgba(255,255,255,0.04);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.5);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.app { display: flex; height: 100vh; overflow: hidden; }
+.sidebar { width: 220px; flex-shrink: 0; background: var(--bg-card); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+.sidebar-logo { padding: 24px 20px 16px; border-bottom: 1px solid var(--border); }
+.logo-mark { font-size: 28px; margin-bottom: 8px; }
+.sidebar-logo h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+.sidebar-logo .subtitle { font-size: 9px; color: var(--text-muted); letter-spacing: 2px; margin-top: 2px; }
+.sidebar-section { padding: 12px 12px 0; }
+.sidebar-section-label { font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; padding: 0 8px; margin-bottom: 4px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius); font-size: 13px; font-weight: 500; color: var(--text-secondary); transition: all 0.15s; margin-bottom: 2px; cursor: pointer; }
+.nav-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.nav-item.active { background: rgba(249,115,22,0.12); color: var(--primary); font-weight: 600; }
+.nav-icon { font-size: 16px; }
+.nav-badge { margin-left: auto; font-size: 9px; background: var(--purple); color: white; padding: 1px 6px; border-radius: 10px; font-weight: 700; }
+.sidebar-footer { margin-top: auto; padding: 16px; border-top: 1px solid var(--border); }
+.db-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
+
+.main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.topbar { height: 60px; border-bottom: 1px solid var(--border); background: var(--bg-card); display: flex; align-items: center; padding: 0 24px; flex-shrink: 0; justify-content: space-between; }
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.topbar-title { font-size: 15px; font-weight: 700; }
+.topbar-subtitle { font-size: 11px; color: var(--text-muted); }
+.topbar-stats { display: flex; gap: 0; }
+.topbar-stat { padding: 0 16px; border-right: 1px solid var(--border); text-align: center; }
+.topbar-stat:last-child { border-right: none; }
+.topbar-stat .num { font-size: 18px; font-weight: 800; line-height: 1.2; }
+.topbar-stat .label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
+
+.content { padding: 24px; flex: 1; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 600; border: none; transition: all 0.15s; cursor: pointer; white-space: nowrap; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-light); }
+.btn-secondary { background: var(--bg-card-hover); color: var(--text-secondary); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
+.btn-ghost { background: transparent; color: var(--text-secondary); }
+.btn-ghost:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+.page-title-wrap h2 { font-size: 22px; font-weight: 800; }
+.page-title-wrap p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.filter-bar { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.filter-bar input, .filter-bar select { padding: 7px 12px; font-size: 13px; min-width: 160px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); border-radius: var(--radius); outline: none; transition: border-color 0.2s; }
+.filter-bar input:focus, .filter-bar select:focus { border-color: var(--primary); }
+.filter-bar input::placeholder { color: var(--text-muted); }
+.filter-search { flex: 1; min-width: 200px; }
+
+.profiles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+.profile-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; transition: all 0.2s; }
+.profile-card:hover { transform: translateY(-3px); border-color: rgba(249,115,22,0.4); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.profile-header { padding: 16px 20px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--border-light); }
+.profile-avatar { width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: white; flex-shrink: 0; }
+.profile-name { font-size: 16px; font-weight: 700; }
+.profile-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.profile-score { margin-left: auto; text-align: center; }
+.profile-score .num { font-size: 28px; font-weight: 900; font-family: 'JetBrains Mono', monospace; }
+.profile-score .lbl { font-size: 10px; color: var(--text-muted); }
+.profile-body { padding: 16px 20px; }
+.radar-wrap { display: flex; justify-content: center; margin-bottom: 12px; }
+.profile-canvas { display: block; }
+.profile-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.profile-stat { text-align: center; padding: 8px; background: var(--bg-secondary); border-radius: 8px; }
+.profile-stat .val { font-size: 15px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+.profile-stat .lbl { font-size: 9px; color: var(--text-muted); margin-top: 2px; text-transform: uppercase; }
+.profile-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-primary { background: rgba(249,115,22,0.15); color: #fb923c; }
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-info { background: var(--info-bg); color: var(--info); }
+.profile-footer { padding: 10px 20px; border-top: 1px solid var(--border-light); display: flex; gap: 8px; justify-content: flex-end; }
+
+.empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }
+.empty-state .empty-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
+.empty-state h3 { font-size: 18px; color: var(--text-secondary); margin-bottom: 8px; }
+
+#toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast { padding: 12px 20px; border-radius: var(--radius); font-size: 13px; font-weight: 600; box-shadow: var(--shadow); animation: slideIn 0.3s ease; max-width: 300px; }
+.toast.success { background: var(--success); color: white; }
+.toast.error { background: var(--danger); color: white; }
+.toast.warning { background: var(--warning); color: #1a1a1a; }
+.toast.info { background: var(--accent); color: white; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 </style>
 </head>
 <body>
+<div id="toast-container"></div>
+
+<div class="app">
+  <aside class="sidebar" id="app-sidebar"></aside>
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="topbar-title" id="topbar-title">球员技术档案</div>
+          <div class="topbar-subtitle" id="topbar-subtitle">Module 04 · Performance Profiles</div>
+        </div>
+      </div>
+      <div class="topbar-stats" id="topbar-stats"></div>
+    </div>
+    <div class="content" id="page-content">
+      <div class="page-header">
+        <div class="page-title-wrap">
+          <h2>📈 球员技术档案</h2>
+          <p>球员技术指标雷达图、历史表现、成长趋势追踪</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-secondary btn-sm" id="btn-ai">🤖 AI 分析</button>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <input type="text" id="filter-search" class="filter-search" placeholder="搜索球员姓名、学校...">
+        <select id="filter-pos">
+          <option value="">全部位置</option>
+          <option value="投手">投手</option>
+          <option value="捕手">捕手</option>
+          <option value="游击手">游击手</option>
+          <option value="中外野">中外野</option>
+        </select>
+        <select id="filter-team">
+          <option value="">全部球队</option>
+          <option value="香港少年老虎 U12">香港少年老虎 U12</option>
+          <option value="协恩紫荆 U15">协恩紫荆 U15</option>
+          <option value="拔萃女小 金鹰队">拔萃女小 金鹰队</option>
+          <option value="SISHK 国际 U18">SISHK 国际 U18</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" id="btn-reset">重置</button>
+      </div>
+      <div id="profile-list"></div>
+    </div>
+  </div>
+</div>
+
 <script>
-(function(){
-var _profiles=[
-{id:'P001',name:'罗莀安',gender:'F',position:'投手',age:13,school:'SISHK',team:'香港少年老虎 U12',stats:{batting:78,speed:85,power:72,technique:88},overall:83,trend:'up',latest_game:'2026-04-15',ERA:2.15,W:6,L:2,SO:48},
-{id:'P002',name:'陈伟霆',gender:'M',position:'捕手',age:14,school:'男拔附小',team:'香港少年老虎 U12',stats:{batting:82,speed:65,power:70,technique:75},overall:76,trend:'stable',latest_game:'2026-04-15',ERA:0, W:0, L:0,SO:0},
-{id:'P003',name:'李芷晴',gender:'F',position:'游击手',age:12,school:'协恩附小',team:'协恩紫荆 U15',stats:{batting:85,speed:78,power:60,technique:90},overall:81,trend:'up',latest_game:'2026-04-13',ERA:0,W:0,L:0,SO:0},
-{id:'P004',name:'张浩然',gender:'M',position:'中外野',age:14,school:'喇沙附小',team:'香港少年老虎 U12',stats:{batting:80,speed:88,power:75,technique:72},overall:79,trend:'up',latest_game:'2026-04-15',ERA:0,W:0,L:0,SO:0},
-{id:'P005',name:'王心怡',gender:'F',position:'游击手',age:12,school:'拔萃女小',team:'拔萃女小 金鹰队',stats:{batting:90,speed:72,power:65,technique:95},overall:86,trend:'up',latest_game:'2026-04-18',ERA:0,W:0,L:0,SO:0},
-{id:'P006',name:'刘建华',gender:'M',position:'投手',age:14,school:'圣保禄附小',team:'香港少年老虎 U12',stats:{batting:68,speed:75,power:85,technique:80},overall:77,trend:'stable',latest_game:'2026-04-18',ERA:3.42,W:4,L:3,SO:35},
-];
-window.DB={getProfiles:function(){return Promise.resolve({data:_profiles,error:null});},getMode:function(){return'in-memory';}};
+/* IN-MEMORY DB */
+var _inMemoryDB = { profiles: [] };
+(function seedDemoData() {
+  _inMemoryDB.profiles = [
+    { id: 'P001', name: '罗莀安', gender: 'F', position: '投手', age: 13, school: 'SISHK', team: '香港少年老虎 U12', stats: { batting: 78, speed: 85, power: 72, technique: 88 }, overall: 83, trend: 'up', latest_game: '2026-04-15', ERA: 2.15, W: 6, L: 2, SO: 48 },
+    { id: 'P002', name: '陈伟霆', gender: 'M', position: '捕手', age: 14, school: '男拔附小', team: '香港少年老虎 U12', stats: { batting: 82, speed: 65, power: 70, technique: 75 }, overall: 76, trend: 'stable', latest_game: '2026-04-15', ERA: 0, W: 0, L: 0, SO: 0 },
+    { id: 'P003', name: '李芷晴', gender: 'F', position: '游击手', age: 12, school: '协恩附小', team: '协恩紫荆 U15', stats: { batting: 85, speed: 78, power: 60, technique: 90 }, overall: 81, trend: 'up', latest_game: '2026-04-13', ERA: 0, W: 0, L: 0, SO: 0 },
+    { id: 'P004', name: '张浩然', gender: 'M', position: '中外野', age: 14, school: '喇沙附小', team: '香港少年老虎 U12', stats: { batting: 80, speed: 88, power: 75, technique: 72 }, overall: 79, trend: 'up', latest_game: '2026-04-15', ERA: 0, W: 0, L: 0, SO: 0 },
+    { id: 'P005', name: '王心怡', gender: 'F', position: '游击手', age: 12, school: '拔萃女小', team: '拔萃女小 金鹰队', stats: { batting: 90, speed: 72, power: 65, technique: 95 }, overall: 86, trend: 'up', latest_game: '2026-04-18', ERA: 0, W: 0, L: 0, SO: 0 },
+    { id: 'P006', name: '刘建华', gender: 'M', position: '投手', age: 14, school: '圣保禄附小', team: '香港少年老虎 U12', stats: { batting: 68, speed: 75, power: 85, technique: 80 }, overall: 77, trend: 'stable', latest_game: '2026-04-18', ERA: 3.42, W: 4, L: 3, SO: 35 }
+  ];
 })();
-var MODULES=[{id:'m1',name:'球员资料库',icon:'👥',href:'players.html'},{id:'m2',name:'球队梯队',icon:'🏆',href:'teams.html'},{id:'m3',name:'赛事记分',icon:'📊',href:'games.html'},{id:'m4',name:'技术档案',icon:'📈',href:'profiles.html'},{id:'m5',name:'权限后台',icon:'⚙️',href:'admin.html'}];
-var CURRENT=window.location.pathname.split('/').pop()||'profiles.html';
-function buildNav(){var h='<aside class="sidebar"><div class="sidebar-logo"><div class="logo-mark">⚾</div><h1>BaseAI</h1><div class="subtitle">BASEBALL SYSTEM</div></div><div class="sidebar-section"><div class="sidebar-section-label">📋 核心模块</div>';MODULES.forEach(function(m){var a=CURRENT===m.href?' active':'';h+='<a href="'+m.href+'" class="nav-item'+a+'"><div class="nav-icon">'+m.icon+'</div><span>'+m.name+'</span></a>';});h+='</div><div class="sidebar-section"><div class="sidebar-section-label">🧠 智能模块</div><a href="06_AI_运动分析_专属教练.html" class="nav-item ai-item'+(CURRENT.includes('06_')?' active':'')+'"><div class="nav-icon">🤖</div><span>AI 专属教练</span><span class="nav-badge">AI</span></a></div><div class="sidebar-section" style="margin-top:auto;"><a href="index.html" class="nav-item" style="border-top:1px solid var(--border);border-left:none;border-radius:0;"><div class="nav-icon">🏠</div><span>返回首页</span></a></div><div class="sidebar-footer"><div class="db-indicator"><span>⚡ 内置数据</span></div><div style="margin-top:4px;font-size:10px;">v2.0 · 2026-04-19</div></div></aside>';return h;}
-function buildTopbar(){return'<header class="topbar"><div class="topbar-left"><div><div class="topbar-title">球员技术档案</div><div style="font-size:11px;color:var(--text-muted)">Module 04 · Performance Profiles</div></div></div><div class="topbar-right"><div class="topbar-stats" id="topbar-stats"></div><div class="topbar-user"><div class="user-avatar">⚾</div><span>管理员</span></div></div></header>';}
-document.body.innerHTML=buildNav()+'<main class="main">'+buildTopbar()+'<div class="page-content" id="page-content"></div></main>';
-function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
-function calcAge(bd){if(!bd)return'-';var t=new Date(),b=new Date(bd);var a=t.getFullYear()-b.getFullYear();var m=t.getMonth()-b.getMonth();if(m<0||(m===0&&t.getDate()<b.getDate()))a--;return a;}
-var avatarColors=['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899','#f59e0b','#06b6d4','#84cc16'];
-function getAvatarColor(n){return avatarColors[(n||'A').charCodeAt(0)%avatarColors.length];}
-function getTrendIcon(t){return t==='up'?'📈':t==='down'?'📉':'➡️';}
-function getOverallColor(o){return o>=85?'#34d399':o>=75?'#818cf8':o>=60?'#fbbf24':'#f87171';}
-function drawRadar(id,stats){var canvas=document.getElementById(id);if(!canvas)return;var ctx=canvas.getContext('2d');var W=160,H=160,CX=W/2,CY=H/2;var R=55;var labels=['打击','速度','力量','技术'];var keys=['batting','speed','power','technique'];var maxVal=100;ctx.clearRect(0,0,W,H);ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;for(var r=1;r<=4;r++){ctx.beginPath();for(var i=0;i<=4;i++){var angle=Math.PI*2*i/4-Math.PI/2;var rr=R*r/4;ctx.lineTo(CX+rr*Math.cos(angle),CY+rr*Math.sin(angle));}ctx.closePath();ctx.stroke();}for(var i=0;i<4;i++){var angle=Math.PI*2*i/4-Math.PI/2;ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+R*Math.cos(angle),CY+R*Math.sin(angle));ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.stroke();}ctx.beginPath();keys.forEach(function(k,i){var v=stats[k]||0;var angle=Math.PI*2*i/4-Math.PI/2;var r=(v/maxVal)*R;if(i===0)ctx.moveTo(CX+r*Math.cos(angle),CY+r*Math.sin(angle));else ctx.lineTo(CX+r*Math.cos(angle),CY+r*Math.sin(angle));});ctx.closePath();ctx.fillStyle='rgba(99,102,241,0.25)';ctx.fill();ctx.strokeStyle='#6366f1';ctx.lineWidth=2;ctx.stroke();keys.forEach(function(k,i){var v=stats[k]||0;var angle=Math.PI*2*i/4-Math.PI/2;var r=(v/maxVal)*R;ctx.beginPath();ctx.arc(CX+r*Math.cos(angle),CY+r*Math.sin(angle),3,0,Math.PI*2);ctx.fillStyle='#6366f1';ctx.fill();});ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='9px sans-serif';ctx.textAlign='center';keys.forEach(function(k,i){var angle=Math.PI*2*i/4-Math.PI/2;ctx.fillText(labels[i],CX+(R+12)*Math.cos(angle),CY+(R+12)*Math.sin(angle)+3);});}
-var allProfiles=[];var filteredProfiles=[];var filterPos='';var filterTeam='';var searchText='';
-function renderTopbarStats(){var el=document.getElementById('topbar-stats');if(!el)return;var avg=allProfiles.length?Math.round(allProfiles.reduce(function(s,p){return s+(p.overall||0);},0)/allProfiles.length):0;var top=allProfiles.length?Math.max.apply(null,allProfiles.map(function(p){return p.overall||0;})):0;el.innerHTML='<div class="topbar-stat"><div class="num">'+allProfiles.length+'</div><div class="label">球员档案</div></div><div class="topbar-stat"><div class="num">'+avg+'</div><div class="label">平均评分</div></div><div class="topbar-stat"><div class="num" style="color:#34d399">'+top+'</div><div class="label">最高评分</div></div>';}
-function renderProfiles(profiles){renderTopbarStats();var container=document.getElementById('page-content');var teams=['香港少年老虎 U12','协恩紫荆 U15','拔萃女小 金鹰队','SISHK 国际 U18'];var positions=['投手','捕手','内野','外野','游击手','一垒手','中外野'];var html='<div class="page-header"><div><h2>📈 球员技术档案</h2><p>球员技术指标雷达图、历史表现、成长趋势追踪</p></div><div class="page-actions"><button class="btn btn-primary" onclick="alert(\'AI分析功能即将上线\')">🤖 AI 分析</button></div></div>';html+='<div class="filter-bar"><input type="text" id="filter-search" class="filter-search" placeholder="🔍 搜索球员姓名..." value="'+escHtml(searchText)+'" oninput="applyFilters()"><select id="filter-pos" onchange="applyFilters()"><option value="">全部位置</option>'+positions.map(function(p){return'<option value="'+p+'" '+(filterPos===p?'selected':'')+'>'+p+'</option>';}).join('')+'</select><select id="filter-team" onchange="applyFilters()"><option value="">全部球队</option>'+teams.map(function(t){return'<option value="'+escHtml(t)+'" '+(filterTeam===t?'selected':'')+'>'+escHtml(t)+'</option>';}).join('')+'</select><button class="btn btn-ghost btn-sm" onclick="resetFilters()">重置</button></div>';if(profiles.length===0){html+='<div class="empty-state"><div class="empty-icon">📈</div><h3>暂无技术档案</h3><p>暂无球员技术数据</p></div>';}else{html+='<div class="profiles-grid">';profiles.forEach(function(p){var color=getAvatarColor(p.name);html+='<div class="profile-card"><div class="profile-header"><div class="profile-avatar" style="background:'+color+'">'+(p.name||'?').charAt(0)+'</div><div><div class="profile-name">'+escHtml(p.name)+'</div><div class="profile-meta">'+escHtml(p.position||'')+' · '+p.age+'岁 · '+escHtml(p.school||'')+'</div></div><div style="margin-left:auto;text-align:center;"><div style="font-size:28px;font-weight:900;font-family:var(--font-mono);color:'+getOverallColor(p.overall)+'">'+p.overall+'</div><div style="font-size:10px;color:var(--text-muted);">综合评分</div></div></div><div class="profile-body"><div class="radar-wrap"><canvas id="radar-'+escHtml(p.id)+'" class="profile-canvas" width="160" height="160"></canvas></div><div class="profile-stats"><div class="profile-stat"><div class="val">'+p.stats.batting+'</div><div class="lbl">打击</div></div><div class="profile-stat"><div class="val">'+p.stats.speed+'</div><div class="lbl">速度</div></div><div class="profile-stat"><div class="val">'+p.stats.power+'</div><div class="lbl">力量</div></div><div class="profile-stat"><div class="val">'+p.stats.technique+'</div><div class="lbl">技术</div></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'+(p.position==='投手'?'<span class="badge">ERA '+p.ERA+'</span><span class="badge badge-success">'+p.W+'胜 '+p.L+'败</span><span class="badge badge-info">'+p.SO+'K</span>':'<span class="badge badge-success">打击率 '+p.stats.batting+'</span>')+'<span class="badge">'+getTrendIcon(p.trend)+' '+(p.trend==='up'?'上升':'stable'?'稳定':'下滑')+'</span></div></div><div class="profile-footer"><button class="btn btn-ghost btn-sm" onclick="alert(\'详细分析即将上线\')">📋 详细报告</button><button class="btn btn-ghost btn-sm" onclick="alert(\'训练建议即将上线\')">🎯 训练建议</button></div></div>';});html+='</div>';}container.innerHTML=html;setTimeout(function(){profiles.forEach(function(p){drawRadar('radar-'+p.id,p.stats);});},50);}
-function applyFilters(){searchText=(document.getElementById('filter-search')||{value:''}).value;filterPos=(document.getElementById('filter-pos')||{value:''}).value;filterTeam=(document.getElementById('filter-team')||{value:''}).value;filteredProfiles=allProfiles.filter(function(p){if(filterPos&&p.position!==filterPos)return false;if(filterTeam&&p.team!==filterTeam)return false;if(searchText){var q=searchText.toLowerCase();if(!(p.name||'').toLowerCase().includes(q)&&!(p.school||'').toLowerCase().includes(q))return false;}return true;});renderProfiles(filteredProfiles);}
-function resetFilters(){searchText='';filterPos='';filterTeam='';var si=document.getElementById('filter-search');var fp=document.getElementById('filter-pos');var ft=document.getElementById('filter-team');if(si)si.value='';if(fp)fp.value='';if(ft)ft.value='';filteredProfiles=allProfiles;renderProfiles(allProfiles);}
-window.applyFilters=applyFilters;window.resetFilters=resetFilters;
-DB.getProfiles().then(function(result){allProfiles=result.data||[];filteredProfiles=allProfiles;renderProfiles(filteredProfiles);}).catch(function(e){document.getElementById('page-content').innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><h3>加载失败</h3><p>'+e.message+'</p></div>';});
+
+var DB = {
+  isReady: function() { return true; },
+  getMode: function() { return 'in-memory'; },
+  getProfiles: function() {
+    return Promise.resolve({ data: _inMemoryDB.profiles, error: null });
+  }
+};
+
+/* NAV */
+function initNav() {
+  var modules = [
+    { id: 'm1', name: '球员资料库', icon: '👥', href: 'players.html' },
+    { id: 'm2', name: '球队梯队', icon: '🏆', href: 'teams.html' },
+    { id: 'm3', name: '赛事记分', icon: '📊', href: 'games.html' },
+    { id: 'm4', name: '技术档案', icon: '📈', href: 'profiles.html', active: true },
+    { id: 'm5', name: '权限后台', icon: '⚙️', href: 'admin.html' }
+  ];
+  var html = '<div class="sidebar-logo"><div class="logo-mark">⚾</div><h1>BaseAI</h1><div class="subtitle">BASEBALL SYSTEM</div></div>';
+  html += '<div class="sidebar-section"><div class="sidebar-section-label">核心模块</div>';
+  modules.forEach(function(m) {
+    html += '<a href="' + m.href + '" class="nav-item' + (m.active ? ' active' : '') + '"><div class="nav-icon">' + m.icon + '</div><span>' + m.name + '</span></a>';
+  });
+  html += '</div><div class="sidebar-section"><div class="sidebar-section-label">智能模块</div>';
+  html += '<a href="06_AI_运动分析_专属教练.html" class="nav-item"><div class="nav-icon">🤖</div><span>AI 专属教练</span><span class="nav-badge">AI</span></a>';
+  html += '</div><div class="sidebar-section" style="margin-top:auto;"><a href="index.html" class="nav-item" style="border-top:1px solid var(--border);"><div class="nav-icon">🏠</div><span>返回首页</span></a></div>';
+  html += '<div class="sidebar-footer"><div class="db-indicator"><span>⚡ 内置数据</span></div><div style="margin-top:4px;font-size:10px;">v2.0 · 2026-04-19</div></div>';
+  document.getElementById('app-sidebar').innerHTML = html;
+}
+
+function showToast(msg, type) {
+  type = type || 'info';
+  var tc = document.getElementById('toast-container');
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  tc.appendChild(t);
+  setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 300); }, 3000);
+}
+
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+var avatarColors = ['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899','#f59e0b','#06b6d4','#84cc16'];
+function getAvatarColor(n) { return avatarColors[(n||'A').charCodeAt(0) % avatarColors.length]; }
+function getTrendIcon(t) { return t === 'up' ? '📈' : t === 'down' ? '📉' : '➡️'; }
+function getOverallColor(o) { return o >= 85 ? '#34d399' : o >= 75 ? '#818cf8' : o >= 60 ? '#fbbf24' : '#f87171'; }
+
+function drawRadar(id, stats) {
+  var canvas = document.getElementById(id);
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = 160, H = 160, CX = W/2, CY = H/2, R = 55;
+  var labels = ['打击','速度','力量','技术'];
+  var keys = ['batting','speed','power','technique'];
+  var maxVal = 100;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background circles
+  for (var r = 1; r <= 4; r++) {
+    ctx.beginPath();
+    for (var i = 0; i <= 4; i++) {
+      var angle = Math.PI * 2 * i / 4 - Math.PI / 2;
+      var rr = R * r / 4;
+      ctx.lineTo(CX + rr * Math.cos(angle), CY + rr * Math.sin(angle));
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Axes
+  for (var i = 0; i < 4; i++) {
+    var angle = Math.PI * 2 * i / 4 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.lineTo(CX + R * Math.cos(angle), CY + R * Math.sin(angle));
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Data polygon
+  ctx.beginPath();
+  keys.forEach(function(k, i) {
+    var v = stats[k] || 0;
+    var angle = Math.PI * 2 * i / 4 - Math.PI / 2;
+    var r = (v / maxVal) * R;
+    if (i === 0) ctx.moveTo(CX + r * Math.cos(angle), CY + r * Math.sin(angle));
+    else ctx.lineTo(CX + r * Math.cos(angle), CY + r * Math.sin(angle));
+  });
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(249,115,22,0.2)';
+  ctx.fill();
+  ctx.strokeStyle = '#f97316';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Data points
+  keys.forEach(function(k, i) {
+    var v = stats[k] || 0;
+    var angle = Math.PI * 2 * i / 4 - Math.PI / 2;
+    var r = (v / maxVal) * R;
+    ctx.beginPath();
+    ctx.arc(CX + r * Math.cos(angle), CY + r * Math.sin(angle), 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#f97316';
+    ctx.fill();
+  });
+
+  // Labels
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'center';
+  keys.forEach(function(k, i) {
+    var angle = Math.PI * 2 * i / 4 - Math.PI / 2;
+    ctx.fillText(labels[i], CX + (R + 14) * Math.cos(angle), CY + (R + 14) * Math.sin(angle) + 3);
+  });
+}
+
+/* APPLICATION */
+var allProfiles = [], filteredProfiles = [];
+var filterPos = '', filterTeam = '', searchText = '';
+
+function getStats() {
+  var avg = allProfiles.length ? Math.round(allProfiles.reduce(function(s, p) { return s + (p.overall||0); }, 0) / allProfiles.length) : 0;
+  var top = allProfiles.length ? Math.max.apply(null, allProfiles.map(function(p) { return p.overall||0; })) : 0;
+  return { total: allProfiles.length, avg: avg, top: top };
+}
+
+function updateTopbarStats() {
+  var s = getStats();
+  document.getElementById('topbar-stats').innerHTML =
+    '<div class="topbar-stat"><div class="num">' + s.total + '</div><div class="label">球员档案</div></div>' +
+    '<div class="topbar-stat"><div class="num">' + s.avg + '</div><div class="label">平均评分</div></div>' +
+    '<div class="topbar-stat"><div class="num" style="color:#34d399">' + s.top + '</div><div class="label">最高评分</div></div>';
+}
+
+function renderProfiles() {
+  var list = document.getElementById('profile-list');
+  updateTopbarStats();
+  if (filteredProfiles.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📈</div><h3>暂无技术档案</h3><p>暂无球员技术数据</p></div>';
+    return;
+  }
+  var html = '<div class="profiles-grid">';
+  filteredProfiles.forEach(function(p) {
+    var color = getAvatarColor(p.name);
+    var overallColor = getOverallColor(p.overall);
+    var isPitcher = p.position === '投手';
+    html += '<div class="profile-card">' +
+      '<div class="profile-header">' +
+        '<div class="profile-avatar" style="background:' + color + '">' + (p.name||'?').charAt(0) + '</div>' +
+        '<div><div class="profile-name">' + escHtml(p.name) + '</div><div class="profile-meta">' + escHtml(p.position||'') + ' · ' + p.age + '岁 · ' + escHtml(p.school||'') + '</div></div>' +
+        '<div class="profile-score"><div class="num" style="color:' + overallColor + '">' + p.overall + '</div><div class="lbl">综合评分</div></div>' +
+      '</div>' +
+      '<div class="profile-body">' +
+        '<div class="radar-wrap"><canvas id="radar-' + escHtml(p.id) + '" class="profile-canvas" width="160" height="160"></canvas></div>' +
+        '<div class="profile-stats">' +
+          '<div class="profile-stat"><div class="val">' + p.stats.batting + '</div><div class="lbl">打击</div></div>' +
+          '<div class="profile-stat"><div class="val">' + p.stats.speed + '</div><div class="lbl">速度</div></div>' +
+          '<div class="profile-stat"><div class="val">' + p.stats.power + '</div><div class="lbl">力量</div></div>' +
+          '<div class="profile-stat"><div class="val">' + p.stats.technique + '</div><div class="lbl">技术</div></div>' +
+        '</div>' +
+        '<div class="profile-tags">' +
+          (isPitcher
+            ? '<span class="badge badge-primary">ERA ' + p.ERA + '</span><span class="badge badge-success">' + p.W + '胜 ' + p.L + '败</span><span class="badge badge-info">' + p.SO + 'K</span>'
+            : '<span class="badge badge-success">打击率 ' + p.stats.batting + '</span>') +
+          '<span class="badge badge-info">' + getTrendIcon(p.trend) + ' ' + (p.trend==='up'?'上升':p.trend==='down'?'下滑':'稳定') + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="profile-footer">' +
+        '<button class="btn btn-ghost btn-sm" onclick="showToast(\'详细分析功能即将上线\', \'info\')">📋 详细报告</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="showToast(\'训练建议功能即将上线\', \'info\')">🎯 训练建议</button>' +
+      '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  list.innerHTML = html;
+  // Draw radar charts after DOM insertion
+  setTimeout(function() {
+    filteredProfiles.forEach(function(p) { drawRadar('radar-' + p.id, p.stats); });
+  }, 50);
+}
+
+function applyFilters() {
+  searchText = document.getElementById('filter-search').value.trim().toLowerCase();
+  filterPos = document.getElementById('filter-pos').value;
+  filterTeam = document.getElementById('filter-team').value;
+  filteredProfiles = allProfiles.filter(function(p) {
+    if (filterPos && p.position !== filterPos) return false;
+    if (filterTeam && p.team !== filterTeam) return false;
+    if (searchText) {
+      if ((p.name||'').toLowerCase().indexOf(searchText) >= 0) return true;
+      if ((p.school||'').toLowerCase().indexOf(searchText) >= 0) return true;
+      return false;
+    }
+    return true;
+  });
+  renderProfiles();
+}
+
+function resetFilters() {
+  document.getElementById('filter-search').value = '';
+  document.getElementById('filter-pos').value = '';
+  document.getElementById('filter-team').value = '';
+  filterPos = ''; filterTeam = ''; searchText = '';
+  filteredProfiles = allProfiles;
+  renderProfiles();
+}
+
+function loadProfiles() {
+  DB.getProfiles().then(function(result) {
+    allProfiles = result.data || [];
+    filteredProfiles = allProfiles;
+    renderProfiles();
+    showToast('已加载 ' + allProfiles.length + ' 份技术档案', 'success');
+  });
+}
+
+window.showToast = showToast;
+
+document.getElementById('filter-search').addEventListener('input', applyFilters);
+document.getElementById('filter-pos').addEventListener('change', applyFilters);
+document.getElementById('filter-team').addEventListener('change', applyFilters);
+document.getElementById('btn-reset').addEventListener('click', resetFilters);
+document.getElementById('btn-ai').addEventListener('click', function() { showToast('AI分析功能即将上线', 'info'); });
+
+initNav();
+loadProfiles();
 </script>
 </body>
 </html>
