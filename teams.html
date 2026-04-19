@@ -5,342 +5,451 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>球队与梯队 — BaseAI</title>
 <style>
+/* =====================================================
+   DESIGN SYSTEM CSS (INLINED - NO EXTERNAL DEPENDENCY)
+   ===================================================== */
 :root {
-  --bg:#0b0e14; --bg-card:#151923; --bg-secondary:#0f1319;
-  --border:rgba(255,255,255,0.08); --border-light:rgba(255,255,255,0.04);
-  --text:#e2e8f0; --text-muted:#64748b; --text-secondary:#94a3b8;
-  --primary:#6366f1; --primary-light:#818cf8; --primary-glow:rgba(99,102,241,0.1);
-  --success:#10b981; --warning:#f59e0b; --danger:#ef4444; --info:#3b82f6;
-  --font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
-  --font-mono:'JetBrains Mono','Fira Code',ui-monospace,monospace;
-  --radius:8px; --radius-lg:14px;
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: #1a2235;
+  --bg-card-hover: #1f2a42;
+  --bg-input: #141a2e;
+  --primary: #f97316;
+  --primary-light: #fb923c;
+  --accent: #3b82f6;
+  --accent-light: #60a5fa;
+  --success: #10b981;
+  --success-bg: rgba(16, 185, 129, 0.12);
+  --warning: #f59e0b;
+  --warning-bg: rgba(245, 158, 11, 0.12);
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --info: #06b6d4;
+  --info-bg: rgba(6, 182, 212, 0.12);
+  --purple: #8b5cf6;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border: rgba(255,255,255,0.08);
+  --border-light: rgba(255,255,255,0.04);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.5);
 }
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:var(--font-sans); background:var(--bg); color:var(--text); min-height:100vh; }
-.app { display:flex; min-height:100vh; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-/* SIDEBAR */
-.sidebar { width:240px; flex-shrink:0; background:var(--bg-card); border-right:1px solid var(--border); display:flex; flex-direction:column; }
-.sidebar-logo { padding:28px 20px 20px; border-bottom:1px solid var(--border); text-align:center; }
-.logo-mark { font-size:32px; margin-bottom:8px; }
-.sidebar-logo h1 { font-size:20px; font-weight:900; letter-spacing:2px; }
-.subtitle { font-size:9px; color:var(--text-muted); letter-spacing:3px; margin-top:2px; }
-.sidebar-section { padding:16px 12px 8px; }
-.sidebar-section-label { font-size:10px; color:var(--text-muted); letter-spacing:1px; padding:0 8px 8px; text-transform:uppercase; }
-.nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--radius); color:var(--text-muted); text-decoration:none; font-size:14px; font-weight:500; transition:all 0.15s; border-left:3px solid transparent; margin-bottom:2px; }
-.nav-item:hover { background:var(--bg-secondary); color:var(--text); }
-.nav-item.active { background:rgba(99,102,241,0.12); color:var(--primary-light); border-left-color:var(--primary); }
-.nav-item.ai-item.active { background:rgba(245,158,11,0.12); color:#fbbf24; border-left-color:#f59e0b; }
-.nav-icon { font-size:18px; width:24px; text-align:center; }
-.nav-badge { margin-left:auto; background:#f59e0b; color:#000; font-size:9px; font-weight:800; padding:2px 5px; border-radius:4px; letter-spacing:0.5px; }
-.sidebar-footer { margin-top:auto; padding:16px 12px; border-top:1px solid var(--border); }
-.db-indicator { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); }
+.app { display: flex; height: 100vh; overflow: hidden; }
+.sidebar {
+  width: 220px; flex-shrink: 0;
+  background: var(--bg-card); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.sidebar-logo { padding: 24px 20px 16px; border-bottom: 1px solid var(--border); }
+.logo-mark { font-size: 28px; margin-bottom: 8px; }
+.sidebar-logo h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+.sidebar-logo .subtitle { font-size: 9px; color: var(--text-muted); letter-spacing: 2px; margin-top: 2px; }
+.sidebar-section { padding: 12px 12px 0; }
+.sidebar-section-label { font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; padding: 0 8px; margin-bottom: 4px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: var(--radius);
+  font-size: 13px; font-weight: 500; color: var(--text-secondary);
+  transition: all 0.15s; margin-bottom: 2px; cursor: pointer;
+}
+.nav-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.nav-item.active { background: rgba(249,115,22,0.12); color: var(--primary); font-weight: 600; }
+.nav-icon { font-size: 16px; }
+.nav-badge { margin-left: auto; font-size: 9px; background: var(--purple); color: white; padding: 1px 6px; border-radius: 10px; font-weight: 700; }
+.sidebar-footer { margin-top: auto; padding: 16px; border-top: 1px solid var(--border); }
+.db-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
 
-/* TOPBAR */
-.topbar { height:60px; background:var(--bg-card); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 24px; gap:16px; }
-.topbar-left { display:flex; align-items:center; gap:12px; flex:1; }
-.topbar-right { display:flex; align-items:center; gap:12px; }
-.topbar-title { font-size:15px; font-weight:700; }
-.topbar-user { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted); }
-.user-avatar { width:30px; height:30px; background:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; }
-.topbar-stats { display:flex; align-items:center; height:100%; }
-.topbar-stat { display:flex; flex-direction:column; justify-content:center; padding:0 16px; border-right:1px solid var(--border); min-width:70px; text-align:center; }
-.topbar-stat .num { font-size:18px; font-weight:800; font-family:var(--font-mono); }
-.topbar-stat .label { font-size:10px; color:var(--text-muted); letter-spacing:0.5px; }
+.main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.topbar {
+  height: 60px; border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  display: flex; align-items: center;
+  padding: 0 24px; flex-shrink: 0;
+  justify-content: space-between;
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.topbar-title { font-size: 15px; font-weight: 700; }
+.topbar-subtitle { font-size: 11px; color: var(--text-muted); }
+.topbar-stats { display: flex; gap: 0; }
+.topbar-stat { padding: 0 16px; border-right: 1px solid var(--border); text-align: center; }
+.topbar-stat:last-child { border-right: none; }
+.topbar-stat .num { font-size: 18px; font-weight: 800; line-height: 1.2; }
+.topbar-stat .label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
 
-/* MAIN */
-.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-.page-content { padding:28px; flex:1; overflow-y:auto; }
+.content { padding: 24px; flex: 1; }
 
-/* COMMON */
-.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
-.page-header h2 { font-size:22px; font-weight:800; }
-.page-header p { font-size:13px; color:var(--text-muted); margin-top:2px; }
-.page-actions { display:flex; gap:8px; flex-wrap:wrap; }
-.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:9px 16px; border-radius:var(--radius); font-size:13px; font-weight:600; border:none; cursor:pointer; transition:all 0.15s; font-family:inherit; }
-.btn-primary { background:var(--primary); color:white; }
-.btn-primary:hover { background:var(--primary-light); }
-.btn-secondary { background:var(--bg-card); color:var(--text); border:1px solid var(--border); }
-.btn-secondary:hover { border-color:var(--primary); color:var(--primary); }
-.btn-ghost { background:none; color:var(--text-muted); }
-.btn-ghost:hover { color:var(--text); background:var(--bg-secondary); }
-.btn-sm { padding:6px 12px; font-size:12px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 600; border: none; transition: all 0.15s; cursor: pointer; white-space: nowrap; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-light); }
+.btn-secondary { background: var(--bg-card-hover); color: var(--text-secondary); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
+.btn-ghost { background: transparent; color: var(--text-secondary); }
+.btn-ghost:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
 
-/* FILTER BAR */
-.filter-bar { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 20px; margin-bottom:20px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
-.filter-bar input[type="text"] { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:9px 12px; color:var(--text); font-size:14px; outline:none; flex:1; min-width:200px; }
-.filter-bar input[type="text"]:focus { border-color:var(--primary); }
-.filter-bar select { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:9px 12px; color:var(--text); font-size:14px; outline:none; cursor:pointer; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+.page-title-wrap h2 { font-size: 22px; font-weight: 800; }
+.page-title-wrap p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* TEAM GRID */
-.team-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
-.team-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; transition:all 0.2s; cursor:pointer; }
-.team-card:hover { transform:translateY(-3px); border-color:rgba(99,102,241,0.4); box-shadow:0 8px 24px rgba(0,0,0,0.3); }
-.team-card-banner { height:80px; display:flex; align-items:center; padding:0 20px; }
-.cat-u10 .team-card-banner { background:linear-gradient(135deg,#10b981,#059669); }
-.cat-u12 .team-card-banner { background:linear-gradient(135deg,#f97316,#ea580c); }
-.cat-u15 .team-card-banner { background:linear-gradient(135deg,#3b82f6,#2563eb); }
-.cat-u18 .team-card-banner { background:linear-gradient(135deg,#8b5cf6,#7c3aed); }
-.cat-senior .team-card-banner { background:linear-gradient(135deg,#ef4444,#dc2626); }
-.team-logo { width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:28px; background:rgba(255,255,255,0.15); color:white; flex-shrink:0; }
-.team-banner-info { margin-left:14px; }
-.team-banner-info h3 { font-size:16px; font-weight:700; color:white; }
-.team-banner-info p { font-size:12px; color:rgba(255,255,255,0.7); margin-top:2px; }
-.team-card-body { padding:16px 20px; }
-.team-meta { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
-.team-meta-item { padding:8px 10px; background:var(--bg-secondary); border-radius:8px; }
-.team-meta-item .lbl { font-size:10px; color:var(--text-muted); }
-.team-meta-item .val { font-size:13px; font-weight:600; color:var(--text-primary); margin-top:2px; }
-.team-tags { display:flex; gap:6px; flex-wrap:wrap; }
-.badge { display:inline-block; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600; background:rgba(99,102,241,0.15); color:#818cf8; }
-.badge-success { background:rgba(16,185,129,0.15); color:#34d399; }
-.badge-info { background:rgba(14,165,233,0.15); color:#38bdf8; }
-.team-card-footer { padding:10px 20px; border-top:1px solid var(--border-light); display:flex; gap:8px; justify-content:flex-end; }
+.filter-bar { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.filter-bar input, .filter-bar select { padding: 7px 12px; font-size: 13px; min-width: 160px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); border-radius: var(--radius); outline: none; transition: border-color 0.2s; }
+.filter-bar input:focus, .filter-bar select:focus { border-color: var(--primary); }
+.filter-bar input::placeholder { color: var(--text-muted); }
+.filter-search { flex: 1; min-width: 200px; }
 
-/* EMPTY STATE */
-.empty-state { text-align:center; padding:80px 20px; }
-.empty-state .empty-icon { font-size:64px; margin-bottom:16px; opacity:0.3; }
-.empty-state h3 { font-size:18px; color:var(--text-secondary); margin-bottom:8px; }
+.team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.team-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; transition: all 0.2s; }
+.team-card:hover { transform: translateY(-3px); border-color: rgba(249,115,22,0.4); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.team-card-banner { height: 80px; display: flex; align-items: center; padding: 0 20px; }
+.cat-u10 .team-card-banner { background: linear-gradient(135deg, #10b981, #059669); }
+.cat-u12 .team-card-banner { background: linear-gradient(135deg, #f97316, #ea580c); }
+.cat-u15 .team-card-banner { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.cat-u18 .team-card-banner { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.cat-senior .team-card-banner { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.team-logo { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 28px; background: rgba(255,255,255,0.15); color: white; flex-shrink: 0; }
+.team-banner-info { margin-left: 14px; }
+.team-banner-info h3 { font-size: 16px; font-weight: 700; color: white; }
+.team-banner-info p { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+.team-card-body { padding: 16px 20px; }
+.team-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.team-meta-item { padding: 8px 10px; background: var(--bg-secondary); border-radius: 8px; }
+.team-meta-item .lbl { font-size: 10px; color: var(--text-muted); }
+.team-meta-item .val { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-top: 2px; }
+.team-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-primary { background: rgba(249,115,22,0.15); color: #fb923c; }
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-info { background: var(--info-bg); color: var(--info); }
+.team-card-footer { padding: 10px 20px; border-top: 1px solid var(--border-light); display: flex; gap: 8px; justify-content: flex-end; }
 
-/* MODAL */
-.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; z-index:1000; padding:20px; }
-.modal-overlay.show { display:flex; }
-.modal { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); width:100%; max-width:560px; max-height:90vh; overflow-y:auto; }
-.modal-header { padding:20px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
-.modal-header h3 { font-size:18px; font-weight:700; }
-.modal-close { background:none; border:none; color:var(--text-muted); font-size:22px; cursor:pointer; padding:4px; line-height:1; }
-.modal-close:hover { color:var(--text); }
-.modal-body { padding:24px; }
-.modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
-.modal-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-.modal-form-grid .full { grid-column:span 2; }
-.modal-form-grid label { display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:5px; }
-.form-input { width:100%; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:9px 12px; color:var(--text); font-size:14px; outline:none; }
-.form-input:focus { border-color:var(--primary); }
+.empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }
+.empty-state .empty-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
+.empty-state h3 { font-size: 18px; color: var(--text-secondary); margin-bottom: 8px; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--border); }
+.modal-title { font-size: 16px; font-weight: 700; }
+.modal-close { width: 32px; height: 32px; border-radius: 50%; background: var(--bg-card-hover); border: none; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.2s; }
+.modal-close:hover { background: var(--danger-bg); color: var(--danger); }
+.modal-body { padding: 24px; }
+.modal-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.modal-form-grid .full { grid-column: span 2; }
+.modal-form-grid label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+.modal-form-grid input, .modal-form-grid select { width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 12px; color: var(--text-primary); font-size: 14px; outline: none; transition: border-color 0.2s; }
+.modal-form-grid input:focus, .modal-form-grid select:focus { border-color: var(--primary); }
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border); }
+
+#toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast { padding: 12px 20px; border-radius: var(--radius); font-size: 13px; font-weight: 600; box-shadow: var(--shadow); animation: slideIn 0.3s ease; max-width: 300px; }
+.toast.success { background: var(--success); color: white; }
+.toast.error { background: var(--danger); color: white; }
+.toast.warning { background: var(--warning); color: #1a1a1a; }
+.toast.info { background: var(--accent); color: white; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 </style>
 </head>
 <body>
-<script>
-// ============================================================
-// DB (IN-MEMORY, SELF-CONTAINED)
-// ============================================================
-(function() {
-  var _teams = [
-    { id:'T001',name:'香港少年老虎 U12',category:'u12',gender:'M',city:'香港',founded:'2022-03',coach:'陈教练',contact:'91234567',color:'#f97316',player_count:18,status:'active',desc:'香港首支青少年老虎联盟代表队' },
-    { id:'T002',name:'拔萃女小 金鹰队',category:'u12',gender:'F',city:'香港',founded:'2023-01',coach:'李教练',contact:'98876543',color:'#818cf8',player_count:14,status:'active',desc:'拔萃女小学官方棒球校队，专注女子青少年发展' },
-    { id:'T003',name:'协恩紫荆 U15',category:'u15',gender:'F',city:'香港',founded:'2021-09',coach:'张教练',contact:'93456789',color:'#8b5cf6',player_count:22,status:'active',desc:'协恩中学附属小学女子 U15 梯队' },
-    { id:'T004',name:'SISHK 国际 U18',category:'u18',gender:'coed',city:'香港',founded:'2020-01',coach:'Micheal教练',contact:'98765432',color:'#3b82f6',player_count:25,status:'active',desc:'新加坡国际学校香港分校棒球校队，面向国际学生' },
-    { id:'T005',name:'喇沙小龙 U10',category:'u10',gender:'M',city:'香港',founded:'2024-01',coach:'王教练',contact:'91234567',color:'#10b981',player_count:12,status:'active',desc:'喇沙附属小学 U10 起步梯队' },
-    { id:'T006',name:'香港烈焰 成人队',category:'senior',gender:'M',city:'香港',founded:'2019-05',coach:'赵教练',contact:'95555555',color:'#ef4444',player_count:30,status:'active',desc:'香港棒垒球总会成人联赛甲组球队' },
-  ];
+<div id="toast-container"></div>
 
-  window.DB = {
-    getTeams: function() { return Promise.resolve({ data: _teams, error: null }); },
-    getMode: function() { return 'in-memory (standalone)'; }
-  };
+<div class="app">
+  <aside class="sidebar" id="app-sidebar"></aside>
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="topbar-title" id="topbar-title">球队与梯队</div>
+          <div class="topbar-subtitle" id="topbar-subtitle">Module 02 · Team Management</div>
+        </div>
+      </div>
+      <div class="topbar-stats" id="topbar-stats"></div>
+    </div>
+    <div class="content" id="page-content">
+      <div class="page-header">
+        <div class="page-title-wrap">
+          <h2>🏆 球队与梯队管理</h2>
+          <p>管理球队信息与梯队建设，支持多年龄段分类</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-primary" id="btn-add">+ 新增球队</button>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <input type="text" id="filter-search" class="filter-search" placeholder="搜索球队名称、城市...">
+        <select id="filter-cat">
+          <option value="">全部组别</option>
+          <option value="u10">🌱 U10</option>
+          <option value="u12">⚾ U12</option>
+          <option value="u15">🏆 U15</option>
+          <option value="u18">🎖️ U18</option>
+          <option value="senior">⭐ 成人</option>
+        </select>
+        <select id="filter-gender">
+          <option value="">全部性别</option>
+          <option value="M">男生</option>
+          <option value="F">女生</option>
+          <option value="coed">混合</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" id="btn-reset">重置</button>
+      </div>
+      <div id="team-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* IN-MEMORY DB LAYER */
+var _inMemoryDB = { teams: [] };
+(function seedDemoData() {
+  _inMemoryDB.teams = [
+    { id: 'T001', name: '香港少年老虎 U12', category: 'u12', gender: 'M', city: '香港', founded: '2022-03', coach: '陈教练', contact: '91234567', player_count: 18, status: 'active', desc: '香港首支青少年老虎联盟代表队' },
+    { id: 'T002', name: '拔萃女小 金鹰队', category: 'u12', gender: 'F', city: '香港', founded: '2023-01', coach: '李教练', contact: '98876543', player_count: 14, status: 'active', desc: '拔萃女小学官方棒球校队' },
+    { id: 'T003', name: '协恩紫荆 U15', category: 'u15', gender: 'F', city: '香港', founded: '2021-09', coach: '张教练', contact: '93456789', player_count: 22, status: 'active', desc: '协恩中学附属小学女子 U15 梯队' },
+    { id: 'T004', name: 'SISHK 国际 U18', category: 'u18', gender: 'coed', city: '香港', founded: '2020-01', coach: 'Michael教练', contact: '98765432', player_count: 25, status: 'active', desc: '新加坡国际学校香港分校棒球校队' },
+    { id: 'T005', name: '喇沙小龙 U10', category: 'u10', gender: 'M', city: '香港', founded: '2024-01', coach: '王教练', contact: '91234567', player_count: 12, status: 'active', desc: '喇沙附属小学 U10 起步梯队' },
+    { id: 'T006', name: '香港烈焰 成人队', category: 'senior', gender: 'M', city: '香港', founded: '2019-05', coach: '赵教练', contact: '95555555', player_count: 30, status: 'active', desc: '香港棒垒球总会成人联赛甲组球队' }
+  ];
 })();
 
-// ============================================================
-// NAV (BUILT IN)
-// ============================================================
-var MODULES = [
-  { id:'m1', name:'球员资料库', icon:'👥', href:'players.html' },
-  { id:'m2', name:'球队梯队', icon:'🏆', href:'teams.html' },
-  { id:'m3', name:'赛事记分', icon:'📊', href:'games.html' },
-  { id:'m4', name:'技术档案', icon:'📈', href:'profiles.html' },
-  { id:'m5', name:'权限后台', icon:'⚙️', href:'admin.html' },
-];
-var CURRENT = window.location.pathname.split('/').pop() || 'teams.html';
+var DB = {
+  isReady: function() { return true; },
+  getMode: function() { return 'in-memory'; },
+  getTeams: function() {
+    return Promise.resolve({ data: _inMemoryDB.teams, error: null });
+  },
+  upsertTeam: function(t) {
+    var idx = _inMemoryDB.teams.findIndex(function(x) { return x.id === t.id; });
+    if (idx >= 0) _inMemoryDB.teams[idx] = Object.assign({}, _inMemoryDB.teams[idx], t);
+    else { t.id = t.id || ('T' + String(Date.now()).slice(-6)); _inMemoryDB.teams.push(t); }
+    return Promise.resolve({ data: [t], error: null });
+  },
+  deleteTeam: function(id) {
+    _inMemoryDB.teams = _inMemoryDB.teams.filter(function(t) { return t.id !== id; });
+    return Promise.resolve({ data: null, error: null });
+  }
+};
 
-function buildNav() {
-  var html = '<aside class="sidebar"><div class="sidebar-logo"><div class="logo-mark">⚾</div><h1>BaseAI</h1><div class="subtitle">BASEBALL SYSTEM</div></div><div class="sidebar-section"><div class="sidebar-section-label">📋 核心模块</div>';
-  MODULES.forEach(function(m) {
-    var active = CURRENT === m.href ? ' active' : '';
-    html += '<a href="'+m.href+'" class="nav-item'+active+'"><div class="nav-icon">'+m.icon+'</div><span>'+m.name+'</span></a>';
+/* NAV */
+function initNav() {
+  var modules = [
+    { id: 'm1', name: '球员资料库', icon: '👥', href: 'players.html' },
+    { id: 'm2', name: '球队梯队', icon: '🏆', href: 'teams.html', active: true },
+    { id: 'm3', name: '赛事记分', icon: '📊', href: 'games.html' },
+    { id: 'm4', name: '技术档案', icon: '📈', href: 'profiles.html' },
+    { id: 'm5', name: '权限后台', icon: '⚙️', href: 'admin.html' }
+  ];
+  var html = '<div class="sidebar-logo"><div class="logo-mark">⚾</div><h1>BaseAI</h1><div class="subtitle">BASEBALL SYSTEM</div></div>';
+  html += '<div class="sidebar-section"><div class="sidebar-section-label">核心模块</div>';
+  modules.forEach(function(m) {
+    html += '<a href="' + m.href + '" class="nav-item' + (m.active ? ' active' : '') + '"><div class="nav-icon">' + m.icon + '</div><span>' + m.name + '</span></a>';
   });
-  html += '</div><div class="sidebar-section"><div class="sidebar-section-label">🧠 智能模块</div><a href="06_AI_运动分析_专属教练.html" class="nav-item ai-item'+(CURRENT.includes('06_')?' active':'')+'"><div class="nav-icon">🤖</div><span>AI 专属教练</span><span class="nav-badge">AI</span></a></div>';
-  html += '<div class="sidebar-section" style="margin-top:auto;"><a href="index.html" class="nav-item" style="border-top:1px solid var(--border);border-left:none;border-radius:0;"><div class="nav-icon">🏠</div><span>返回首页</span></a></div>';
-  html += '<div class="sidebar-footer"><div class="db-indicator"><span>⚡ 内置数据</span></div><div style="margin-top:4px;font-size:10px;">v2.0 · 2026-04-19</div></div></aside>';
-  return html;
+  html += '</div><div class="sidebar-section"><div class="sidebar-section-label">智能模块</div>';
+  html += '<a href="06_AI_运动分析_专属教练.html" class="nav-item"><div class="nav-icon">🤖</div><span>AI 专属教练</span><span class="nav-badge">AI</span></a>';
+  html += '</div><div class="sidebar-section" style="margin-top:auto;"><a href="index.html" class="nav-item" style="border-top:1px solid var(--border);"><div class="nav-icon">🏠</div><span>返回首页</span></a></div>';
+  html += '<div class="sidebar-footer"><div class="db-indicator"><span>⚡ 内置数据</span></div><div style="margin-top:4px;font-size:10px;">v2.0 · 2026-04-19</div></div>';
+  document.getElementById('app-sidebar').innerHTML = html;
 }
 
-function buildTopbar() {
-  return '<header class="topbar"><div class="topbar-left"><div><div class="topbar-title">球队与梯队</div><div style="font-size:11px;color:var(--text-muted);">Module 02 · Team Management</div></div></div><div class="topbar-right"><div class="topbar-stats" id="topbar-stats"></div><div class="topbar-user"><div class="user-avatar">⚾</div><span>管理员</span></div></div></header>';
+function showToast(msg, type) {
+  type = type || 'info';
+  var tc = document.getElementById('toast-container');
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  tc.appendChild(t);
+  setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 300); }, 3000);
 }
 
-document.body.innerHTML = buildNav() + '<main class="main">' + buildTopbar() + '<div class="page-content" id="page-content"></div></main>';
-
-// ============================================================
-// HELPERS
-// ============================================================
-var avatarColors = ['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899','#f59e0b','#06b6d4','#84cc16'];
-function getAvatarColor(n) { return avatarColors[(n||'A').charCodeAt(0) % avatarColors.length]; }
-function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function getCatLabel(cat) { var c={u10:'U10',u12:'U12',u15:'U15',u18:'U18',senior:'成人'}; return c[cat]||cat||''; }
 function getCatIcon(cat) { var i={u10:'🌱',u12:'⚾',u15:'🏆',u18:'🎖️',senior:'⭐'}; return i[cat]||'👥'; }
 function getGenderLabel(g) { var c={M:'男生',F:'女生',coed:'混合'}; return c[g]||g||''; }
 
-// ============================================================
-// STATE
-// ============================================================
-var allTeams = [];
-var filteredTeams = [];
-var filterCat = '';
-var filterGender = '';
-var searchText = '';
+/* APPLICATION */
+var allTeams = [], filteredTeams = [];
+var filterCat = '', filterGender = '', searchText = '';
 
-// ============================================================
-// RENDER
-// ============================================================
-function renderTopbarStats() {
-  var cats = ['u10','u12','u15','u18','senior'];
-  var el = document.getElementById('topbar-stats');
-  if (!el) return;
-  var counts = {};
-  cats.forEach(function(c){ counts[c] = allTeams.filter(function(t){ return t.category === c; }).length; });
-  el.innerHTML = [
-    '<div class="topbar-stat"><div class="num">'+allTeams.length+'</div><div class="label">球队总数</div></div>',
-    '<div class="topbar-stat"><div class="num">'+(counts.u12||0)+'</div><div class="label">U12球队</div></div>',
-    '<div class="topbar-stat"><div class="num">'+(counts.u15||0)+'</div><div class="label">U15球队</div></div>',
-    '<div class="topbar-stat"><div class="num">'+(counts.u18||0)+'</div><div class="label">U18球队</div></div>'
-  ].join('');
+function getStats() {
+  return {
+    total: allTeams.length,
+    u12: allTeams.filter(function(t){ return t.category === 'u12'; }).length,
+    u15: allTeams.filter(function(t){ return t.category === 'u15'; }).length,
+    u18: allTeams.filter(function(t){ return t.category === 'u18'; }).length
+  };
 }
 
-function renderTeams(teams) {
-  renderTopbarStats();
-  var container = document.getElementById('page-content');
-  var html = '<div class="page-header"><div><h2>🏆 球队与梯队管理</h2><p>管理球队信息与梯队建设，支持多年龄段分类</p></div><div class="page-actions"><button class="btn btn-primary" onclick="openTeamModal()">+ 新增球队</button></div></div>';
+function updateTopbarStats() {
+  var s = getStats();
+  document.getElementById('topbar-stats').innerHTML =
+    '<div class="topbar-stat"><div class="num">' + s.total + '</div><div class="label">球队总数</div></div>' +
+    '<div class="topbar-stat"><div class="num">' + s.u12 + '</div><div class="label">U12球队</div></div>' +
+    '<div class="topbar-stat"><div class="num">' + s.u15 + '</div><div class="label">U15球队</div></div>' +
+    '<div class="topbar-stat"><div class="num">' + s.u18 + '</div><div class="label">U18球队</div></div>';
+}
 
-  html += '<div class="filter-bar"><input type="text" id="filter-search" placeholder="🔍 搜索球队名称..." value="'+escHtml(searchText)+'" oninput="applyFilters()"><select id="filter-cat" onchange="applyFilters()"><option value="">全部组别</option><option value="u10" '+(filterCat==='u10'?'selected':'')+'>🌱 U10</option><option value="u12" '+(filterCat==='u12'?'selected':'')+'>⚾ U12</option><option value="u15" '+(filterCat==='u15'?'selected':'')+'>🏆 U15</option><option value="u18" '+(filterCat==='u18'?'selected':'')+'>🎖️ U18</option><option value="senior" '+(filterCat==='senior'?'selected':'')+'>⭐ 成人</option></select><select id="filter-gender" onchange="applyFilters()"><option value="">全部性别</option><option value="M" '+(filterGender==='M'?'selected':'')+'>男生</option><option value="F" '+(filterGender==='F'?'selected':'')+'>女生</option><option value="coed" '+(filterGender==='coed'?'selected':'')+'>混合</option></select><button class="btn btn-ghost btn-sm" onclick="resetFilters()">重置</button></div>';
-
-  if (teams.length === 0) {
-    html += '<div class="empty-state"><div class="empty-icon">🏆</div><h3>暂无球队数据</h3><p>点击右上角「新增球队」添加第一支球队</p><button class="btn btn-primary" onclick="openTeamModal()" style="margin-top:16px;">+ 新增球队</button></div>';
-  } else {
-    html += '<div class="team-grid">';
-    teams.forEach(function(t) {
-      var cat = t.category || 'u12';
-      html += '<div class="team-card cat-'+cat+'"><div class="team-card-banner"><div class="team-logo">'+getCatIcon(cat)+'</div><div class="team-banner-info"><h3>'+escHtml(t.name)+'</h3><p>'+escHtml(t.city||'')+' · '+getCatLabel(cat)+'</p></div></div><div class="team-card-body"><div class="team-meta"><div class="team-meta-item"><div class="lbl">球员人数</div><div class="val">'+t.player_count+' 人</div></div><div class="team-meta-item"><div class="lbl">教练</div><div class="val">'+escHtml(t.coach||'-')+'</div></div><div class="team-meta-item"><div class="lbl">性别组别</div><div class="val">'+getGenderLabel(t.gender)+'</div></div><div class="team-meta-item"><div class="lbl">成立时间</div><div class="val">'+escHtml(t.founded||'-')+'</div></div></div><div class="team-tags"><span class="badge">'+getCatIcon(cat)+' '+getCatLabel(cat)+'</span><span class="badge badge-success">活跃</span>'+(t.desc?'<span class="badge badge-info">'+escHtml(t.desc)+'</span>':'')+'</div></div><div class="team-card-footer"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openTeamModal(\''+escHtml(t.id)+'\')">✏️ 编辑</button><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="event.stopPropagation();deleteTeam(\''+escHtml(t.id)+'\')">🗑️</button></div></div>';
-    });
-    html += '</div>';
+function renderTeams() {
+  var list = document.getElementById('team-list');
+  updateTopbarStats();
+  if (filteredTeams.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><h3>暂无球队数据</h3><p>点击右上角「新增球队」添加第一支球队</p></div>';
+    return;
   }
-  container.innerHTML = html;
+  var html = '<div class="team-grid">';
+  filteredTeams.forEach(function(t) {
+    var cat = t.category || 'u12';
+    html += '<div class="team-card cat-' + cat + '">' +
+      '<div class="team-card-banner">' +
+        '<div class="team-logo">' + getCatIcon(cat) + '</div>' +
+        '<div class="team-banner-info"><h3>' + escHtml(t.name) + '</h3><p>' + escHtml(t.city||'') + ' · ' + getCatLabel(cat) + '</p></div>' +
+      '</div>' +
+      '<div class="team-card-body">' +
+        '<div class="team-meta">' +
+          '<div class="team-meta-item"><div class="lbl">球员人数</div><div class="val">' + t.player_count + ' 人</div></div>' +
+          '<div class="team-meta-item"><div class="lbl">教练</div><div class="val">' + escHtml(t.coach||'-') + '</div></div>' +
+          '<div class="team-meta-item"><div class="lbl">性别组别</div><div class="val">' + getGenderLabel(t.gender) + '</div></div>' +
+          '<div class="team-meta-item"><div class="lbl">成立时间</div><div class="val">' + escHtml(t.founded||'-') + '</div></div>' +
+        '</div>' +
+        '<div class="team-tags">' +
+          '<span class="badge badge-primary">' + getCatIcon(cat) + ' ' + getCatLabel(cat) + '</span>' +
+          '<span class="badge badge-success">活跃</span>' +
+          (t.desc ? '<span class="badge badge-info">' + escHtml(t.desc) + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="team-card-footer">' +
+        '<button class="btn btn-ghost btn-sm" onclick="editTeam(\'' + escHtml(t.id) + '\')">✏️ 编辑</button>' +
+        '<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="confirmDelete(\'' + escHtml(t.id) + '\',\'' + escHtml(t.name) + '\')">🗑️</button>' +
+      '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  list.innerHTML = html;
 }
 
 function applyFilters() {
-  searchText = (document.getElementById('filter-search')||{value:''}).value;
-  filterCat = (document.getElementById('filter-cat')||{value:''}).value;
-  filterGender = (document.getElementById('filter-gender')||{value:''}).value;
+  searchText = document.getElementById('filter-search').value.trim().toLowerCase();
+  filterCat = document.getElementById('filter-cat').value;
+  filterGender = document.getElementById('filter-gender').value;
   filteredTeams = allTeams.filter(function(t) {
     if (filterCat && t.category !== filterCat) return false;
     if (filterGender && t.gender !== filterGender) return false;
     if (searchText) {
-      var q = searchText.toLowerCase();
-      if (!(t.name||'').toLowerCase().includes(q) && !(t.city||'').toLowerCase().includes(q)) return false;
+      if ((t.name||'').toLowerCase().indexOf(searchText) >= 0) return true;
+      if ((t.city||'').toLowerCase().indexOf(searchText) >= 0) return true;
+      return false;
     }
     return true;
   });
-  renderTeams(filteredTeams);
+  renderTeams();
 }
 
 function resetFilters() {
-  searchText=''; filterCat=''; filterGender='';
-  var si=document.getElementById('filter-search');
-  var fc=document.getElementById('filter-cat');
-  var fg=document.getElementById('filter-gender');
-  if(si)si.value='';
-  if(fc)fc.value='';
-  if(fg)fg.value='';
+  document.getElementById('filter-search').value = '';
+  document.getElementById('filter-cat').value = '';
+  document.getElementById('filter-gender').value = '';
+  filterCat = ''; filterGender = ''; searchText = '';
   filteredTeams = allTeams;
-  renderTeams(allTeams);
+  renderTeams();
 }
 
-window.applyFilters = applyFilters;
-window.resetFilters = resetFilters;
+function closeModal(id) { var m = document.getElementById(id); if (m) m.remove(); }
 
-// ============================================================
-// MODAL
-// ============================================================
-function openTeamModal(id) {
-  var team = id ? allTeams.find(function(t){ return t.id===id; }) : null;
-  var isEdit = !!team;
-  var overlay = document.getElementById('team-modal-overlay') || createModal();
-  document.getElementById('modal-title').textContent = isEdit ? '✏️ 编辑球队' : '+ 新增球队';
-  document.getElementById('f-name').value = team ? team.name : '';
-  document.getElementById('f-cat').value = team ? team.category : 'u12';
-  document.getElementById('f-gender').value = team ? team.gender : 'M';
-  document.getElementById('f-city').value = team ? team.city : '';
-  document.getElementById('f-coach').value = team ? team.coach : '';
-  document.getElementById('f-contact').value = team ? team.contact : '';
-  document.getElementById('f-founded').value = team ? team.founded : '';
-  document.getElementById('f-players').value = team ? team.player_count : '';
-  document.getElementById('f-desc').value = team ? team.desc : '';
-  document.getElementById('modal-save-btn').onclick = function(){ saveTeam(id); };
-  document.getElementById('modal-cancel-btn').onclick = closeModal;
-  overlay.classList.add('show');
-}
-
-function createModal() {
-  var div = document.createElement('div');
-  div.id = 'team-modal-overlay';
-  div.className = 'modal-overlay';
-  div.innerHTML = '<div class="modal"><div class="modal-header"><h3 id="modal-title">新增球队</h3><button class="modal-close" onclick="closeModal()">×</button></div><div class="modal-body"><div class="modal-form-grid"><div class="full"><label>球队名称</label><input id="f-name" class="form-input" placeholder="例如：香港少年老虎 U12"></div><div><label>年龄组别</label><select id="f-cat" class="form-input"><option value="u10">🌱 U10</option><option value="u12">⚾ U12</option><option value="u15">🏆 U15</option><option value="u18">🎖️ U18</option><option value="senior">⭐ 成人</option></select></div><div><label>性别组别</label><select id="f-gender" class="form-input"><option value="M">男生</option><option value="F">女生</option><option value="coed">混合</option></select></div><div><label>所在城市</label><input id="f-city" class="form-input" placeholder="香港"></div><div><label>主教练</label><input id="f-coach" class="form-input" placeholder="教练姓名"></div><div><label>联系电话</label><input id="f-contact" class="form-input" placeholder="联系电话"></div><div><label>成立时间</label><input id="f-founded" class="form-input" placeholder="2024-01" type="month"></div><div><label>球员人数</label><input id="f-players" class="form-input" type="number" min="1" placeholder="18"></div><div class="full"><label>备注说明</label><input id="f-desc" class="form-input" placeholder="球队简介（可选）"></div></div></div><div class="modal-footer"><button class="btn btn-ghost" id="modal-cancel-btn">取消</button><button class="btn btn-primary" id="modal-save-btn">保存</button></div></div>';
-  document.body.appendChild(div);
-  return div;
-}
-
-function closeModal() {
-  var m = document.getElementById('team-modal-overlay');
-  if (m) m.classList.remove('show');
-}
-
-function saveTeam(id) {
-  var name = document.getElementById('f-name').value.trim();
-  if (!name) { alert('请输入球队名称'); return; }
-  var data = {
-    id: id || 'T' + String(Date.now()).slice(-6),
-    name: name,
-    category: document.getElementById('f-cat').value,
-    gender: document.getElementById('f-gender').value,
-    city: document.getElementById('f-city').value,
-    coach: document.getElementById('f-coach').value,
-    contact: document.getElementById('f-contact').value,
-    founded: document.getElementById('f-founded').value,
-    player_count: parseInt(document.getElementById('f-players').value)||0,
-    desc: document.getElementById('f-desc').value,
-    status: 'active'
+function openAddModal(team) {
+  team = team || {};
+  var isEdit = !!team.id;
+  var html = '<div class="modal-overlay" id="team-modal">' +
+    '<div class="modal">' +
+      '<div class="modal-header"><div class="modal-title">' + (isEdit ? '✏️ 编辑球队' : '+ 新增球队') + '</div><button class="modal-close" onclick="closeModal(\'team-modal\')">✕</button></div>' +
+      '<div class="modal-body"><div class="modal-form-grid">' +
+        '<div class="full"><label>球队名称 *</label><input id="f-name" value="' + escHtml(team.name||'') + '" placeholder="例如：香港少年老虎 U12"></div>' +
+        '<div><label>年龄组别</label><select id="f-cat"><option value="u10"' + (team.category==='u10'?' selected':'') + '>🌱 U10</option><option value="u12"' + (team.category==='u12'?' selected':'') + '>⚾ U12</option><option value="u15"' + (team.category==='u15'?' selected':'') + '>🏆 U15</option><option value="u18"' + (team.category==='u18'?' selected':'') + '>🎖️ U18</option><option value="senior"' + (team.category==='senior'?' selected':'') + '>⭐ 成人</option></select></div>' +
+        '<div><label>性别组别</label><select id="f-gender"><option value="M"' + (team.gender==='M'?' selected':'') + '>男生</option><option value="F"' + (team.gender==='F'?' selected':'') + '>女生</option><option value="coed"' + (team.gender==='coed'?' selected':'') + '>混合</option></select></div>' +
+        '<div><label>所在城市</label><input id="f-city" value="' + escHtml(team.city||'') + '" placeholder="香港"></div>' +
+        '<div><label>主教练</label><input id="f-coach" value="' + escHtml(team.coach||'') + '" placeholder="教练姓名"></div>' +
+        '<div><label>联系电话</label><input id="f-contact" value="' + escHtml(team.contact||'') + '" placeholder="联系电话"></div>' +
+        '<div><label>成立时间</label><input id="f-founded" type="month" value="' + escHtml(team.founded||'') + '"></div>' +
+        '<div><label>球员人数</label><input id="f-players" type="number" value="' + (team.player_count||'') + '" placeholder="18"></div>' +
+        '<div class="full"><label>备注说明</label><input id="f-desc" value="' + escHtml(team.desc||'') + '" placeholder="球队简介（可选）"></div>' +
+      '</div></div>' +
+      '<div class="modal-footer">' +
+        '<button class="btn btn-ghost" onclick="closeModal(\'team-modal\')">取消</button>' +
+        '<button class="btn btn-primary" id="btn-save">保存</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.getElementById('btn-save').onclick = function() {
+    var name = document.getElementById('f-name').value.trim();
+    if (!name) { showToast('请输入球队名称', 'warning'); return; }
+    var data = {
+      name: name,
+      category: document.getElementById('f-cat').value,
+      gender: document.getElementById('f-gender').value,
+      city: document.getElementById('f-city').value,
+      coach: document.getElementById('f-coach').value,
+      contact: document.getElementById('f-contact').value,
+      founded: document.getElementById('f-founded').value,
+      player_count: parseInt(document.getElementById('f-players').value) || 0,
+      desc: document.getElementById('f-desc').value,
+      status: 'active'
+    };
+    if (isEdit) data.id = team.id;
+    DB.upsertTeam(data).then(function() {
+      closeModal('team-modal');
+      showToast(isEdit ? '球队信息已更新' : '球队已添加', 'success');
+      loadTeams();
+    });
   };
-  if (id) {
-    var idx = allTeams.findIndex(function(t){ return t.id===id; });
-    if (idx >= 0) allTeams[idx] = data;
-  } else {
-    allTeams.push(data);
-  }
-  filteredTeams = allTeams;
-  closeModal();
-  renderTeams(filteredTeams);
 }
 
-function deleteTeam(id) {
-  if (!confirm('确认删除该球队？')) return;
-  allTeams = allTeams.filter(function(t){ return t.id!==id; });
-  filteredTeams = allTeams;
-  renderTeams(filteredTeams);
+window.editTeam = function(id) {
+  var t = allTeams.find(function(x){ return x.id === id; });
+  if (t) openAddModal(t);
+};
+
+window.confirmDelete = function(id, name) {
+  if (!confirm('确定要删除球队「' + name + '」吗？此操作不可撤销。')) return;
+  DB.deleteTeam(id).then(function() {
+    showToast('球队已删除', 'success');
+    loadTeams();
+  });
+};
+
+function loadTeams() {
+  DB.getTeams().then(function(result) {
+    allTeams = result.data || [];
+    filteredTeams = allTeams;
+    renderTeams();
+    showToast('已加载 ' + allTeams.length + ' 支球队', 'success');
+  });
 }
 
-window.openTeamModal = openTeamModal;
-window.closeModal = closeModal;
-window.deleteTeam = deleteTeam;
+document.getElementById('filter-search').addEventListener('input', applyFilters);
+document.getElementById('filter-cat').addEventListener('change', applyFilters);
+document.getElementById('filter-gender').addEventListener('change', applyFilters);
+document.getElementById('btn-reset').addEventListener('click', resetFilters);
+document.getElementById('btn-add').addEventListener('click', function() { openAddModal(); });
 
-// ============================================================
-// BOOT
-// ============================================================
-DB.getTeams().then(function(result) {
-  allTeams = result.data || [];
-  filteredTeams = allTeams;
-  renderTeams(filteredTeams);
-}).catch(function(e) {
-  document.getElementById('page-content').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><h3>加载失败</h3><p>'+e.message+'</p></div>';
-});
+initNav();
+loadTeams();
 </script>
 </body>
 </html>
