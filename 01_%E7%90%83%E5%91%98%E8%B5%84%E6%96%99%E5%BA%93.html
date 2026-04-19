@@ -357,6 +357,11 @@ document.addEventListener('DOMContentLoaded', async function() {
       allPlayers = result.data || [];
       filteredPlayers = allPlayers;
       console.log('[Module01] Players loaded:', allPlayers.length);
+
+      // DEBUG: show in page header
+      var hdr = document.querySelector('.page-title-wrap h2');
+      if (hdr) hdr.innerHTML = '⚾ 球员资料库 <span style="font-size:14px;color:#34d399;font-weight:400">(' + filteredPlayers.length + ' 人)</span>';
+
       renderPlayers(filteredPlayers);
     } catch (e) {
       showToast('加载失败: ' + e.message, 'error');
