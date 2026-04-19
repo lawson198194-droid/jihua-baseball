@@ -183,6 +183,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     renderGames(filtered);
   }
 
+  // Expose to window so inline onclick handlers can find it
+  window.switchTab = switchTab;
+
   // Modals
   function openGameModal(game) {
     game = game || {};
