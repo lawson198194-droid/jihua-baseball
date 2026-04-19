@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块6 · AI 专属教练 — BaseAI</title>
+<link rel="stylesheet" href="assets/design-system.css">
+<style>
+  body { background: #080c18; }
+
+  .hero-section {
+    background: linear-gradient(135deg, #0a1628 0%, #1a2d4a 50%, #0f1f3a 100%);
+    padding: 32px 28px;
+    text-align: center;
+    border-bottom: 1px solid rgba(249,115,22,0.15);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-section::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at 50% 50%, rgba(249,115,22,0.06) 0%, transparent 60%);
+    animation: rotate-bg 20s linear infinite;
+  }
+  @keyframes rotate-bg { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+  .hero-title {
+    font-size: 36px; font-weight: 900;
+    background: linear-gradient(135deg, #fff 30%, #f97316);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 8px; position: relative;
+  }
+  .hero-sub { font-size: 14px; color: #64748b; position: relative; }
+  .ai-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin: 16px auto 0; padding: 8px 20px;
+    background: linear-gradient(90deg, rgba(249,115,22,0.15), rgba(59,130,246,0.15));
+    border: 1px solid rgba(249,115,22,0.2);
+    border-radius: 24px;
+    font-size: 13px; color: #f97316; font-weight: 600; position: relative;
+  }
+  .ai-badge::before {
+    content: '●';
+    animation: blink-dot 1.5s infinite;
+    color: #f97316;
+  }
+  @keyframes blink-dot { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  .page-content { padding: 28px; max-width: 1100px; margin: 0 auto; }
+
+  /* Steps */
+  .steps-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0; margin-bottom: 32px;
+  }
+  .step-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px;
+    color: #475569;
+    font-size: 13px; font-weight: 600;
+    transition: all 0.2s;
+  }
+  .step-item.active { color: #f97316; }
+  .step-item.done { color: #10b981; }
+  .step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800;
+    border: 2px solid currentColor;
+    transition: all 0.2s;
+  }
+  .step-item.active .step-num { background: #f97316; border-color: #f97316; color: white; }
+  .step-item.done .step-num { background: #10b981; border-color: #10b981; color: white; }
+  .step-arrow { color: #334155; font-size: 18px; margin: 0 4px; }
+
+  /* Panels */
+  .panel {
+    background: rgba(26,34,53,0.8);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    margin-bottom: 24px; overflow: hidden;
+    backdrop-filter: blur(8px);
+  }
+  .panel-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .panel-title { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+  .panel-body { padding: 24px; }
+
+  /* Step 1: Player + Type Selection */
+  .setup-row {
+    display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .form-group { flex: 1; min-width: 200px; }
+  .form-group label {
+    display: block; font-size: 12px; font-weight: 700;
+    color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .form-group select, .form-group input {
+    width: 100%; padding: 12px 14px; font-size: 14px;
+    background: rgba(20,26,46,0.9); border: 1px solid rgba(249,115,22,0.3);
+    color: #f1f5f9; border-radius: 10px; box-sizing: border-box;
+    outline: none; transition: border-color 0.15s;
+  }
+  .form-group select:focus, .form-group input:focus { border-color: #f97316; }
+  .form-group select option { background: #1a2235; }
+
+  /* Video Type Selector */
+  .type-cards {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;
+  }
+  .type-card {
+    background: rgba(20,26,46,0.9);
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 24px; text-align: center;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .type-card:hover { border-color: rgba(249,115,22,0.3); transform: translateY(-2px); }
+  .type-card.selected { border-color: #f97316; background: rgba(249,115,22,0.08); }
+  .type-card .icon { font-size: 48px; margin-bottom: 12px; }
+  .type-card .type-name { font-size: 18px; font-weight: 800; color: #f1f5f9; margin-bottom: 6px; }
+  .type-card .type-desc { font-size: 12px; color: #64748b; }
+  .type-card.selected .type-name { color: #f97316; }
+
+  /* Upload Zone */
+  .upload-zone {
+    border: 2px dashed rgba(249,115,22,0.3);
+    border-radius: 16px;
+    padding: 48px 32px; text-align: center;
+    cursor: pointer; transition: all 0.2s;
+    background: rgba(20,26,46,0.5);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: #f97316;
+    background: rgba(249,115,22,0.05);
+  }
+  .upload-zone .icon { font-size: 56px; margin-bottom: 16px; }
+  .upload-zone .title { font-size: 18px; font-weight: 700; color: #f1f5f9; margin-bottom: 8px; }
+  .upload-zone .sub { font-size: 13px; color: #64748b; line-height: 1.6; }
+  .upload-zone .formats { margin-top: 12px; font-size: 12px; color: #475569; }
+  .upload-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    width: 100%; height: 100%;
+  }
+
+  /* Video Preview */
+  .video-preview-wrap {
+    border-radius: 14px; overflow: hidden;
+    background: #000; margin-bottom: 16px;
+    position: relative;
+  }
+  .video-preview-wrap video {
+    width: 100%; max-height: 400px; display: block;
+  }
+  .video-badge {
+    position: absolute; top: 12px; left: 12px;
+    padding: 4px 12px; border-radius: 8px;
+    font-size: 11px; font-weight: 700;
+    background: rgba(0,0,0,0.6); color: white;
+    backdrop-filter: blur(4px);
+  }
+  .video-type-badge { position: absolute; top: 12px; right: 12px; }
+
+  /* Analysis Button */
+  .btn-ai {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: white; border: none; padding: 14px 32px;
+    border-radius: 12px; font-size: 15px; font-weight: 800;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 10px;
+    box-shadow: 0 4px 20px rgba(249,115,22,0.35);
+    transition: all 0.15s;
+    width: 100%; justify-content: center;
+  }
+  .btn-ai:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(249,115,22,0.45); }
+  .btn-ai:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* AI Loading */
+  .ai-loading {
+    text-align: center; padding: 60px 20px;
+  }
+  .ai-loading .spinner {
+    width: 64px; height: 64px; margin: 0 auto 24px;
+    border: 4px solid rgba(249,115,22,0.2);
+    border-top-color: #f97316;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to{transform:rotate(360deg);} }
+  .ai-loading .msg { font-size: 16px; font-weight: 700; color: #f1f5f9; margin-bottom: 12px; }
+  .ai-loading .sub { font-size: 13px; color: #64748b; }
+  .ai-loading .progress-bar {
+    width: 300px; max-width: 100%; height: 6px;
+    background: rgba(255,255,255,0.08); border-radius: 3px;
+    margin: 20px auto 0; overflow: hidden;
+  }
+  .ai-loading .progress-fill {
+    height: 100%; background: linear-gradient(90deg, #f97316, #fb923c);
+    border-radius: 3px; transition: width 0.3s;
+  }
+  .ai-loading .steps-list {
+    margin-top: 24px; text-align: left; max-width: 320px; margin: 24px auto 0;
+  }
+  .ai-loading .step-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 0; font-size: 13px; color: #475569;
+  }
+  .ai-loading .step-row.done { color: #10b981; }
+  .ai-loading .step-row.active { color: #f97316; font-weight: 600; }
+
+  /* Results */
+  .result-header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 24px;
+    background: rgba(20,26,46,0.9);
+    border: 1px solid rgba(249,115,22,0.2);
+    border-radius: 12px; padding: 16px 20px;
+  }
+  .result-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 900; color: white; flex-shrink: 0;
+  }
+  .result-meta .name { font-size: 18px; font-weight: 800; color: #f1f5f9; }
+  .result-meta .sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .result-score {
+    margin-left: auto; text-align: right; flex-shrink: 0;
+  }
+  .result-score .num { font-size: 36px; font-weight: 900; color: #f97316; font-family: 'Space Grotesk', monospace; }
+  .result-score .label { font-size: 11px; color: #64748b; }
+
+  .metrics-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px;
+  }
+  .metric-card {
+    background: rgba(20,26,46,0.9);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px; padding: 16px; text-align: center;
+  }
+  .metric-card .m-icon { font-size: 24px; margin-bottom: 8px; }
+  .metric-card .m-val { font-size: 22px; font-weight: 900; font-family: 'Space Grotesk', monospace; }
+  .metric-card .m-unit { font-size: 11px; color: #64748b; }
+  .metric-card .m-label { font-size: 11px; color: #64748b; margin-top: 4px; }
+  .metric-card.orange .m-val { color: #f97316; }
+  .metric-card.blue .m-val { color: #3b82f6; }
+  .metric-card.green .m-val { color: #10b981; }
+
+  .result-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;
+  }
+  .result-card {
+    background: rgba(20,26,46,0.9);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 20px;
+  }
+  .result-card-title {
+    font-size: 13px; font-weight: 700; color: #f97316;
+    margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .result-bar-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+  .result-bar-row .rb-label { font-size: 12px; color: #94a3b8; min-width: 80px; }
+  .result-bar-row .rb-track {
+    flex: 1; height: 8px; background: rgba(255,255,255,0.07);
+    border-radius: 4px; overflow: hidden;
+  }
+  .result-bar-row .rb-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+  .result-bar-row .rb-val { font-size: 12px; font-weight: 700; min-width: 32px; text-align: right; }
+
+  /* Radar */
+  .radar-wrap { display: flex; justify-content: center; align-items: center; }
+  .radar-svg { width: 240px; height: 240px; }
+
+  /* Suggestions */
+  .suggestions-list { display: flex; flex-direction: column; gap: 12px; }
+  .sug-card {
+    display: flex; align-items: flex-start; gap: 14px;
+    background: rgba(20,26,46,0.9);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px; padding: 16px;
+    border-left: 4px solid;
+  }
+  .sug-card.good { border-left-color: #10b981; }
+  .sug-card.warn { border-left-color: #f97316; }
+  .sug-card.info { border-left-color: #3b82f6; }
+  .sug-icon { font-size: 22px; flex-shrink: 0; }
+  .sug-body .sug-title { font-size: 14px; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+  .sug-body .sug-text { font-size: 12px; color: #94a3b8; line-height: 1.6; }
+
+  /* Training Plan */
+  .plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .plan-card {
+    background: rgba(20,26,46,0.9);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 18px;
+    border-left: 4px solid #f97316;
+    transition: all 0.15s;
+  }
+  .plan-card:hover { border-color: rgba(249,115,22,0.4); transform: translateX(4px); }
+  .plan-card .p-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .plan-card .p-title { font-size: 14px; font-weight: 700; color: #f1f5f9; }
+  .plan-card .p-pri { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+  .plan-card .p-desc { font-size: 12px; color: #94a3b8; line-height: 1.6; margin-bottom: 10px; }
+  .plan-card .p-meta { display: flex; gap: 14px; font-size: 11px; color: #64748b; }
+  .plan-card .p-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 6px; }
+
+  /* Actions */
+  .result-actions { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+  .btn { padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.15s; }
+  .btn-primary { background: linear-gradient(135deg, #f97316, #ea580c); color: white; box-shadow: 0 4px 12px rgba(249,115,22,0.25); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(249,115,22,0.35); }
+  .btn-secondary { background: rgba(255,255,255,0.07); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); }
+  .btn-secondary:hover { background: rgba(255,255,255,0.12); color: #f1f5f9; }
+
+  /* History */
+  .history-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer; border-radius: 10px; padding: 12px;
+    transition: background 0.1s;
+  }
+  .history-item:hover { background: rgba(255,255,255,0.03); }
+  .history-item:last-child { border-bottom: none; }
+  .hi-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 900; color: white; flex-shrink: 0;
+  }
+  .hi-info { flex: 1; }
+  .hi-name { font-size: 14px; font-weight: 600; color: #f1f5f9; }
+  .hi-meta { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .hi-score { font-size: 22px; font-weight: 900; font-family: 'Space Grotesk', monospace; }
+  .hi-type { font-size: 10px; color: #64748b; text-align: right; }
+  .hi-actions { display: flex; gap: 6px; }
+  .hi-actions .btn { padding: 6px 12px; font-size: 11px; }
+
+  /* Empty State */
+  .empty-state { text-align: center; padding: 48px 20px; color: #475569; }
+  .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state .title { font-size: 16px; font-weight: 700; color: #64748b; margin-bottom: 8px; }
+  .empty-state .sub { font-size: 13px; }
+
+  @keyframes fadeIn { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+  .fade-in { animation: fadeIn 0.4s ease; }
+
+  @media (max-width: 768px) {
+    .result-grid, .plan-grid { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .type-cards { grid-template-columns: 1fr; }
+    .step-item .step-label { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<script src="assets/nav.js"></script>
+
+<script>
+// ====== STATE ======
+var allPlayers = [];
+var selectedPlayer = null;
+var selectedType = null; // 'batting' | 'pitching'
+var uploadedVideo = null;
+var currentStep = 1;
+var analysisResult = null;
+var analysisHistory = JSON.parse(localStorage.getItem('baseai_ai_history') || '[]');
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+// ====== INIT ======
+document.addEventListener('DOMContentLoaded', function() {
+  initNav({ title: 'AI 专属教练', subtitle: 'Module 06 · AI Coach' });
+  var pc = document.getElementById('page-content');
+  pc.innerHTML = `
+<div class="hero-section">
+  <div class="hero-title">🤖 AI 专属教练</div>
+  <div class="hero-sub">BaseAI 智能棒球分析系统 · Powered by AI</div>
+  <div class="ai-badge">视频 AI 分析 · 个性化训练计划 · 成长追踪</div>
+</div>
+<div id="main-content"></div>`;
+  loadPlayers();
+});
+
+// 备用演示球员数据（当 DB 不可用时使用）
+var DEMO_PLAYERS = [
+  { id: 'p1', player_id: 'p1', name: '罗莀安', position: '投手', number: 7, age: 11, team: 'U12 精英队' },
+  { id: 'p2', player_id: 'p2', name: '陈小明', position: '捕手', number: 12, age: 12, team: 'U12 精英队' },
+  { id: 'p3', player_id: 'p3', name: '王大伟', position: '一垒手', number: 23, age: 11, team: 'U12 精英队' },
+  { id: 'p4', player_id: 'p4', name: '李小强', position: '游击手', number: 5, age: 12, team: 'U12 精英队' },
+  { id: 'p5', player_id: 'p5', name: '张小龙', position: '外野手', number: 18, age: 11, team: 'U12 精英队' },
+  { id: 'p6', player_id: 'p6', name: '刘小虎', position: '三垒手', number: 9, age: 12, team: 'U12 精英队' }
+];
+
+async function loadPlayers() {
+  try {
+    // 尝试从 DB 加载
+    if (typeof DB !== 'undefined' && DB.getPlayers) {
+      var res = await DB.getPlayers();
+      allPlayers = res.data || [];
+    }
+    // 如果 DB 没数据或失败，使用演示数据
+    if (!allPlayers || allPlayers.length === 0) {
+      allPlayers = DEMO_PLAYERS;
+    }
+    renderStep1();
+  } catch(e) {
+    // DB 完全失败，用演示数据继续
+    allPlayers = DEMO_PLAYERS;
+    renderStep1();
+  }
+}
+
+// ====== STEP 1: SELECT PLAYER + TYPE ======
+function renderStep1() {
+  var mc = document.getElementById('main-content');
+  var playerOpts = allPlayers.map(function(p){
+    return '<option value="'+(p.id||p.player_id)+'" data-name="'+esc(p.name)+'">'+esc(p.name)+(p.position?' ('+esc(p.position)+')':'')+'</option>';
+  }).join('');
+
+  mc.innerHTML = `
+<div class="panel fade-in">
+  <div class="panel-header">
+    <div class="panel-title">📋 步骤 1：选择球员 &amp; 分析类型</div>
+  </div>
+  <div class="panel-body">
+    <div class="setup-row">
+      <div class="form-group">
+        <label>选择球员</label>
+        <select id="sel-player" onchange="onPlayerChange()">
+          <option value="">— 请选择球员 —</option>
+          ${playerOpts}
+        </select>
+      </div>
+    </div>
+
+    <div style="font-size:13px;font-weight:700;color:#94a3b8;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">选择分析类型</div>
+    <div class="type-cards">
+      <div class="type-card" id="card-batting" onclick="selectType('batting')">
+        <div class="icon">⚡</div>
+        <div class="type-name">⚾ 打击分析</div>
+        <div class="type-desc">上传挥棒视频，分析挥棒速度、轨迹、力量、BPA角度</div>
+      </div>
+      <div class="type-card" id="card-pitching" onclick="selectType('pitching')">
+        <div class="icon">🎯</div>
+        <div class="type-name">🏹 投球分析</div>
+        <div class="type-desc">上传投球视频，分析球速、控球力、球种分布、耐力</div>
+      </div>
+    </div>
+
+    <button class="btn-ai" id="btn-next-step1" disabled onclick="goToStep2()">
+      ▶ 继续：上传视频
+    </button>
+  </div>
+</div>`;
+}
+
+function onPlayerChange() {
+  var sel = document.getElementById('sel-player');
+  var opt = sel.options[sel.selectedIndex];
+  selectedPlayer = opt && sel.value ? { id: sel.value, name: opt.dataset.name } : null;
+  updateStep1Btn();
+}
+
+function selectType(type) {
+  selectedType = type;
+  document.querySelectorAll('.type-card').forEach(function(c){ c.classList.remove('selected'); });
+  document.getElementById('card-'+type).classList.add('selected');
+  updateStep1Btn();
+}
+
+function updateStep1Btn() {
+  var btn = document.getElementById('btn-next-step1');
+  btn.disabled = !(selectedPlayer && selectedType);
+}
+
+function goToStep2() {
+  if (!selectedPlayer || !selectedType) return;
+  currentStep = 2;
+  renderStep2();
+}
+
+// ====== STEP 2: UPLOAD VIDEO ======
+function renderStep2() {
+  var mc = document.getElementById('main-content');
+  var typeLabel = selectedType === 'batting' ? '⚾ 打击' : '🎯 投球';
+  var typeIcon = selectedType === 'batting' ? '⚡' : '🎯';
+  mc.innerHTML = `
+<div class="panel fade-in">
+  <div class="panel-header">
+    <div class="panel-title">📤 步骤 2：上传 ${typeLabel} 视频</div>
+    <button class="btn btn-secondary" onclick="backToStep1()" style="margin-left:auto;font-size:12px;">← 返回</button>
+  </div>
+  <div class="panel-body">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;background:rgba(20,26,46,0.8);padding:12px 16px;border-radius:10px;border:1px solid rgba(249,115,22,0.15);">
+      <div style="width:36px;height:36px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;">${selectedPlayer.name.charAt(0)}</div>
+      <div><div style="font-size:14px;font-weight:700;color:#f1f5f9;">${esc(selectedPlayer.name)}</div><div style="font-size:12px;color:#64748b;">${typeIcon} ${typeLabel}分析</div></div>
+    </div>
+
+    <div id="upload-zone" class="upload-zone">
+      <input type="file" accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,video/*" id="video-input" onchange="onVideoFile(this.files[0])">
+      <div class="icon">📹</div>
+      <div class="title">拖拽视频文件到这里，或点击选择</div>
+      <div class="sub">选择球员的${typeLabel}训练或比赛视频<br>建议时长 10-30 秒，效果最佳</div>
+      <div class="formats">支持格式：MP4、MOV、AVI、WebM</div>
+    </div>
+
+    <!-- 显眼的独立上传按钮 -->
+    <div style="text-align:center;margin-top:16px;">
+      <button class="btn-ai" id="btn-upload-trigger" onclick="document.getElementById('video-input').click()" style="max-width:320px;">
+        🎬 选择视频文件
+      </button>
+      <div style="font-size:12px;color:#475569;margin-top:10px;">或直接拖拽视频文件到上方区域</div>
+    </div>
+
+    <div id="video-preview" style="display:none;" class="fade-in">
+      <div class="video-preview-wrap">
+        <video id="preview-video" controls playsinline></video>
+        <div class="video-badge" id="video-duration"></div>
+        <div class="video-badge video-type-badge" style="background:rgba(249,115,22,0.8);">${typeIcon} ${typeLabel}</div>
+      </div>
+      <button class="btn-ai" id="btn-analyze" onclick="startAnalysis()">
+        🤖 开始 AI 分析
+      </button>
+    </div>
+  </div>
+</div>`;
+
+  // Drag & drop
+  var zone = document.getElementById('upload-zone');
+  zone.addEventListener('dragover', function(e){ e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', function(){ zone.classList.remove('dragover'); });
+  zone.addEventListener('drop', function(e){
+    e.preventDefault(); zone.classList.remove('dragover');
+    var f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('video/')) { document.getElementById('video-input').files = e.dataTransfer.files; onVideoFile(f); }
+    else { showToast('请上传视频文件', 'warning'); }
+  });
+}
+
+function onVideoFile(file) {
+  if (!file) return;
+  uploadedVideo = file;
+  var zone = document.getElementById('upload-zone');
+  var preview = document.getElementById('video-preview');
+  var video = document.getElementById('preview-video');
+  zone.style.display = 'none';
+  preview.style.display = 'block';
+  video.src = URL.createObjectURL(file);
+  video.onloadedmetadata = function() {
+    var dur = Math.round(video.duration);
+    var mm = Math.floor(dur/60), ss = dur%60;
+    document.getElementById('video-duration').textContent = (mm>0?mm+'分':'')+ss+'秒';
+  };
+}
+
+function backToStep1() {
+  currentStep = 1;
+  selectedType = null;
+  uploadedVideo = null;
+  renderStep1();
+}
+
+// ====== STEP 3: AI ANALYSIS ======
+function startAnalysis() {
+  if (!uploadedVideo) return;
+  currentStep = 3;
+  renderStep3();
+}
+
+var analysisSteps = [];
+var analysisInterval = null;
+
+function renderStep3() {
+  var mc = document.getElementById('main-content');
+  var typeLabel = selectedType === 'batting' ? '⚾ 打击' : '🎯 投球';
+  var steps = selectedType === 'batting'
+    ? ['📹 读取视频帧...', '🦾 检测挥棒动作...', '📊 计算挥棒速度...', '📐 分析挥棒角度...', '🎯 生成雷达评分...', '💡 输出训练建议...']
+    : ['📹 读取视频帧...', '🦾 追踪投球轨迹...', '📊 计算球速数据...', '📐 分析控球精度...', '🎯 识别球种分布...', '💡 输出训练建议...'];
+
+  analysisSteps = steps.map(function(s,i){ return { text: s, done: false, active: i===0 }; });
+
+  mc.innerHTML = `
+<div class="panel fade-in">
+  <div class="panel-header">
+    <div class="panel-title">🤖 AI 正在分析 ${typeLabel} 视频...</div>
+  </div>
+  <div class="panel-body">
+    <div class="ai-loading">
+      <div class="spinner"></div>
+      <div class="msg">BaseAI 智能分析引擎运行中</div>
+      <div class="sub">正在分析 ${selectedPlayer.name} 的 ${typeLabel} 视频</div>
+      <div class="progress-bar"><div class="progress-fill" id="ai-progress" style="width:0%"></div></div>
+      <div class="steps-list" id="steps-list"></div>
+    </div>
+  </div>
+</div>`;
+
+  renderSteps();
+  runAnalysisSimulation();
+}
+
+function renderSteps() {
+  var list = document.getElementById('steps-list');
+  if (!list) return;
+  list.innerHTML = analysisSteps.map(function(s){
+    var cls = s.done ? 'done' : s.active ? 'active' : '';
+    var icon = s.done ? '✓' : s.active ? '▸' : '○';
+    return '<div class="step-row '+cls+'">'+icon+' '+s.text+'</div>';
+  }).join('');
+}
+
+function runAnalysisSimulation() {
+  var progress = 0;
+  var stepIdx = 0;
+  analysisInterval = setInterval(function() {
+    progress += Math.random() * 12 + 4;
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(analysisInterval);
+      setTimeout(function() { generateResult(); }, 400);
+    }
+    var el = document.getElementById('ai-progress');
+    if (el) el.style.width = Math.min(progress, 100) + '%';
+    var newStepIdx = Math.floor(progress / (100 / analysisSteps.length));
+    if (newStepIdx > stepIdx && newStepIdx < analysisSteps.length) {
+      analysisSteps[stepIdx].done = true;
+      analysisSteps[stepIdx].active = false;
+      stepIdx = newStepIdx;
+      analysisSteps[stepIdx].active = true;
+      renderSteps();
+    } else if (progress >= 100) {
+      analysisSteps.forEach(function(s){ s.done = true; s.active = false; });
+      renderSteps();
+    }
+  }, 250);
+}
+
+// ====== STEP 4: RESULTS ======
+function generateResult() {
+  currentStep = 4;
+  var type = selectedType;
+  var name = selectedPlayer.name;
+
+  if (type === 'batting') {
+    var speedAvg = (55 + Math.random() * 35).toFixed(1);
+    var speedMax = (parseFloat(speedAvg) + 8 + Math.random() * 12).toFixed(1);
+    var bpa = (30 + Math.random() * 40).toFixed(1);
+    var trajectory = bpa < 42 ? '下挥型 💪' : bpa < 58 ? '平击型 ⚡' : '高弧型 🚀';
+    var power = Math.floor(45 + Math.random() * 45);
+    var speed = Math.floor(45 + Math.random() * 45);
+    var contact = Math.floor(45 + Math.random() * 45);
+    var defense = Math.floor(45 + Math.random() * 45);
+    var control = Math.floor(45 + Math.random() * 45);
+    var overall = Math.round((power+speed+contact+defense+control)/5);
+
+    analysisResult = { type: 'batting', player: name, overall: overall,
+      speedAvg: speedAvg, speedMax: speedMax, bpa: bpa, trajectory: trajectory,
+      power: power, speed: speed, contact: contact, defense: defense, control: control };
+
+    // Suggestions
+    var sugs = [];
+    if (power < 60) sugs.push({ cls: 'warn', icon: '💪', title: '力量提升空间大', text: '挥棒力量评分 '+power+'/100，建议使用加重球棒进行专项训练，每周 3 次，逐步增加重量。' });
+    else sugs.push({ cls: 'good', icon: '💪', title: '力量表现优秀', text: '挥棒力量达到 '+power+'/100，继续保持当前训练强度。' });
+    if (speed < 60) sugs.push({ cls: 'warn', icon: '⚡', title: '挥棒速度可提升', text: '平均挥棒速度 '+speedAvg+' km/h，建议每天进行 20 分钟挥棒速度专项训练。' });
+    else sugs.push({ cls: 'good', icon: '⚡', title: '挥棒速度良好', text: '最快挥棒 '+speedMax+' km/h，已达到同龄球员优秀水平。' });
+    if (contact < 65) sugs.push({ cls: 'info', icon: '🎯', title: '击球命中率待加强', text: '建议使用击球机器进行反应训练，每次 30 分钟，每周 2 次。' });
+    else sugs.push({ cls: 'good', icon: '🎯', title: '击球命中率优秀', text: '击球接触率达到 '+contact+'/100，继续保持球感训练。' });
+
+    var plans = [
+      { title: '核心力量训练', pri: '高', priCls: '#ef4444', bgCls: 'rgba(239,68,68,0.15)',
+        desc: '每天 20 分钟平板支撑 + 卷腹，增强挥棒时的核心稳定性。核心力量提升 15% 可使挥棒速度提升约 8%。',
+        duration: '8周', freq: '每周5次', level: '初级', tag: '力量 ↑12%', tagColor: '#ef4444' },
+      { title: '挥棒速度专项', pri: '高', priCls: '#f97316', bgCls: 'rgba(249,115,22,0.15)',
+        desc: '使用加重球棒进行挥棒训练，逐步增加重量。每周 3 次，每次 30 分钟，重点训练挥棒加速度。',
+        duration: '6周', freq: '每周3次', level: '中级', tag: '速度 ↑15%', tagColor: '#f97316' },
+      { title: '击球反应训练', pri: '中', priCls: '#3b82f6', bgCls: 'rgba(59,130,246,0.15)',
+        desc: '使用击球机器进行多元化击球训练，提升反应速度和击球命中率。',
+        duration: '4周', freq: '每周2次', level: '初级', tag: '命中率 ↑10%', tagColor: '#3b82f6' },
+      { title: '耐力体能训练', pri: '低', priCls: '#10b981', bgCls: 'rgba(16,185,129,0.15)',
+        desc: '长跑 + 间歇跑结合，提升比赛耐力。建议每周 2 次有氧训练。',
+        duration: '持续', freq: '每周2次', level: '中级', tag: '体能 ↑8%', tagColor: '#10b981' }
+    ];
+
+    renderBattingResult(sugs, plans, { speedAvg, speedMax, bpa, trajectory, power, speed, contact, defense, control, overall });
+
+  } else {
+    var pitchAvg = (70 + Math.random() * 45).toFixed(1);
+    var pitchMax = (parseFloat(pitchAvg) + 8 + Math.random() * 18).toFixed(1);
+    var control = Math.floor(50 + Math.random() * 45);
+    var strike = Math.floor(50 + Math.random() * 45);
+    var stamina = Math.floor(50 + Math.random() * 45);
+    var fb = Math.floor(55 + Math.random() * 40);
+    var cb = Math.floor(45 + Math.random() * 45);
+    var sl = Math.floor(45 + Math.random() * 45);
+    var ch = Math.floor(45 + Math.random() * 45);
+    var overall = Math.round((control+strike+stamina)/3);
+
+    analysisResult = { type: 'pitching', player: name, overall: overall,
+      pitchAvg: pitchAvg, pitchMax: pitchMax, control: control, strike: strike, stamina: stamina,
+      fb: fb, cb: cb, sl: sl, ch: ch };
+
+    var sugs = [];
+    if (control < 65) sugs.push({ cls: 'warn', icon: '🎯', title: '控球力待提升', text: '控球率 '+control+'%，建议使用好球带训练器进行精准控球练习，每周五次，每次 20 分钟。' });
+    else sugs.push({ cls: 'good', icon: '🎯', title: '控球能力优秀', text: '好球率达到 '+strike+'%，投手天赋突出，继续保持。' });
+    if (stamina < 60) sugs.push({ cls: 'warn', icon: '💪', title: '耐力需要加强', text: '耐力评分 '+stamina+'/100，建议增加有氧训练，提升比赛后期控球稳定性。' });
+    else sugs.push({ cls: 'good', icon: '💪', title: '耐力表现良好', text: '耐力达到 '+stamina+'/100，能支持长局数投球。' });
+    if (fb < 65) sugs.push({ cls: 'info', icon: '⚡', title: '直球速度可提升', text: '最快球速 '+pitchMax+' km/h，建议加强腿部爆发力训练。' });
+
+    var plans = [
+      { title: '好球带精准训练', pri: '高', priCls: '#f97316', bgCls: 'rgba(249,115,22,0.15)',
+        desc: '使用好球带训练器，练习四角控球。每周五次，每次 20 分钟，逐步缩小目标区域。',
+        duration: '6周', freq: '每周5次', level: '初级', tag: '控球 ↑18%', tagColor: '#f97316' },
+      { title: '球速提升专项', pri: '高', priCls: '#ef4444', bgCls: 'rgba(239,68,68,0.15)',
+        desc: '腿部爆发力 + 肩膀旋转训练。每周 3 次，每次 25 分钟，逐步提升直球球速。',
+        duration: '8周', freq: '每周3次', level: '中级', tag: '球速 ↑10km/h', tagColor: '#ef4444' },
+      { title: '变化球种训练', pri: '中', priCls: '#3b82f6', bgCls: 'rgba(59,130,246,0.15)',
+        desc: '系统学习曲球、滑球、变速球的手腕动作，巩固肌肉记忆。',
+        duration: '10周', freq: '每周2次', level: '中级', tag: '球种 +2', tagColor: '#3b82f6' },
+      { title: '耐力体能训练', pri: '中', priCls: '#10b981', bgCls: 'rgba(16,185,129,0.15)',
+        desc: '有氧耐力 + 上肢耐力结合训练。提升比赛后半段控球和球速保持能力。',
+        duration: '持续', freq: '每周2次', level: '初级', tag: '耐力 ↑15%', tagColor: '#10b981' }
+    ];
+
+    renderPitchingResult(sugs, plans, { pitchAvg, pitchMax, control, strike, stamina, fb, cb, sl, ch, overall });
+  }
+
+  // Save to history
+  analysisHistory.unshift({
+    date: new Date().toLocaleString('zh-CN'),
+    playerId: selectedPlayer.id,
+    playerName: name,
+    type: type === 'batting' ? '⚾ 打击分析' : '🎯 投球分析',
+    overall: analysisResult.overall,
+    videoName: uploadedVideo ? uploadedVideo.name : '未知'
+  });
+  if (analysisHistory.length > 30) analysisHistory.pop();
+  localStorage.setItem('baseai_ai_history', JSON.stringify(analysisHistory));
+}
+
+function renderBattingResult(sugs, plans, d) {
+  var mc = document.getElementById('main-content');
+  mc.innerHTML = `
+<div class="panel fade-in">
+  <div class="panel-header">
+    <div class="panel-title">⚡ ${selectedPlayer.name} — 打击分析报告</div>
+    <button class="btn btn-secondary" onclick="startNewAnalysis()" style="margin-left:auto;font-size:12px;">+ 新分析</button>
+  </div>
+  <div class="panel-body">
+    <div class="result-header">
+      <div class="result-avatar">${selectedPlayer.name.charAt(0)}</div>
+      <div class="result-meta">
+        <div class="name">${esc(selectedPlayer.name)}</div>
+        <div class="sub">⚾ 打击分析 · ${new Date().toLocaleDateString('zh-CN')}</div>
+      </div>
+      <div class="result-score">
+        <div class="num">${d.overall}</div>
+        <div class="label">综合评分</div>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card orange">
+        <div class="m-icon">⚡</div>
+        <div class="m-val" style="color:#f97316">${d.speedAvg}</div>
+        <div class="m-unit">km/h</div>
+        <div class="m-label">平均挥棒速度</div>
+      </div>
+      <div class="metric-card orange">
+        <div class="m-icon">🚀</div>
+        <div class="m-val" style="color:#f97316">${d.speedMax}</div>
+        <div class="m-unit">km/h</div>
+        <div class="m-label">最快挥棒速度</div>
+      </div>
+      <div class="metric-card blue">
+        <div class="m-icon">📐</div>
+        <div class="m-val" style="color:#3b82f6">${d.bpa}°</div>
+        <div class="m-unit"></div>
+        <div class="m-label">BPA 角度</div>
+      </div>
+      <div class="metric-card green">
+        <div class="m-icon">🎯</div>
+        <div class="m-val" style="color:#10b981">${d.trajectory}</div>
+        <div class="m-unit"></div>
+        <div class="m-label">挥棒轨迹类型</div>
+      </div>
+      <div class="metric-card orange">
+        <div class="m-icon">💪</div>
+        <div class="m-val" style="color:#f97316">${d.power}/100</div>
+        <div class="m-unit"></div>
+        <div class="m-label">力量评分</div>
+      </div>
+      <div class="metric-card blue">
+        <div class="m-icon">🏆</div>
+        <div class="m-val" style="color:#3b82f6">${d.contact}/100</div>
+        <div class="m-unit"></div>
+        <div class="m-label">击球命中率</div>
+      </div>
+    </div>
+
+    <div class="result-grid">
+      <div class="result-card">
+        <div class="result-card-title">📊 五维能力雷达</div>
+        <div class="radar-wrap">
+          <svg class="radar-svg" id="result-radar"></svg>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px;">
+          ${[['💪','power','力量'],['⚡','speed','速度'],['🎯','contact','击球'],['🛡️','defense','防守'],['⚙️','control','控球']].map(function(v){
+            return '<div style="text-align:center;"><div style="font-size:11px;font-weight:800;color:#f97316" id="radar-v-'+v[1]+'">--</div><div style="font-size:10px;color:#64748b;margin-top:2px">'+v[2]+'</div></div>';
+          }).join('')}
+        </div>
+      </div>
+      <div class="result-card">
+        <div class="result-card-title">📈 分项评分</div>
+        ${[['💪 力量', d.power, '#f97316'],['⚡ 速度', d.speed, '#f97316'],['🎯 击球', d.contact, '#3b82f6'],['🛡️ 防守', d.defense, '#8b5cf6'],['⚙️ 控球', d.control, '#10b981']].map(function(v){
+          return `<div class="result-bar-row">
+            <div class="rb-label">${v[0]}</div>
+            <div class="rb-track"><div class="rb-fill" style="width:0%;background:${v[2]};" id="bar-${v[1]}"></div></div>
+            <div class="rb-val" style="color:${v[2]}" id="val-${v[1]}">--</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="panel-header" style="border-top:1px solid rgba(255,255,255,0.06);margin-top:8px;">
+      <div class="panel-title">💡 AI 分析建议</div>
+    </div>
+    <div class="suggestions-list" style="padding:0 0 8px;">
+      ${sugs.map(function(s){
+        return `<div class="sug-card ${s.cls}">
+          <div class="sug-icon">${s.icon}</div>
+          <div class="sug-body"><div class="sug-title">${s.title}</div><div class="sug-text">${s.text}</div></div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="panel-header" style="border-top:1px solid rgba(255,255,255,0.06);margin-top:8px;">
+      <div class="panel-title">📋 个性化训练计划</div>
+    </div>
+    <div class="plan-grid" style="padding:0 0 8px;">
+      ${plans.map(function(p){
+        return `<div class="plan-card">
+          <div class="p-header">
+            <div class="p-title">${p.title}</div>
+            <span class="p-pri" style="background:${p.bgCls};color:${p.priCls}">${p.pri}优先级</span>
+          </div>
+          <div class="p-desc">${p.desc}</div>
+          <div class="p-meta"><span>⏱️ ${p.duration}</span><span>📅 ${p.freq}</span></div>
+          <div class="p-tag" style="background:${p.bgCls};color:${p.tagColor}">${p.tag}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="result-actions">
+      <button class="btn btn-primary" onclick="window.print()">🖨️ 打印报告</button>
+      <button class="btn btn-secondary" onclick="startNewAnalysis()">+ 新分析</button>
+      <button class="btn btn-secondary" onclick="viewHistory()">📊 查看历史</button>
+    </div>
+  </div>
+</div>`;
+
+  // Animate radar + bars
+  setTimeout(function(){
+    drawRadar('result-radar', { power: d.power, speed: d.speed, contact: d.contact, defense: d.defense, control: d.control });
+    ['power','speed','contact','defense','control'].forEach(function(k, i){
+      setTimeout(function(){
+        document.getElementById('bar-power').style.width = d.power+'%';
+        document.getElementById('val-power').textContent = d.power;
+      }, 0);
+      setTimeout(function(){
+        document.getElementById('bar-speed').style.width = d.speed+'%';
+        document.getElementById('val-speed').textContent = d.speed;
+      }, 150);
+      setTimeout(function(){
+        document.getElementById('bar-contact').style.width = d.contact+'%';
+        document.getElementById('val-contact').textContent = d.contact;
+      }, 300);
+      setTimeout(function(){
+        document.getElementById('bar-defense').style.width = d.defense+'%';
+        document.getElementById('val-defense').textContent = d.defense;
+      }, 450);
+      setTimeout(function(){
+        document.getElementById('bar-control').style.width = d.control+'%';
+        document.getElementById('val-control').textContent = d.control;
+      }, 600);
+    });
+
+    // radar labels
+    setTimeout(function(){
+      var map = { 'power': d.power, 'speed': d.speed, 'contact': d.contact, 'defense': d.defense, 'control': d.control };
+      Object.keys(map).forEach(function(k){
+        var el = document.getElementById('radar-v-'+k);
+        if (el) el.textContent = map[k];
+      });
+    }, 200);
+  }, 100);
+}
+
+function renderPitchingResult(sugs, plans, d) {
+  var mc = document.getElementById('main-content');
+  mc.innerHTML = `
+<div class="panel fade-in">
+  <div class="panel-header">
+    <div class="panel-title">🎯 ${selectedPlayer.name} — 投手分析报告</div>
+    <button class="btn btn-secondary" onclick="startNewAnalysis()" style="margin-left:auto;font-size:12px;">+ 新分析</button>
+  </div>
+  <div class="panel-body">
+    <div class="result-header">
+      <div class="result-avatar" style="background:linear-gradient(135deg,#3b82f6,#2563eb);">${selectedPlayer.name.charAt(0)}</div>
+      <div class="result-meta">
+        <div class="name">${esc(selectedPlayer.name)}</div>
+        <div class="sub">🎯 投球分析 · ${new Date().toLocaleDateString('zh-CN')}</div>
+      </div>
+      <div class="result-score">
+        <div class="num" style="color:#3b82f6">${d.overall}</div>
+        <div class="label">综合评分</div>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card blue">
+        <div class="m-icon">⚡</div>
+        <div class="m-val" style="color:#3b82f6">${d.pitchAvg}</div>
+        <div class="m-unit">km/h</div>
+        <div class="m-label">平均球速</div>
+      </div>
+      <div class="metric-card blue">
+        <div class="m-icon">🚀</div>
+        <div class="m-val" style="color:#3b82f6">${d.pitchMax}</div>
+        <div class="m-unit">km/h</div>
+        <div class="m-label">最快球速</div>
+      </div>
+      <div class="metric-card orange">
+        <div class="m-icon">🎯</div>
+        <div class="m-val" style="color:#f97316">${d.control}%</div>
+        <div class="m-unit"></div>
+        <div class="m-label">控球率</div>
+      </div>
+      <div class="metric-card green">
+        <div class="m-icon">⭕</div>
+        <div class="m-val" style="color:#10b981">${d.strike}%</div>
+        <div class="m-unit"></div>
+        <div class="m-label">好球率</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-icon">💪</div>
+        <div class="m-val" style="color:#8b5cf6">${d.stamina}/100</div>
+        <div class="m-unit"></div>
+        <div class="m-label">耐力评分</div>
+      </div>
+    </div>
+
+    <div class="result-grid">
+      <div class="result-card">
+        <div class="result-card-title">🗺️ 球种速度分布</div>
+        ${[['直球', d.fb, '#ef4444'],['曲球', d.cb, '#3b82f6'],['滑球', d.sl, '#8b5cf6'],['变速球', d.ch, '#10b981']].map(function(v){
+          var kmh = (d.pitchAvg * (v[1]/100)).toFixed(1);
+          return `<div class="result-bar-row">
+            <div class="rb-label">${v[0]}</div>
+            <div class="rb-track"><div class="rb-fill" style="width:0%;background:${v[2]};" id="pt-bar-${v[0]}"></div></div>
+            <div class="rb-val" style="color:${v[2]}" id="pt-val-${v[0]}">-- km/h</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="result-card">
+        <div class="result-card-title">📈 投球能力评分</div>
+        ${[['控球', d.control, '#f97316'],['好球率', d.strike, '#10b981'],['耐力', d.stamina, '#8b5cf6']].map(function(v){
+          return `<div class="result-bar-row">
+            <div class="rb-label">${v[0]}</div>
+            <div class="rb-track"><div class="rb-fill" style="width:0%;background:${v[2]};" id="pp-bar-${v[0]}"></div></div>
+            <div class="rb-val" style="color:${v[2]}" id="pp-val-${v[0]}">--</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="panel-header" style="border-top:1px solid rgba(255,255,255,0.06);margin-top:8px;">
+      <div class="panel-title">💡 AI 分析建议</div>
+    </div>
+    <div class="suggestions-list" style="padding:0 0 8px;">
+      ${sugs.map(function(s){
+        return `<div class="sug-card ${s.cls}">
+          <div class="sug-icon">${s.icon}</div>
+          <div class="sug-body"><div class="sug-title">${s.title}</div><div class="sug-text">${s.text}</div></div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="panel-header" style="border-top:1px solid rgba(255,255,255,0.06);margin-top:8px;">
+      <div class="panel-title">📋 个性化训练计划</div>
+    </div>
+    <div class="plan-grid" style="padding:0 0 8px;">
+      ${plans.map(function(p){
+        return `<div class="plan-card">
+          <div class="p-header">
+            <div class="p-title">${p.title}</div>
+            <span class="p-pri" style="background:${p.bgCls};color:${p.priCls}">${p.pri}优先级</span>
+          </div>
+          <div class="p-desc">${p.desc}</div>
+          <div class="p-meta"><span>⏱️ ${p.duration}</span><span>📅 ${p.freq}</span></div>
+          <div class="p-tag" style="background:${p.bgCls};color:${p.tagColor}">${p.tag}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="result-actions">
+      <button class="btn btn-primary" onclick="window.print()">🖨️ 打印报告</button>
+      <button class="btn btn-secondary" onclick="startNewAnalysis()">+ 新分析</button>
+      <button class="btn btn-secondary" onclick="viewHistory()">📊 查看历史</button>
+    </div>
+  </div>
+</div>`;
+
+  // Animate bars
+  setTimeout(function(){
+    ['直球','曲球','滑球','变速球'].forEach(function(t, i){
+      setTimeout(function(){
+        var pct = t==='直球'?d.fb:t==='曲球'?d.cb:t==='滑球'?d.sl:d.ch;
+        var kmh = (d.pitchAvg * (pct/100)).toFixed(1);
+        var bar = document.getElementById('pt-bar-'+t);
+        var val = document.getElementById('pt-val-'+t);
+        if (bar) bar.style.width = pct+'%';
+        if (val) val.textContent = kmh+' km/h';
+      }, i * 200);
+    });
+    setTimeout(function(){
+      [['控球', d.control],['好球率', d.strike],['耐力', d.stamina]].forEach(function(v, i){
+        setTimeout(function(){
+          var bar = document.getElementById('pp-bar-'+v[0]);
+          var val = document.getElementById('pp-val-'+v[0]);
+          if (bar) bar.style.width = v[1]+'%';
+          if (val) val.textContent = v[1]+'/100';
+        }, i * 200);
+      });
+    }, 200);
+  }, 100);
+}
+
+// ====== RADAR DRAW ======
+function drawRadar(svgId, scores) {
+  var svg = document.getElementById(svgId);
+  if (!svg) return;
+  var cx = 120, cy = 120, r = 90;
+  var labels = ['力量','速度','击球','防守','控球'];
+  var keys = ['power','speed','contact','defense','control'];
+  var n = labels.length;
+  var step = (2*Math.PI)/n;
+  var html = '';
+
+  // Background rings
+  for (var lvl = 1; lvl <= 5; lvl++) {
+    var lr = r*(lvl/5);
+    var pts = [];
+    for (var i = 0; i < n; i++) {
+      var a = i*step - Math.PI/2;
+      pts.push((cx+lr*Math.cos(a)).toFixed(1)+','+(cy+lr*Math.sin(a)).toFixed(1));
+    }
+    html += '<polygon points="'+pts.join(' ')+'" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>';
+  }
+  // Spokes
+  for (var i = 0; i < n; i++) {
+    var a = i*step - Math.PI/2;
+    html += '<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+r*Math.cos(a)).toFixed(1)+'" y2="'+(cy+r*Math.sin(a)).toFixed(1)+'" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>';
+  }
+  // Data polygon
+  var dPts = [];
+  for (var i = 0; i < n; i++) {
+    var v = Math.min((scores[keys[i]]||60)/100, 1);
+    var a = i*step - Math.PI/2;
+    dPts.push((cx+r*v*Math.cos(a)).toFixed(1)+','+(cy+r*v*Math.sin(a)).toFixed(1));
+  }
+  html += '<polygon points="'+dPts.join(' ')+'" fill="rgba(249,115,22,0.2)" stroke="#f97316" stroke-width="2.5"/>';
+  // Dots
+  for (var i = 0; i < n; i++) {
+    var v = Math.min((scores[keys[i]]||60)/100, 1);
+    var a = i*step - Math.PI/2;
+    var px = (cx+r*v*Math.cos(a)).toFixed(1), py = (cy+r*v*Math.sin(a)).toFixed(1);
+    html += '<circle cx="'+px+'" cy="'+py+'" r="5" fill="#f97316" stroke="white" stroke-width="2"/>';
+  }
+  // Labels
+  for (var i = 0; i < n; i++) {
+    var a = i*step - Math.PI/2;
+    var lx = (cx+(r+18)*Math.cos(a)).toFixed(1), ly = (cy+(r+18)*Math.sin(a)).toFixed(1);
+    html += '<text x="'+lx+'" y="'+ly+'" text-anchor="middle" dominant-baseline="middle" fill="#64748b" font-size="11" font-weight="600">'+labels[i]+'</text>';
+  }
+  svg.innerHTML = html;
+}
+
+// ====== NAVIGATION ======
+function startNewAnalysis() {
+  selectedPlayer = null;
+  selectedType = null;
+  uploadedVideo = null;
+  currentStep = 1;
+  renderStep1();
+}
+
+function viewHistory() {
+  var mc = document.getElementById('main-content');
+  if (analysisHistory.length === 0) {
+    mc.innerHTML = `
+<div class="panel fade-in">
+  <div class="panel-header">
+    <div class="panel-title">📊 分析历史</div>
+    <button class="btn btn-secondary" onclick="startNewAnalysis()" style="margin-left:auto;font-size:12px;">+ 新分析</button>
+  </div>
+  <div class="panel-body">
+    <div class="empty-state">
+      <div class="icon">📊</div>
+      <div class="title">暂无分析记录</div>
+      <div class="sub">上传视频完成分析后，记录将保存在这里</div>
+    </div>
+  </div>
+</div>`;
+    return;
+  }
+  var avatarColors = ['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899'];
+  mc.innerHTML = `
+<div class="panel fade-in">
+  <div class="panel-header">
+    <div class="panel-title">📊 分析历史</div>
+    <span style="margin-left:auto;font-size:12px;color:#64748b;">${analysisHistory.length} 条记录</span>
+    <button class="btn btn-secondary" onclick="startNewAnalysis()" style="font-size:12px;">+ 新分析</button>
+  </div>
+  <div class="panel-body">
+    ${analysisHistory.map(function(h, i){
+      var color = avatarColors[i % avatarColors.length];
+      return `<div class="history-item">
+        <div class="hi-avatar" style="background:${color}">${(h.playerName||'?').charAt(0)}</div>
+        <div class="hi-info">
+          <div class="hi-name">${esc(h.playerName)}</div>
+          <div class="hi-meta">${esc(h.type)} · ${esc(h.date)}</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="hi-score" style="color:${h.type&&h.type.includes('投球')?'#3b82f6':'#f97316'}">${h.overall}</div>
+          <div class="hi-type">${h.type&&h.type.includes('投球')?'投球':'打击'}</div>
+        </div>
+        <div class="hi-actions">
+          <button class="btn btn-secondary" onclick="loadHistory(${i})">查看</button>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
+</div>`;
+}
+
+function loadHistory(idx) {
+  // Can't reload full analysis without video, just show summary
+  var h = analysisHistory[idx];
+  showToast('历史记录：'+h.playerName+' - '+h.type+' - 评分 '+h.overall, 'info');
+}
+
+// toast
+function showToast(msg, type) {
+  var existing = document.getElementById('baseai-toast');
+  if (existing) existing.remove();
+  var colors = { success: '#10b981', warning: '#f59e0b', error: '#ef4444', info: '#3b82f6' };
+  var toast = document.createElement('div');
+  toast.id = 'baseai-toast';
+  toast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;background:'+colors[type]+';color:white;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,0.3);animation:slideUp 0.3s ease';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  var style = document.createElement('style');
+  style.textContent = '@keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}';
+  document.head.appendChild(style);
+  setTimeout(function(){ toast.style.opacity='0'; toast.style.transition='opacity 0.3s'; setTimeout(function(){ toast.remove(); }, 300); }, 3000);
+}
+
+// Make global
+window.startNewAnalysis = startNewAnalysis;
+window.viewHistory = viewHistory;
+window.loadHistory = loadHistory;
+window.startAnalysis = startAnalysis;
+window.onVideoFile = onVideoFile;
+window.backToStep1 = backToStep1;
+window.goToStep2 = goToStep2;
+window.selectType = selectType;
+window.onPlayerChange = onPlayerChange;
+</script>
+</body>
+</html>
