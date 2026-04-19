@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块3 · 赛事管理与记分 — BaseAI</title>
+<link rel="stylesheet" href="assets/design-system.css">
+<script src="db.js"></script>
+<style>
+  .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .page-header h2 { font-size:22px; font-weight:800; }
+  .page-header p { font-size:13px; color:var(--text-muted); margin-top:2px; }
+  .page-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+  .game-tabs { display:flex; gap:4px; margin-bottom:20px; }
+  .game-tab { padding:8px 18px; border-radius:var(--radius); font-size:13px; font-weight:600; cursor:pointer; border:none; background:var(--bg-card); color:var(--text-secondary); border:1px solid var(--border); transition:all 0.15s; }
+  .game-tab.active { background:var(--primary); color:white; border-color:var(--primary); }
+
+  .scoreboard-card {
+    background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg);
+    overflow:hidden; margin-bottom:16px; transition:all 0.2s; cursor:pointer;
+  }
+  .scoreboard-card:hover { border-color:rgba(249,115,22,0.4); box-shadow:0 4px 16px rgba(0,0,0,0.3); }
+
+  .score-header {
+    display:flex; align-items:center; padding:14px 20px;
+    border-bottom:1px solid var(--border-light);
+    justify-content:space-between; flex-wrap:wrap; gap:8px;
+  }
+  .score-date { font-size:12px; color:var(--text-muted); }
+  .score-teams { display:flex; align-items:center; justify-content:center; gap:20px; flex-wrap:wrap; }
+  .score-team { text-align:center; min-width:120px; }
+  .score-team-name { font-size:14px; font-weight:700; color:var(--text-primary); }
+  .score-team-scr { font-size:36px; font-weight:900; font-family:var(--font-mono); color:var(--text-primary); }
+  .score-vs { font-size:20px; font-weight:700; color:var(--text-muted); }
+  .score-center { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .score-info { font-size:11px; color:var(--text-muted); text-align:center; }
+
+  .inning-bar { padding:8px 20px; display:flex; gap:4px; align-items:center; overflow-x:auto; }
+  .inning-cell { min-width:36px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; background:var(--bg-secondary); color:var(--text-secondary); }
+  .inning-cell.home { background:var(--accent-glow); color:var(--accent); }
+  .inning-cell.away { background:var(--primary-glow); color:var(--primary); }
+  .inning-cell.total { background:var(--border-light); font-size:12px; font-weight:800; }
+
+  .score-footer { padding:10px 20px; border-top:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center; }
+  .game-status-badge { font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; }
+  .status-completed { background:var(--success-bg); color:var(--success); }
+  .status-in-progress { background:var(--warning-bg); color:var(--warning); }
+  .status-scheduled { background:var(--info-bg); color:var(--info); }
+
+  .live-badge { display:inline-flex; align-items:center; gap:5px; background:var(--danger); color:white; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; animation:pulse-badge 1s infinite; }
+  @keyframes pulse-badge { 0%,100%{opacity:1;} 50%{opacity:0.7;} }
+
+  /* Inning detail */
+  .innings-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(60px,1fr)); gap:6px; margin:16px 0; }
+  .inning-box { padding:10px 6px; background:var(--bg-secondary); border-radius:8px; text-align:center; border:1px solid var(--border-light); }
+  .inning-box .num { font-size:10px; color:var(--text-muted); }
+  .inning-box .runs { font-size:20px; font-weight:800; font-family:var(--font-mono); }
+
+  .modal-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .modal-form-grid .full { grid-column:span 2; }
+  .modal-form-grid label { display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:5px; }
+  .modal-form-grid input, .modal-form-grid select { width:100%; }
+
+  .empty-state { text-align:center; padding:80px 20px; }
+  .empty-state .empty-icon { font-size:64px; margin-bottom:16px; opacity:0.3; }
+</style>
+</head>
+<body>
+<script src="assets/nav.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  initNav({ title:'赛事与记分', subtitle:'Module 03 · Game Management' });
+
+  var allGames = [];
+  var allTeams = [];
+  var currentTab = 'all';
+
+  function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+  function getStatusBadge(status, game_date) {
+    if (status === 'completed') return '<span class="game-status-badge status-completed">✓ 已结束</span>';
+    if (status === 'in_progress') return '<span class="live-badge"><span>●</span>进行中</span>';
+    var d = new Date(game_date);
+    var today = new Date();
+    today.setHours(0,0,0,0);
+    if (d.toDateString() === today.toDateString()) return '<span class="live-badge">今日比赛</span>';
+    return '<span class="game-status-badge status-scheduled">📅 待赛</span>';
+  }
+
+  function getStatusBtn(status, id) {
+    if (status === 'scheduled') return '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();startGame(\'' + id + '\')">▶ 开始</button>';
+    if (status === 'in_progress') return '<button class="btn btn-sm btn-warning" style="background:var(--warning);color:white" onclick="event.stopPropagation();endGame(\'' + id + '\')">■ 结束</button>';
+    return '<button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();editGame(\'' + id + '\')">✏️</button>';
+  }
+
+  function renderGames(games) {
+    var pc = {
+      total: allGames.length,
+      completed: allGames.filter(function(g){ return g.status==='completed'; }).length,
+      live: allGames.filter(function(g){ return g.status==='in_progress'; }).length,
+      scheduled: allGames.filter(function(g){ return g.status==='scheduled'; }).length
+    };
+    initNav({
+      title: '赛事与记分',
+      subtitle: 'Module 03 · Game Management',
+      stats: [
+        { label: '总赛事', value: pc.total },
+        { label: '已结束', value: pc.completed },
+        { label: '进行中', value: pc.live },
+        { label: '待赛', value: pc.scheduled }
+      ]
+    });
+
+    var container = document.getElementById('page-content');
+    var html = `
+    <div class="page-header">
+      <div><h2>📊 赛事管理与记分</h2><p>联赛管理、实时记分、数据统计</p></div>
+      <div class="page-actions">
+        <button class="btn btn-secondary btn-sm" onclick="exportGames()">📤 导出</button>
+        <button class="btn btn-primary" onclick="openGameModal()">+ 新增比赛</button>
+      </div>
+    </div>
+
+    <div class="game-tabs">
+      <button class="game-tab ${currentTab==='all'?'active':''}" onclick="switchTab('all')">全部 (${pc.total})</button>
+      <button class="game-tab ${currentTab==='in_progress'?'active':''}" onclick="switchTab('in_progress')">🔴 进行中 (${pc.live})</button>
+      <button class="game-tab ${currentTab==='scheduled'?'active':''}" onclick="switchTab('scheduled')">📅 待赛 (${pc.scheduled})</button>
+      <button class="game-tab ${currentTab==='completed'?'active':''}" onclick="switchTab('completed')">✓ 已结束 (${pc.completed})</button>
+    </div>`;
+
+    if (games.length === 0) {
+      html += `<div class="empty-state"><div class="empty-icon">📊</div><h3>暂无比赛数据</h3><p>点击右上角「新增比赛」创建第一场比赛</p><button class="btn btn-primary" onclick="openGameModal()" style="margin-top:16px;">+ 新增比赛</button></div>`;
+    } else {
+      games.forEach(function(g) {
+        var statusBadge = getStatusBadge(g.status, g.game_date);
+        var homeScore = g.home_score || 0;
+        var awayScore = g.away_score || 0;
+        var winner = homeScore > awayScore ? 'home' : homeScore < awayScore ? 'away' : 'tie';
+        var league = g.league || '';
+        var venue = g.venue || '';
+
+        html += `
+        <div class="scoreboard-card" onclick="openGameDetail('${g.id || g.game_id}')">
+          <div class="score-header">
+            <div>
+              <div class="score-date">${formatDate(g.game_date)} ${g.game_time||''} · ${escHtml(league)}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">📍 ${escHtml(venue)}</div>
+            </div>
+            ${statusBadge}
+          </div>
+          <div class="score-teams">
+            <div class="score-team">
+              <div class="score-team-name" style="color:${winner==='home'?'var(--primary)':'var(--text-primary)'}">${g.home_team_name || '主队'}</div>
+              <div class="score-team-scr" style="color:${winner==='home'?'var(--primary)':'var(--text-primary)'}">${homeScore}</div>
+            </div>
+            <div class="score-vs">VS</div>
+            <div class="score-team">
+              <div class="score-team-name" style="color:${winner==='away'?'var(--accent)':'var(--text-primary)'}">${g.away_team_name || '客队'}</div>
+              <div class="score-team-scr" style="color:${winner==='away'?'var(--accent)':'var(--text-primary)'}">${awayScore}</div>
+            </div>
+          </div>
+          <div class="score-footer">
+            <div style="font-size:12px;color:var(--text-muted);">${g.innings_total || 7}局 · 已赛${g.innings_played || 0}局</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();editGame('${g.id || g.game_id}')">✏️</button>
+              ${getStatusBtn(g.status, g.id || g.game_id)}
+            </div>
+          </div>
+        </div>`;
+      });
+    }
+
+    container.innerHTML = html;
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    var filtered = tab === 'all' ? allGames : allGames.filter(function(g){ return g.status === tab; });
+    renderGames(filtered);
+  }
+
+  // Modals
+  function openGameModal(game) {
+    game = game || {};
+    var isEdit = !!(game.id || game.game_id);
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'game-modal';
+    var teamOptions = allTeams.map(function(t){ return '<option value="' + (t.id||'') + '" ' + (game.home_team_id===t.id||game.away_team_id===t.id?'selected':'') + '>' + escHtml(t.name) + '</option>'; }).join('');
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-header"><div class="modal-title">${isEdit?'✏️ 编辑比赛':'➕ 新增比赛'}</div><button class="modal-close" onclick="closeGameModal()">✕</button></div>
+        <div class="modal-body">
+          <div class="modal-form-grid">
+            <div><label>比赛日期</label><input type="date" id="g-date" value="${game.game_date||''}"></div>
+            <div><label>比赛时间</label><input type="time" id="g-time" value="${game.game_time||''}"></div>
+            <div><label>主场球队</label><select id="g-home">${teamOptions?'<option value="">选择球队</option>'+teamOptions:'<option value="">暂无球队</option>'}</select></div>
+            <div><label>客场球队</label><select id="g-away">${teamOptions?'<option value="">选择球队</option>'+teamOptions:'<option value="">暂无球队</option>'}</select></div>
+            <div><label>联赛名称</label><input id="g-league" value="${escHtml(game.league||'')}" placeholder="香港U12联赛"></div>
+            <div><label>赛季</label><input id="g-season" value="${escHtml(game.season||'')}" placeholder="2026春季"></div>
+            <div><label>比赛类型</label><select id="g-type"><option value="">请选择</option><option value="league" ${(game.game_type==='league')?'selected':''}>联赛</option><option value="cup" ${(game.game_type==='cup')?'selected':''}>杯赛</option><option value="friendly" ${(game.game_type==='friendly')?'selected':''}>友谊赛</option></select></div>
+            <div><label>比赛场地</label><input id="g-venue" value="${escHtml(game.venue||'')}" placeholder="比赛场地"></div>
+            <div><label>主场得分</label><input type="number" id="g-hs" value="${game.home_score||0}" min="0"></div>
+            <div><label>客场得分</label><input type="number" id="g-as" value="${game.away_score||0}" min="0"></div>
+            <div><label>总局数</label><input type="number" id="g-innings" value="${game.innings_total||7}" min="1" max="20"></div>
+            <div class="full"><label>备注</label><input id="g-notes" value="${escHtml(game.notes||'')}" placeholder="其他备注"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="closeGameModal()">取消</button>
+          <button class="btn btn-primary" onclick="saveGame('${escHtml(game.id||game.game_id||'')}')">${isEdit?'保存':'新增'}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e){ if(e.target===overlay) closeGameModal(); });
+  }
+
+  window.closeGameModal = function(){ var m=document.getElementById('game-modal'); if(m)m.remove(); };
+  window.openGameModal = openGameModal;
+
+  window.editGame = function(id) {
+    var g = allGames.find(function(x){ return (x.id||x.game_id)===id; });
+    if (g) openGameModal(g);
+  };
+
+  window.saveGame = async function(existingId) {
+    var data = {
+      game_date: document.getElementById('g-date').value,
+      game_time: document.getElementById('g-time').value,
+      home_team_id: document.getElementById('g-home').value || null,
+      away_team_id: document.getElementById('g-away').value || null,
+      league: document.getElementById('g-league').value.trim(),
+      season: document.getElementById('g-season').value.trim(),
+      game_type: document.getElementById('g-type').value,
+      venue: document.getElementById('g-venue').value.trim(),
+      innings_total: parseInt(document.getElementById('g-innings').value) || 7,
+      home_score: parseInt(document.getElementById('g-hs').value) || 0,
+      away_score: parseInt(document.getElementById('g-as').value) || 0,
+      notes: document.getElementById('g-notes').value.trim()
+    };
+    if (!data.game_date) { showToast('请选择比赛日期', 'warning'); return; }
+    if (existingId) {
+      var g = allGames.find(function(x){ return (x.id||x.game_id)===existingId; });
+      if (g) { data.id = g.id; data.game_id = g.game_id; }
+    } else {
+      data.game_id = genGameId();
+      data.status = 'scheduled';
+    }
+    // Resolve team names
+    if (data.home_team_id) {
+      var ht = allTeams.find(function(t){ return t.id===data.home_team_id; });
+      data.home_team_name = ht ? ht.name : '主队';
+    }
+    if (data.away_team_id) {
+      var at = allTeams.find(function(t){ return t.id===data.away_team_id; });
+      data.away_team_name = at ? at.name : '客队';
+    }
+    try {
+      await DB.upsertGame(data);
+      closeGameModal();
+      showToast(existingId?'比赛已更新':'比赛已创建', 'success');
+      loadAll();
+    } catch(e) { showToast('保存失败: '+e.message, 'error'); }
+  };
+
+  window.startGame = async function(id) {
+    var g = allGames.find(function(x){ return (x.id||x.game_id)===id; });
+    if (!g) return;
+    try {
+      await DB.updateGame(g.id, { status: 'in_progress' });
+      showToast('比赛已开始！', 'success');
+      loadAll();
+    } catch(e) { showToast('操作失败', 'error'); }
+  };
+
+  window.endGame = async function(id) {
+    var g = allGames.find(function(x){ return (x.id||x.game_id)===id; });
+    if (!g) return;
+    try {
+      await DB.updateGame(g.id, { status: 'completed', innings_played: g.innings_total || 7 });
+      showToast('比赛已结束', 'success');
+      loadAll();
+    } catch(e) { showToast('操作失败', 'error'); }
+  };
+
+  window.openGameDetail = function(id) {
+    var g = allGames.find(function(x){ return (x.id||x.game_id)===id; });
+    if (!g) return;
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    var statusBadge = getStatusBadge(g.status, g.game_date);
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:560px;">
+        <div class="modal-header">
+          <div class="modal-title">📊 ${formatDate(g.game_date)}</div>
+          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="text-align:center;padding:20px 0;background:var(--bg-secondary);border-radius:12px;margin-bottom:20px;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:30px;">
+              <div><div style="font-size:16px;font-weight:700;">${escHtml(g.home_team_name||'主队')}</div><div style="font-size:48px;font-weight:900;font-family:var(--font-mono);color:var(--primary);margin-top:8px;">${g.home_score||0}</div></div>
+              <div style="font-size:24px;color:var(--text-muted);">VS</div>
+              <div><div style="font-size:16px;font-weight:700;">${escHtml(g.away_team_name||'客队')}</div><div style="font-size:48px;font-weight:900;font-family:var(--font-mono);color:var(--accent);margin-top:8px;">${g.away_score||0}</div></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="view-item"><div class="v-label">联赛</div><div class="v-value">${g.league || '-'}</div></div>
+            <div class="view-item"><div class="v-label">赛季</div><div class="v-value">${g.season || '-'}</div></div>
+            <div class="view-item"><div class="v-label">场地</div><div class="v-value">${g.venue || '-'}</div></div>
+            <div class="view-item"><div class="v-label">总局数</div><div class="v-value">${g.innings_total || 7}</div></div>
+            <div class="view-item"><div class="v-label">状态</div><div class="v-value">${statusBadge}</div></div>
+            <div class="view-item"><div class="v-label">已赛</div><div class="v-value">${g.innings_played || 0} 局</div></div>
+          </div>
+          ${g.notes ? '<div style="margin-top:12px;padding:10px;background:var(--bg-secondary);border-radius:8px;font-size:13px;color:var(--text-secondary);">📝 ' + escHtml(g.notes) + '</div>' : ''}
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">关闭</button>
+          <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove();editGame('${id}')">✏️ 编辑</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+  };
+
+  window.exportGames = function() {
+    var blob = new Blob([JSON.stringify(allGames, null, 2)], { type:'application/json' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'baseai_games_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click(); URL.revokeObjectURL(a.href);
+    showToast('已导出 ' + allGames.length + ' 条记录', 'success');
+  };
+
+  async function loadAll() {
+    try {
+      var gres = await DB.getGames();
+      var tres = await DB.getTeams();
+      allGames = gres.data || [];
+      allTeams = tres.data || [];
+      // Resolve team names
+      allGames.forEach(function(g) {
+        var ht = allTeams.find(function(t){ return t.id === g.home_team_id; });
+        var at = allTeams.find(function(t){ return t.id === g.away_team_id; });
+        g.home_team_name = ht ? ht.name : (g.home_team_name || '主队');
+        g.away_team_name = at ? at.name : (g.away_team_name || '客队');
+      });
+      // Sort by date desc
+      allGames.sort(function(a,b){ return new Date(b.game_date) - new Date(a.game_date); });
+      var filtered = currentTab === 'all' ? allGames : allGames.filter(function(g){ return g.status === currentTab; });
+      renderGames(filtered);
+    } catch(e) { showToast('加载失败: '+e.message, 'error'); }
+  }
+
+  loadAll();
+});
+</script>
+</body>
+</html>
