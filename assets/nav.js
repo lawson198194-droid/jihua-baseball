@@ -6,11 +6,11 @@
   'use strict';
 
   const MODULES = [
-    { id: 'm1', name: '球员资料库', icon: '👥', href: '01_球员资料库.html' },
-    { id: 'm2', name: '球队梯队', icon: '🏆', href: '02_球队梯队管理.html' },
-    { id: 'm3', name: '赛事记分', icon: '📊', href: '03_赛事管理与记分.html' },
-    { id: 'm4', name: '技术档案', icon: '📈', href: '04_球员技术档案.html' },
-    { id: 'm5', name: '权限后台', icon: '⚙️', href: '05_权限与后台管理.html' },
+    { id: 'm1', name: '球员资料库', icon: '👥', href: 'players.html' },
+    { id: 'm2', name: '球队梯队', icon: '🏆', href: 'teams.html' },
+    { id: 'm3', name: '赛事记分', icon: '📊', href: 'games.html' },
+    { id: 'm4', name: '技术档案', icon: '📈', href: 'profiles.html' },
+    { id: 'm5', name: '权限后台', icon: '⚙️', href: 'admin.html' },
   ];
 
   function getCurrentModule() {
