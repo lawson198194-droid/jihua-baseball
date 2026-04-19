@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块4 · 技术档案 — BaseAI</title>
+<link rel="stylesheet" href="assets/design-system.css">
+<script src="db.js"></script>
+<style>
+  .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .page-header h2 { font-size:22px; font-weight:800; }
+  .page-header p { font-size:13px; color:var(--text-muted); margin-top:2px; }
+  .page-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .filter-bar { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 20px; margin-bottom:20px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .filter-bar select, .filter-bar input { padding:7px 12px; font-size:13px; min-width:160px; }
+  .filter-search { flex:1; min-width:200px; }
+
+  .profiles-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
+
+  .profile-card {
+    background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg);
+    overflow:hidden; transition:all 0.2s; cursor:pointer;
+  }
+  .profile-card:hover { transform:translateY(-3px); border-color:rgba(249,115,22,0.4); box-shadow:0 8px 24px rgba(0,0,0,0.3); }
+
+  .profile-header { padding:16px 20px; display:flex; align-items:center; gap:14px; border-bottom:1px solid var(--border-light); }
+  .profile-avatar { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; color:white; flex-shrink:0; }
+  .profile-name { font-size:16px; font-weight:700; }
+  .profile-meta { font-size:12px; color:var(--text-muted); margin-top:2px; }
+  .profile-body { padding:16px 20px; }
+
+  /* Radar Chart */
+  .radar-wrap { display:flex; justify-content:center; margin-bottom:16px; }
+  .radar-svg { width:160px; height:160px; }
+  .profile-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
+  .profile-stat { text-align:center; padding:8px; background:var(--bg-secondary); border-radius:8px; }
+  .profile-stat .val { font-size:15px; font-weight:800; font-family:var(--font-mono); color:var(--text-primary); }
+  .profile-stat .lbl { font-size:9px; color:var(--text-muted); margin-top:2px; text-transform:uppercase; }
+  .profile-footer { padding:10px 20px; border-top:1px solid var(--border-light); display:flex; gap:8px; justify-content:flex-end; }
+  .empty-state { text-align:center; padding:80px 20px; }
+  .empty-state .empty-icon { font-size:64px; margin-bottom:16px; opacity:0.3; }
+
+  /* Radar legend */
+  .radar-legend { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin-top:8px; }
+  .radar-legend-item { display:flex; align-items:center; gap:4px; font-size:10px; color:var(--text-muted); }
+  .radar-legend-dot { width:8px; height:8px; border-radius:50%; }
+</style>
+</head>
+<body>
+<script src="assets/nav.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  initNav({ title:'技术档案', subtitle:'Module 04 · Player Profiles' });
+
+  var allPlayers = [];
+  var allProfiles = [];
+  var filterText = '';
+
+  var avatarColors = ['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899','#f59e0b','#06b6d4','#84cc16'];
+
+  function getAvatarColor(name) {
+    return avatarColors[(name||'A').charCodeAt(0) % avatarColors.length];
+  }
+
+  function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+  function drawRadar(svgId, scores, size) {
+    size = size || 160;
+    var svg = document.getElementById(svgId);
+    if (!svg) return;
+    var cx = size/2, cy = size/2, r = size/2 - 10;
+    var labels = ['力量', '速度', '防守', '控球', '击球'];
+    var keys = ['power','speed','defense','control','batting'];
+    var n = labels.length;
+    var angleStep = (2 * Math.PI) / n;
+
+    var html = '';
+    // Background circles
+    for (var level = 1; level <= 5; level++) {
+      var lr = r * (level / 5);
+      var pts = [];
+      for (var i = 0; i < n; i++) {
+        var a = i * angleStep - Math.PI/2;
+        pts.push(cx + lr * Math.cos(a) + ',' + (cy + lr * Math.sin(a)));
+      }
+      html += '<polygon points="' + pts.join(' ') + '" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>';
+    }
+    // Axis lines
+    for (var i = 0; i < n; i++) {
+      var a = i * angleStep - Math.PI/2;
+      html += '<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx + r*Math.cos(a)) + '" y2="' + (cy + r*Math.sin(a)) + '" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>';
+    }
+    // Data polygon
+    var dataPts = [];
+    var dataPtsFill = [];
+    var colors = ['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899'];
+    for (var i = 0; i < n; i++) {
+      var val = scores[keys[i]] || 0;
+      var norm = Math.min(val / 100, 1);
+      var a = i * angleStep - Math.PI/2;
+      var px = cx + r * norm * Math.cos(a);
+      var py = cy + r * norm * Math.sin(a);
+      dataPts.push(px + ',' + py);
+      dataPtsFill.push(px + ',' + py);
+    }
+    html += '<polygon points="' + dataPts.join(' ') + '" fill="rgba(249,115,22,0.2)" stroke="#f97316" stroke-width="2"/>';
+    // Data dots
+    for (var i = 0; i < n; i++) {
+      var val = scores[keys[i]] || 0;
+      var norm = Math.min(val / 100, 1);
+      var a = i * angleStep - Math.PI/2;
+      var px = cx + r * norm * Math.cos(a);
+      var py = cy + r * norm * Math.sin(a);
+      html += '<circle cx="' + px + '" cy="' + py + '" r="4" fill="#f97316" stroke="white" stroke-width="1.5"/>';
+    }
+    // Labels
+    for (var i = 0; i < n; i++) {
+      var a = i * angleStep - Math.PI/2;
+      var lx = cx + (r + 14) * Math.cos(a);
+      var ly = cy + (r + 14) * Math.sin(a);
+      html += '<text x="' + lx + '" y="' + ly + '" text-anchor="middle" dominant-baseline="middle" fill="#64748b" font-size="10" font-weight="600">' + labels[i] + '</text>';
+    }
+    svg.innerHTML = html;
+  }
+
+  function getRandomProfile(player) {
+    var base = player.name ? (player.name.charCodeAt(0) % 30) + 50 : 60;
+    return {
+      player_id: player.id || player.player_id,
+      name: player.name,
+      overall_rating: base + Math.floor(Math.random() * 20),
+      power_rating: base + Math.floor(Math.random() * 20),
+      speed_rating: base + Math.floor(Math.random() * 20),
+      defense_rating: base + Math.floor(Math.random() * 20),
+      control_rating: base + Math.floor(Math.random() * 20),
+      batting_rating: base + Math.floor(Math.random() * 20),
+      swing_speed_avg: (60 + Math.floor(Math.random() * 30)).toFixed(1),
+      pitch_speed_avg: (70 + Math.floor(Math.random() * 40)).toFixed(1),
+      last_analysis_at: new Date().toISOString()
+    };
+  }
+
+  function renderProfiles(profiles) {
+    var container = document.getElementById('page-content');
+    initNav({
+      title: '技术档案',
+      subtitle: 'Module 04 · Player Profiles',
+      stats: [{ label: '注册球员', value: allPlayers.length }, { label: '已建档', value: profiles.length }]
+    });
+
+    var html = `
+    <div class="page-header">
+      <div><h2>📈 球员技术档案</h2><p>雷达评分、成长曲线、历史数据分析</p></div>
+      <div class="page-actions">
+        <button class="btn btn-secondary btn-sm" onclick="generateAllProfiles()">🔄 生成档案</button>
+        <button class="btn btn-primary" onclick="window.location.href='06_AI_运动分析_专属教练.html'">🤖 AI分析</button>
+      </div>
+    </div>
+    <div class="filter-bar">
+      <input type="text" id="filter-search" class="filter-search" placeholder="🔍 搜索球员姓名..." oninput="applyFilter()">
+      <select id="filter-pos" onchange="applyFilter()"><option value="">全部位置</option><option>投手</option><option>捕手</option><option>内野</option><option>外野</option></select>
+    </div>`;
+
+    if (profiles.length === 0) {
+      html += `<div class="empty-state"><div class="empty-icon">📈</div><h3>暂无技术档案</h3><p>点击右上角「生成档案」为球员创建技术评分</p><button class="btn btn-primary" onclick="generateAllProfiles()" style="margin-top:16px;">🔄 生成档案</button></div>`;
+    } else {
+      html += `<div class="profiles-grid">`;
+      profiles.forEach(function(p) {
+        var color = getAvatarColor(p.name);
+        var scores = {
+          power: p.power_rating || 60,
+          speed: p.speed_rating || 60,
+          defense: p.defense_rating || 60,
+          control: p.control_rating || 60,
+          batting: p.batting_rating || 60
+        };
+        html += `
+        <div class="profile-card" onclick="viewProfile('${p.player_id}')">
+          <div class="profile-header">
+            <div class="profile-avatar" style="background:${color}">${(p.name||'?').charAt(0)}</div>
+            <div>
+              <div class="profile-name">${escHtml(p.name)}</div>
+              <div class="profile-meta">综合评分: ${p.overall_rating || '-'}</div>
+            </div>
+          </div>
+          <div class="profile-body">
+            <div class="radar-wrap">
+              <svg class="radar-svg" id="radar-${p.player_id}"></svg>
+            </div>
+            <div class="profile-stats">
+              <div class="profile-stat"><div class="val">${p.swing_speed_avg || '-'}</div><div class="lbl">挥棒km/h</div></div>
+              <div class="profile-stat"><div class="val">${p.pitch_speed_avg || '-'}</div><div class="lbl">球速km/h</div></div>
+              <div class="profile-stat"><div class="val" style="color:${(p.power_rating||60)>70?'var(--primary)':'var(--text-secondary)'}">${p.power_rating||'-'}</div><div class="lbl">力量</div></div>
+              <div class="profile-stat"><div class="val" style="color:${(p.speed_rating||60)>70?'var(--success)':'var(--text-secondary)'}">${p.speed_rating||'-'}</div><div class="lbl">速度</div></div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <span class="badge badge-primary">综合 ${p.overall_rating || '-'}</span>
+              <span class="badge badge-success">击球 ${p.batting_rating || '-'}</span>
+              <span class="badge badge-warning">防守 ${p.defense_rating || '-'}</span>
+            </div>
+          </div>
+          <div class="profile-footer">
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();viewProfile('${p.player_id}')">📊 详情</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="event.stopPropagation();deleteProfile('${p.player_id}')">🗑️</button>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    container.innerHTML = html;
+
+    // Draw radars after DOM is ready
+    setTimeout(function() {
+      profiles.forEach(function(p) {
+        var scores = {
+          power: p.power_rating || 60,
+          speed: p.speed_rating || 60,
+          defense: p.defense_rating || 60,
+          control: p.control_rating || 60,
+          batting: p.batting_rating || 60
+        };
+        drawRadar('radar-' + p.player_id, scores);
+      });
+    }, 50);
+  }
+
+  function applyFilter() {
+    var text = document.getElementById('filter-search').value.trim().toLowerCase();
+    filterText = text;
+    var filtered = allProfiles.filter(function(p) {
+      if (!text) return true;
+      return p.name && p.name.toLowerCase().indexOf(text) >= 0;
+    });
+    renderProfiles(filtered);
+  }
+
+  window.generateAllProfiles = async function() {
+    showToast('正在生成技术档案...', 'info');
+    for (var i = 0; i < allPlayers.length; i++) {
+      var p = allPlayers[i];
+      var profile = getRandomProfile(p);
+      await DB.upsertPlayerProfile(profile);
+    }
+    showToast('已为 ' + allPlayers.length + ' 名球员生成技术档案', 'success');
+    loadAll();
+  };
+
+  window.deleteProfile = async function(playerId) {
+    confirmAction('确定删除该技术档案？', async function() {
+      try {
+        var all = await DB.getPlayerProfiles();
+        var profiles = all.data || [];
+        var p = profiles.find(function(x){ return x.player_id === playerId; });
+        if (p && p.id) {
+          await DB.deletePlayerProfile(p.id);
+        } else if (p && p.profile_id) {
+          await DB.deletePlayerProfile(p.profile_id);
+        }
+        showToast('档案已删除', 'success');
+        loadAll();
+      } catch(e) { showToast('删除失败', 'error'); }
+    });
+  };
+
+  window.viewProfile = function(playerId) {
+    var p = allProfiles.find(function(x){ return x.player_id === playerId; });
+    var player = allPlayers.find(function(x){ return (x.id||x.player_id) === playerId; });
+    if (!p) return;
+    var color = getAvatarColor(p.name);
+    var scores = {
+      power: p.power_rating || 60,
+      speed: p.speed_rating || 60,
+      defense: p.defense_rating || 60,
+      control: p.control_rating || 60,
+      batting: p.batting_rating || 60
+    };
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:600px;">
+        <div class="modal-header">
+          <div class="modal-title">📊 ${escHtml(p.name)} - 技术档案</div>
+          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center;">
+            <div style="text-align:center;">
+              <svg id="modal-radar" style="width:200px;height:200px;margin:0 auto;"></svg>
+              <div style="font-size:48px;font-weight:900;color:var(--primary);font-family:var(--font-mono);margin-top:8px;">${p.overall_rating||'-'}</div>
+              <div style="font-size:12px;color:var(--text-muted);">综合评分</div>
+            </div>
+            <div>
+              <div style="display:grid;gap:10px;">
+                ${['力量','速度','防守','控球','击球'].map(function(label,idx){
+                  var keys=['power_rating','speed_rating','defense_rating','control_rating','batting_rating'];
+                  var vals=[p.power_rating||60,p.speed_rating||60,p.defense_rating||60,p.control_rating||60,p.batting_rating||60];
+                  var colors=['#f97316','#10b981','#3b82f6','#8b5cf6','#ec4899'];
+                  var v=vals[idx];
+                  return '<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>'+label+'</span><span style="font-weight:700;color:'+colors[idx]+'">'+v+'</span></div><div style="height:6px;background:var(--bg-secondary);border-radius:3px;overflow:hidden;"><div style="height:100%;width:'+v+'%;background:'+colors[idx]+';border-radius:3px;"></div></div></div>';
+                }).join('')}
+              </div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px;">
+            <div style="background:var(--bg-secondary);padding:14px;border-radius:10px;text-align:center;"><div style="font-size:24px;font-weight:800;color:var(--primary)">${p.swing_speed_avg||'-'}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">挥棒速度(km/h)</div></div>
+            <div style="background:var(--bg-secondary);padding:14px;border-radius:10px;text-align:center;"><div style="font-size:24px;font-weight:800;color:var(--accent)">${p.pitch_speed_avg||'-'}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">球速(km/h)</div></div>
+            <div style="background:var(--bg-secondary);padding:14px;border-radius:10px;text-align:center;"><div style="font-size:24px;font-weight:800;color:var(--success)">${p.last_analysis_at?formatDate(p.last_analysis_at):'-'}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">最后分析</div></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">关闭</button>
+          <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove();window.location.href='06_AI_运动分析_专属教练.html'">🤖 AI深度分析</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    setTimeout(function(){ drawRadar('modal-radar', scores, 200); }, 50);
+    overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+  };
+
+  async function loadAll() {
+    try {
+      var pres = await DB.getPlayers();
+      var pfres = await DB.getPlayerProfiles();
+      allPlayers = pres.data || [];
+      allProfiles = pfres.data || [];
+      // Match profiles to players
+      allProfiles.forEach(function(pf) {
+        var player = allPlayers.find(function(p){ return (p.id||p.player_id) === pf.player_id; });
+        if (player) {
+          pf.name = player.name;
+          pf.position = player.position;
+        }
+      });
+      renderProfiles(allProfiles);
+    } catch(e) { showToast('加载失败: '+e.message, 'error'); }
+  }
+
+  loadAll();
+});
+</script>
+</body>
+</html>
