@@ -365,7 +365,7 @@ var DB = {
 // ============================================================
 //  HELPERS
 // ============================================================
-function escHtml(s) { return (s||'').replace(/&','&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function escAttr(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function calcAge(bd) { if(!bd) return '-'; var t=new Date(),b=new Date(bd); var a=t.getFullYear()-b.getFullYear(); if(t.getMonth()-b.getMonth()<0||(t.getMonth()===b.getMonth()&&t.getDate()<b.getDate())) a--; return a; }
 function calcBirthYear(bd) { if(!bd) return null; return new Date(bd).getFullYear(); }
