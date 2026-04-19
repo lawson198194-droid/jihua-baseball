@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>球员自主注册 — BaseAI</title>
+<style>
+:root {
+  --bg-primary: #0a0e1a; --bg-secondary: #111827; --bg-card: #1a2235;
+  --bg-card-hover: #1f2a42; --bg-input: #141a2e; --primary: #f97316;
+  --primary-light: #fb923c; --accent: #3b82f6; --success: #10b981;
+  --success-bg: rgba(16,185,129,0.12); --danger: #ef4444;
+  --danger-bg: rgba(239,68,68,0.12); --info: #06b6d4; --purple: #8b5cf6;
+  --text-primary: #f1f5f9; --text-secondary: #94a3b8; --text-muted: #64748b;
+  --border: rgba(255,255,255,0.08); --border-focus: rgba(249,115,22,0.5);
+  --radius: 8px; --radius-lg: 14px; --shadow: 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.5);
+}
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Space Grotesk','Noto Sans SC',system-ui,sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; line-height: 1.5; }
+button { font-family: inherit; cursor: pointer; }
+input,select,textarea { font-family: inherit; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.container { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
+
+/* Header */
+.reg-header { text-align: center; padding: 32px 0 28px; }
+.reg-logo { font-size: 48px; margin-bottom: 16px; }
+.reg-title { font-size: 28px; font-weight: 900; margin-bottom: 8px; background: linear-gradient(135deg,#fff,#f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.reg-sub { font-size: 14px; color: var(--text-muted); }
+.reg-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 6px 16px; background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2); border-radius: 20px; font-size: 12px; color: var(--primary); font-weight: 600; }
+.reg-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+/* Progress Steps */
+.progress-steps { display: flex; justify-content: center; gap: 0; margin-bottom: 28px; }
+.step { display: flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: 13px; color: var(--text-muted); font-weight: 600; }
+.step.active { color: var(--primary); }
+.step.done { color: var(--success); }
+.step-num { width: 26px; height: 26px; border-radius: 50%; border: 2px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+.step.active .step-num { background: var(--primary); border-color: var(--primary); color: white; }
+.step.done .step-num { background: var(--success); border-color: var(--success); color: white; }
+.step-arrow { color: var(--border); font-size: 16px; }
+
+/* Card */
+.reg-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-lg); margin-bottom: 20px; }
+.card-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg,var(--bg-card),var(--bg-secondary)); }
+.card-icon { font-size: 24px; }
+.card-title { font-size: 16px; font-weight: 700; }
+.card-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.card-body { padding: 24px; }
+
+/* Form */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-grid .full { grid-column: span 2; }
+.form-group { display: flex; flex-direction: column; }
+.form-group label { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-group label .required { color: var(--danger); margin-left: 2px; }
+.form-group input,.form-group select,.form-group textarea { width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; color: var(--text-primary); font-size: 14px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(249,115,22,0.1); }
+.form-group input::placeholder,.form-group textarea::placeholder { color: var(--text-muted); }
+.form-group select option { background: var(--bg-secondary); }
+.form-group .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* Position chips */
+.pos-selector { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius); min-height: 44px; align-items: center; transition: border-color 0.2s; }
+.pos-selector:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(249,115,22,0.1); }
+.pos-chip { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); background: transparent; color: var(--text-muted); transition: all 0.15s; }
+.pos-chip:hover { border-color: var(--primary); color: var(--primary); }
+.pos-chip.selected { color: white; }
+.pos-hint { font-size: 11px; color: var(--text-muted); margin-left: 6px; white-space: nowrap; }
+.pos-selected-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.pos-selected-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+
+/* Photo */
+.photo-upload-area { display: flex; align-items: center; gap: 16px; }
+.photo-preview { width: 72px; height: 72px; border-radius: 14px; overflow: hidden; background: var(--bg-input); border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; transition: all 0.2s; position: relative; }
+.photo-preview:hover { border-color: var(--primary); }
+.photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.photo-preview input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.photo-preview .initial { font-size: 28px; font-weight: 800; color: var(--text-muted); }
+.photo-info { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+.photo-info p { margin-bottom: 4px; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: var(--radius); font-size: 14px; font-weight: 700; border: none; transition: all 0.15s; cursor: pointer; white-space: nowrap; }
+.btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 14px rgba(249,115,22,0.3); }
+.btn-primary:hover { background: var(--primary-light); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(249,115,22,0.4); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-secondary { background: var(--bg-card-hover); color: var(--text-secondary); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
+.btn-ghost { background: transparent; color: var(--text-muted); }
+.card-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
+/* Success */
+.success-card { text-align: center; padding: 48px 24px; }
+.success-icon { font-size: 72px; margin-bottom: 20px; animation: bounceIn 0.6s ease; }
+@keyframes bounceIn { 0%{transform:scale(0);} 60%{transform:scale(1.1);} 100%{transform:scale(1);} }
+.success-title { font-size: 24px; font-weight: 800; margin-bottom: 8px; color: var(--success); }
+.success-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.6; }
+.invite-url-box { background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 20px; text-align: left; }
+.invite-url-box .url { font-size: 12px; color: var(--accent); word-break: break-all; line-height: 1.6; }
+.invite-url-box .url-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+.qr-placeholder { display: flex; align-items: center; justify-content: center; padding: 16px; background: white; border-radius: var(--radius); margin-bottom: 16px; color: #1a1a1a; font-size: 12px; }
+
+/* Share options */
+.share-options { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+.share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1.5px solid; cursor: pointer; background: transparent; transition: all 0.15s; }
+.share-btn.wechat { color: #07c160; border-color: #07c160; }
+.share-btn.wechat:hover { background: rgba(7,193,96,0.1); }
+.share-btn.copy { color: var(--accent); border-color: var(--accent); }
+.share-btn.copy:hover { background: rgba(59,130,246,0.1); }
+
+/* Error */
+.error-msg { color: var(--danger); font-size: 12px; margin-top: 4px; }
+.field-error { border-color: var(--danger) !important; }
+
+/* Note */
+.info-note { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); border-radius: var(--radius); padding: 12px 16px; font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; display: flex; gap: 10px; align-items: flex-start; }
+.info-note .icon { font-size: 16px; flex-shrink: 0; }
+
+/* Footer */
+.reg-footer { text-align: center; padding: 16px; font-size: 12px; color: var(--text-muted); }
+
+/* Toast */
+#toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast { padding: 12px 20px; border-radius: var(--radius); font-size: 13px; font-weight: 600; box-shadow: var(--shadow); animation: slideIn 0.3s ease; }
+.toast.success { background: var(--success); color: white; }
+.toast.error { background: var(--danger); color: white; }
+.toast.info { background: var(--accent); color: white; }
+@keyframes slideIn { from{transform:translateX(100%);opacity:0;} to{transform:translateX(0);opacity:1;} }
+
+@media(max-width:600px){ .form-grid{grid-template-columns:1fr;} .form-grid .full{grid-column:span 1;} .container{padding:12px 8px;} }
+</style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="container">
+  <!-- Header -->
+  <div class="reg-header">
+    <div class="reg-logo">⚾</div>
+    <div class="reg-title">球员自主注册</div>
+    <div class="reg-sub">BaseAI 棒球智能分析系统 · 香港棒垒球总会</div>
+    <div class="reg-badge"><div class="reg-badge-dot"></div> 填写信息即可完成注册</div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-steps" id="progress-steps">
+    <div class="step active" id="step1-indicator">
+      <div class="step-num">1</div><span>填写信息</span>
+    </div>
+    <div class="step-arrow">→</div>
+    <div class="step" id="step2-indicator">
+      <div class="step-num">2</div><span>提交确认</span>
+    </div>
+  </div>
+
+  <!-- Form Card -->
+  <div class="reg-card" id="reg-card">
+    <div class="card-header">
+      <div class="card-icon">📋</div>
+      <div>
+        <div class="card-title" id="card-title">填写球员信息</div>
+        <div class="card-sub" id="card-sub">请填写球员基本信息，带 * 为必填项</div>
+      </div>
+    </div>
+    <div class="card-body" id="card-body">
+      <div class="form-grid">
+        <!-- Photo -->
+        <div class="full">
+          <div class="form-group">
+            <label>球员照片</label>
+            <div class="photo-upload-area">
+              <div class="photo-preview" id="photo-preview">
+                <input type="file" accept="image/*" id="photo-input" onchange="onPhotoSelected(this.files[0])">
+                <div class="initial" id="photo-initial">?</div>
+                <img id="photo-img" src="" style="display:none">
+              </div>
+              <div class="photo-info">
+                <p>📷 点击上传球员照片</p>
+                <p>支持 JPG/PNG，建议正方形图片</p>
+                <p>照片将显示在球员卡片上</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Name & Gender -->
+        <div class="form-group">
+          <label>姓名 <span class="required">*</span></label>
+          <input type="text" id="f-name" placeholder="输入球员姓名" maxlength="30">
+        </div>
+        <div class="form-group">
+          <label>性别 <span class="required">*</span></label>
+          <select id="f-gender">
+            <option value="">请选择</option>
+            <option value="M">男</option>
+            <option value="F">女</option>
+          </select>
+        </div>
+
+        <!-- Birth & Club -->
+        <div class="form-group">
+          <label>出生日期 <span class="required">*</span></label>
+          <input type="date" id="f-birth">
+        </div>
+        <div class="form-group">
+          <label>所属俱乐部 / 球队</label>
+          <input type="text" id="f-club" placeholder="如：香港棒垒球总会 U12" maxlength="50">
+        </div>
+
+        <!-- HKBA ID & School -->
+        <div class="form-group">
+          <label>🏅 棒总会员编号</label>
+          <input type="text" id="f-hkab" placeholder="如：HKBA-2024-XXXX" maxlength="30">
+        </div>
+        <div class="form-group">
+          <label>就读学校</label>
+          <input type="text" id="f-school" placeholder="就读学校名称" maxlength="50">
+        </div>
+
+        <!-- Positions -->
+        <div class="full">
+          <div class="form-group">
+            <label>擅长位置（最多选 3 个）</label>
+            <div class="pos-selector" id="pos-selector"></div>
+            <div class="pos-selected-tags" id="pos-selected-tags"></div>
+          </div>
+        </div>
+
+        <!-- Height & Weight -->
+        <div class="form-group">
+          <label>身高 (cm)</label>
+          <input type="number" id="f-height" placeholder="如：145" min="80" max="220">
+        </div>
+        <div class="form-group">
+          <label>体重 (kg)</label>
+          <input type="number" id="f-weight" placeholder="如：40" min="20" max="150">
+        </div>
+
+        <!-- Batting & Throwing -->
+        <div class="form-group">
+          <label>打击</label>
+          <select id="f-bat">
+            <option value="">请选择</option>
+            <option value="R">右手</option>
+            <option value="L">左手</option>
+            <option value="S">左右开</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>投球</label>
+          <select id="f-throw">
+            <option value="">请选择</option>
+            <option value="R">右手</option>
+            <option value="L">左手</option>
+          </select>
+        </div>
+
+        <!-- Contact -->
+        <div class="full" style="grid-column:span 2;margin-top:4px;">
+          <div class="info-note">
+            <div class="icon">👨‍👩‍👧</div>
+            <div>请填写家长或监护人联系方式，方便教练团联系通知训练和比赛信息</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>家长/监护人姓名 <span class="required">*</span></label>
+          <input type="text" id="f-contact-name" placeholder="如：罗先生" maxlength="20">
+        </div>
+        <div class="form-group">
+          <label>联系电话 <span class="required">*</span></label>
+          <input type="tel" id="f-contact-phone" placeholder="+852 6xxx xxxx" maxlength="20">
+        </div>
+        <div class="form-group">
+          <label>与球员关系</label>
+          <select id="f-contact-rel">
+            <option value="">请选择</option>
+            <option value="父亲">父亲</option>
+            <option value="母亲">母亲</option>
+            <option value="监护人">监护人</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>备用联系方式</label>
+          <input type="tel" id="f-contact-phone2" placeholder="如无可不填" maxlength="20">
+        </div>
+
+        <!-- Notes -->
+        <div class="full">
+          <div class="form-group">
+            <label>补充说明</label>
+            <textarea id="f-notes" placeholder="如：有过敏史、特殊体质、棒球经验年限、期望加入的球队类型等..." maxlength="200"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success State -->
+    <div class="card-body" id="success-body" style="display:none;">
+      <div class="success-card">
+        <div class="success-icon">✅</div>
+        <div class="success-title">提交成功！</div>
+        <div class="success-sub">球员信息已提交，请将以下邀请链接保存好。<br>教练审核通过后，球员将自动加入系统。</div>
+
+        <div class="invite-url-box">
+          <div class="url-label">📋 球员自主完善信息链接</div>
+          <div class="url" id="invite-url-display">-</div>
+        </div>
+
+        <div class="share-options">
+          <button class="share-btn copy" onclick="copyInviteUrl()">📋 复制链接</button>
+          <button class="share-btn wechat" onclick="shareToWechat()">💬 微信发送</button>
+        </div>
+
+        <div style="margin-top:24px;">
+          <button class="btn btn-secondary" onclick="startNewRegistration()">+ 再填一份</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-footer" id="card-footer">
+      <div style="font-size:12px;color:var(--text-muted);">* 为必填项 · 信息将加密存储</div>
+      <button class="btn btn-primary" id="btn-submit" onclick="submitRegistration()">
+        提交注册 →
+      </button>
+    </div>
+  </div>
+
+  <!-- Invite URL Generator -->
+  <div class="reg-card">
+    <div class="card-header">
+      <div class="card-icon">🔗</div>
+      <div>
+        <div class="card-title">生成邀请注册链接</div>
+        <div class="card-sub">教练可生成专属链接发给球员家长填写</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="full">
+          <div class="form-group">
+            <label>球员姓名（选填，预填到表单）</label>
+            <input type="text" id="f-prefill-name" placeholder="留空则让家长自行填写姓名" maxlength="30">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div style="font-size:12px;color:var(--text-muted);">生成的链接可分享给球员家长</div>
+      <button class="btn btn-secondary" onclick="generateInviteLink()">🔗 生成邀请链接</button>
+    </div>
+    <div id="invite-link-result" style="display:none;padding:0 24px 16px;">
+      <div class="invite-url-box">
+        <div class="url-label">✅ 邀请链接已生成：</div>
+        <div class="url" id="generated-url">-</div>
+      </div>
+      <button class="btn btn-primary" onclick="copyGeneratedUrl()" style="width:100%;justify-content:center;">📋 复制邀请链接</button>
+    </div>
+  </div>
+
+  <div class="reg-footer">
+    BaseAI 棒球智能分析系统 · Powered by AI · © 2026
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  CONFIG
+// ============================================================
+var ALL_POSITIONS=['投手','捕手','一垒手','二垒手','三垒手','游击手','左外野','中外野','右外野','指定打击'];
+var POS_COLORS={'投手':'#8b5cf6','捕手':'#f97316','一垒手':'#f59e0b','二垒手':'#06b6d4','三垒手':'#ef4444','游击手':'#ec4899','左外野':'#10b981','中外野':'#22c55e','右外野':'#14b8a6','指定打击':'#f97316'};
+var _selectedPositions=[];
+var _photoBase64=null;
+var _submitData=null;
+
+// ============================================================
+//  TOAST
+// ============================================================
+function showToast(msg,type){
+  type=type||'info';
+  var tc=document.getElementById('toast-container');
+  var t=document.createElement('div'); t.className='toast '+type; t.textContent=msg;
+  tc.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ t.remove(); },300); },3500);
+}
+
+// ============================================================
+//  HELPERS
+// ============================================================
+function escAttr(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// ============================================================
+//  POSITION SELECTOR
+// ============================================================
+function buildPosSelector(){
+  var wrap=document.getElementById('pos-selector');
+  var html='';
+  ALL_POSITIONS.forEach(function(pos){
+    var c=POS_COLORS[pos];
+    html+='<button type="button" class="pos-chip" data-pos="'+escAttr(pos)+'" style="border-color:'+c+'" onclick="togglePos(this,\''+escAttr(pos)+'\')">'+pos+'</button>';
+  });
+  html+='<span class="pos-hint">最多选3个</span>';
+  wrap.innerHTML=html;
+}
+
+window.togglePos=function(btn,pos){
+  var c=POS_COLORS[pos];
+  var idx=_selectedPositions.indexOf(pos);
+  if(idx>=0){
+    _selectedPositions.splice(idx,1);
+    btn.classList.remove('selected');
+    btn.style.background='transparent';
+    btn.style.color=pos==='投手'?'#8b5cf6':pos==='捕手'?'#f97316':'var(--text-muted)';
+  } else {
+    if(_selectedPositions.length>=3){ showToast('最多选择 3 个位置','info'); return; }
+    _selectedPositions.push(pos);
+    btn.classList.add('selected');
+    btn.style.background=c;
+    btn.style.color='white';
+  }
+  updatePosTags();
+};
+
+function updatePosTags(){
+  var tags=document.getElementById('pos-selected-tags');
+  tags.innerHTML=_selectedPositions.map(function(pos){
+    var c=POS_COLORS[pos];
+    return '<span class="pos-selected-tag" style="background:'+c+'22;color:'+c+';border:1px solid '+c+'44">'+pos+'</span>';
+  }).join('');
+}
+
+// ============================================================
+//  PHOTO
+// ============================================================
+window.onPhotoSelected=function(file){
+  if(!file) return;
+  if(file.size>5*1024*1024){ showToast('图片大小不能超过 5MB','error'); return; }
+  var reader=new FileReader();
+  reader.onload=function(e){
+    _photoBase64=e.target.result;
+    var img=document.getElementById('photo-img');
+    var init=document.getElementById('photo-initial');
+    img.src=_photoBase64; img.style.display='block'; init.style.display='none';
+  };
+  reader.readAsDataURL(file);
+};
+
+function updatePhotoInitial(name){
+  if(!_photoBase64){
+    document.getElementById('photo-initial').textContent=name?name.charAt(0):'?';
+  }
+}
+
+// ============================================================
+//  VALIDATION
+// ============================================================
+function validate(){
+  var errors=[];
+  var name=document.getElementById('f-name').value.trim();
+  var gender=document.getElementById('f-gender').value;
+  var birth=document.getElementById('f-birth').value;
+  var contactName=document.getElementById('f-contact-name').value.trim();
+  var contactPhone=document.getElementById('f-contact-phone').value.trim();
+  if(!name) errors.push({id:'f-name',msg:'请输入球员姓名'});
+  if(!gender) errors.push({id:'f-gender',msg:'请选择性别'});
+  if(!birth) errors.push({id:'f-birth',msg:'请选择出生日期'});
+  if(!contactName) errors.push({id:'f-contact-name',msg:'请输入联系人姓名'});
+  if(!contactPhone) errors.push({id:'f-contact-phone',msg:'请输入联系电话'});
+  return errors;
+}
+
+function showErrors(errors){
+  document.querySelectorAll('.field-error').forEach(function(el){ el.classList.remove('field-error'); });
+  document.querySelectorAll('.error-msg').forEach(function(el){ el.remove(); });
+  errors.forEach(function(e){
+    var el=document.getElementById(e.id);
+    if(el){ el.classList.add('field-error'); }
+    var err=document.createElement('div'); err.className='error-msg'; err.textContent=e.msg;
+    el.parentNode.appendChild(err);
+  });
+}
+
+// ============================================================
+//  SUBMIT
+// ============================================================
+function submitRegistration(){
+  var errors=validate();
+  if(errors.length>0){ showErrors(errors); showToast('请填写必填项','error'); return; }
+
+  var name=document.getElementById('f-name').value.trim();
+  var gender=document.getElementById('f-gender').value;
+  var birth=document.getElementById('f-birth').value;
+  var data={
+    name:name, gender:gender, birth_date:birth,
+    positions:_selectedPositions.slice(),
+    club:document.getElementById('f-club').value.trim(),
+    hkab_id:document.getElementById('f-hkab').value.trim(),
+    school:document.getElementById('f-school').value.trim(),
+    height_cm:parseInt(document.getElementById('f-height').value)||null,
+    weight_kg:parseInt(document.getElementById('f-weight').value)||null,
+    batting_hand:document.getElementById('f-bat').value,
+    throwing_hand:document.getElementById('f-throw').value,
+    contact_name:document.getElementById('f-contact-name').value.trim(),
+    contact_phone:document.getElementById('f-contact-phone').value.trim(),
+    contact_relation:document.getElementById('f-contact-rel').value,
+    contact_phone2:document.getElementById('f-contact-phone2').value.trim(),
+    notes:document.getElementById('f-notes').value.trim(),
+    photo:_photoBase64,
+    submitted_at:new Date().toISOString(),
+    status:'pending'
+  };
+
+  // Save to localStorage pending list
+  var pending=JSON.parse(localStorage.getItem('baseai_pending_players')||'[]');
+  data._local_id='P'+(pending.length+1).toString().padStart(3,'0');
+  pending.push(data);
+  localStorage.setItem('baseai_pending_players',JSON.stringify(pending));
+
+  _submitData=data;
+  showSuccess();
+}
+
+function showSuccess(){
+  document.getElementById('card-body').style.display='none';
+  document.getElementById('card-footer').style.display='none';
+  document.getElementById('success-body').style.display='block';
+  document.getElementById('card-title').textContent='✅ 提交成功';
+  document.getElementById('card-sub').textContent='已收到「'+_submitData.name+'」的注册申请';
+  document.getElementById('step1-indicator').className='step done';
+  document.getElementById('step1-indicator').querySelector('.step-num').textContent='✓';
+  document.getElementById('step2-indicator').className='step active';
+  document.getElementById('progress-steps').style.display='none';
+
+  // Generate invite URL for this player
+  var base=window.location.origin+window.location.pathname.replace('register.html','register.html');
+  var encoded=btoa(unescape(encodeURIComponent(JSON.stringify({name:_submitData.name,birth_date:_submitData.birth_date,gender:_submitData.gender,club:_submitData.club}))));
+  var url=base+'?prefill='+encoded+'&id='+_submitData._local_id;
+  document.getElementById('invite-url-display').textContent=url;
+  window._lastInviteUrl=url;
+}
+
+function copyInviteUrl(){
+  navigator.clipboard.writeText(window._lastInviteUrl||'').then(function(){
+    showToast('链接已复制！可发给球员家长','success');
+  }).catch(function(){
+    showToast('请手动复制链接','info');
+  });
+}
+
+function shareToWechat(){
+  showToast('请长按上方链接复制，在微信中粘贴发送','info');
+}
+
+function startNewRegistration(){
+  location.reload();
+}
+
+// ============================================================
+//  INVITE LINK GENERATOR
+// ============================================================
+function generateInviteLink(){
+  var name=document.getElementById('f-prefill-name').value.trim();
+  var base=window.location.origin+window.location.pathname.replace('register.html','register.html');
+  var data={};
+  if(name) data={name:name};
+  var encoded=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  var url=base+'?prefill='+encoded;
+  document.getElementById('generated-url').textContent=url;
+  document.getElementById('invite-link-result').style.display='block';
+  window._generatedUrl=url;
+  showToast('邀请链接已生成','success');
+}
+
+function copyGeneratedUrl(){
+  navigator.clipboard.writeText(window._generatedUrl||'').then(function(){
+    showToast('邀请链接已复制！发给球员家长','success');
+  }).catch(function(){
+    showToast('请手动复制链接','info');
+  });
+}
+
+// ============================================================
+//  URL PRE-FILL
+// ============================================================
+function checkUrlPrefill(){
+  var params=new URLSearchParams(window.location.search);
+  var prefill=params.get('prefill');
+  if(prefill){
+    try{
+      var data=JSON.parse(decodeURIComponent(escape(atob(prefill))));
+      if(data.name){
+        document.getElementById('f-name').value=data.name||'';
+        updatePhotoInitial(data.name);
+      }
+      if(data.birth_date) document.getElementById('f-birth').value=data.birth_date;
+      if(data.gender) document.getElementById('f-gender').value=data.gender;
+      if(data.club) document.getElementById('f-club').value=data.club;
+      if(data.hkab_id) document.getElementById('f-hkab').value=data.hkab_id;
+      if(data.school) document.getElementById('f-school').value=data.school;
+      if(data.positions&&Array.isArray(data.positions)){
+        _selectedPositions=data.positions.slice(0,3);
+        _selectedPositions.forEach(function(pos){
+          var btn=document.querySelector('[data-pos="'+escAttr(pos)+'"]');
+          if(btn) togglePos(btn,pos);
+        });
+      }
+      document.getElementById('card-sub').textContent='请完善信息并提交 · 已预填部分数据';
+      showToast('已预填部分信息，请确认后提交','info');
+    } catch(e){ console.warn('Prefill failed:',e); }
+  }
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+(function(){
+  buildPosSelector();
+  checkUrlPrefill();
+  document.getElementById('f-name').addEventListener('input',function(){ updatePhotoInitial(this.value); });
+})();
+</script>
+</body>
+</html>
