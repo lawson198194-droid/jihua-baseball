@@ -11,6 +11,7 @@
     { id: 'm3', name: '赛事记分', icon: '📊', href: 'games.html' },
     { id: 'm4', name: '技术档案', icon: '📈', href: 'profiles.html' },
     { id: 'm5', name: '权限后台', icon: '⚙️', href: 'admin.html' },
+    { id: 'm6', name: 'AI 专属教练', icon: '🤖', href: 'ai-coach.html', isAI: true },
   ];
 
   function getCurrentModule() {
@@ -18,7 +19,6 @@
   }
 
   function buildNav(current) {
-    const isAI = current.includes('06_');
     let html = `<aside class="sidebar" id="app-sidebar">
       <div class="sidebar-logo">
         <div class="logo-mark">⚾</div>
@@ -29,17 +29,13 @@
         <div class="sidebar-section-label">📋 核心模块</div>`;
     MODULES.forEach(m => {
       const active = current === m.href ? ' active' : '';
-      html += `<a href="${m.href}" class="nav-item${active}">
-        <div class="nav-icon">${m.icon}</div><span>${m.name}</span>
+      const badge = m.isAI ? '<span class="nav-badge">AI</span>' : '';
+      const extraClass = m.isAI ? ' ai-item' : '';
+      html += `<a href="${m.href}" class="nav-item${active}${extraClass}">
+        <div class="nav-icon">${m.icon}</div><span>${m.name}</span>${badge}
       </a>`;
     });
-    html += `</div><div class="sidebar-section">
-      <div class="sidebar-section-label">🧠 智能模块</div>
-      <a href="06_AI_运动分析_专属教练.html" class="nav-item ai-item${isAI ? ' active' : ''}">
-        <div class="nav-icon">🤖</div><span>AI 专属教练</span>
-        <span class="nav-badge">AI</span>
-      </a>
-    </div>
+    html += `</div>
     <div class="sidebar-section" style="margin-top:auto;">
       <a href="index.html" class="nav-item" style="border-top:1px solid var(--border);border-left:none;border-radius:0;">
         <div class="nav-icon">🏠</div><span>返回首页</span>
