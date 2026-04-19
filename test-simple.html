@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BaseAI 简单测试</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --bg-card: #111827;
+    --border: #1f2937;
+    --primary: #3b82f6;
+    --text: #f9fafb;
+    --text-muted: #9ca3af;
+  }
+  body { background: var(--bg); color: var(--text); font-family: system-ui; margin: 0; padding: 0; }
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: var(--bg-card); border-right: 1px solid var(--border); padding: 20px; }
+  .main { flex: 1; padding: 28px; }
+  .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .player-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; padding: 20px; }
+  .player-card h3 { margin: 0 0 8px; font-size: 16px; }
+  .player-card p { margin: 0; font-size: 13px; color: var(--text-muted); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; margin-right: 4px; }
+  .badge-primary { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .badge-success { background: rgba(16,185,129,0.15); color: #34d399; }
+  .filter-bar { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 20px; display: flex; gap: 12px; }
+  .filter-bar input { flex: 1; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 8px; }
+  .filter-bar select { padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 8px; }
+  .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; border: none; }
+  .btn-primary { background: var(--primary); color: white; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 28px; height: 64px; background: var(--bg-card); border-bottom: 1px solid var(--border); }
+  .topbar-stats { display: flex; gap: 24px; }
+  .topbar-stat { text-align: center; }
+  .topbar-stat .num { font-size: 20px; font-weight: 800; color: var(--text); }
+  .topbar-stat .label { font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <h2>⚾ BaseAI</h2>
+    <a href="01_球员资料库.html">👥 球员资料库</a>
+    <a href="02_球队梯队管理.html">🏆 球队梯队</a>
+  </aside>
+  <main class="main">
+    <div class="topbar" id="topbar">
+      <div>⚾ 球员资料库</div>
+      <div class="topbar-stats" id="topbar-stats"></div>
+    </div>
+    <div class="filter-bar">
+      <input type="text" id="search-input" placeholder="🔍 搜索..." oninput="applyFilters()">
+      <select id="filter-gender" onchange="applyFilters()">
+        <option value="">全部</option>
+        <option value="M">男</option>
+        <option value="F">女</option>
+      </select>
+    </div>
+    <div id="player-list"></div>
+  </main>
+</div>
+<script>
+var allPlayers = [
+  {id:'p1',name:'罗莀安',gender:'F',age:11,position:'投手',status:'active',height:148,weight:42,school:'SISHK'},
+  {id:'p2',name:'陈伟明',gender:'M',age:12,position:'捕手',status:'active',height:155,weight:50,school:'香港小学'},
+  {id:'p3',name:'李晓东',gender:'M',age:11,position:'内野',status:'active',height:150,weight:45,school:'拔萃男小学'},
+  {id:'p4',name:'王思琪',gender:'F',age:12,position:'外野',status:'active',height:152,weight:44,school:'协恩附小'},
+  {id:'p5',name:'张浩然',gender:'M',age:11,position:'游击手',status:'active',height:148,weight:43,school:'圣保禄'},
+  {id:'p6',name:'刘美琪',gender:'F',age:12,position:'投手',status:'active',height:156,weight:48,school:'英华小学'},
+  {id:'p7',name:'赵子强',gender:'M',age:11,position:'一垒手',status:'active',height:153,weight:47,school:'喇沙小学'},
+  {id:'p8',name:'孙静怡',gender:'F',age:11,position:'三垒手',status:'active',height:149,weight:41,school:'玛利曼'}
+];
+var filtered = allPlayers;
+
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderPlayers() {
+  var pc = {
+    total: allPlayers.length,
+    active: allPlayers.filter(function(p){ return p.status==='active'; }).length,
+    male: allPlayers.filter(function(p){ return p.gender==='M'; }).length,
+    female: allPlayers.filter(function(p){ return p.gender==='F'; }).length
+  };
+  document.getElementById('topbar-stats').innerHTML =
+    '<div class="topbar-stat"><div class="num">' + pc.total + '</div><div class="label">注册球员</div></div>' +
+    '<div class="topbar-stat"><div class="num">' + pc.active + '</div><div class="label">活跃球员</div></div>' +
+    '<div class="topbar-stat"><div class="num">' + pc.male + '</div><div class="label">男生</div></div>' +
+    '<div class="topbar-stat"><div class="num">' + pc.female + '</div><div class="label">女生</div></div>';
+
+  var html = '<div class="player-grid">';
+  filtered.forEach(function(p) {
+    var bg = ['#3b82f6','#8b5cf6','#ec4899','#10b981','#f97316'][p.id.charCodeAt(p.id.length-1)%5];
+    html += '<div class="player-card" style="cursor:pointer">' +
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">' +
+        '<div style="width:48px;height:48px;background:' + bg + ';border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:white;flex-shrink:0">' + p.name.charAt(0) + '</div>' +
+        '<div><h3>' + escHtml(p.name) + '</h3><p>' + (p.school||'') + '</p></div>' +
+      '</div>' +
+      '<div style="margin-bottom:10px">' +
+        '<span class="badge badge-primary">' + p.position + '</span>' +
+        '<span class="badge badge-success">' + p.status + '</span>' +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--text-muted)">' + p.age + '岁 · ' + p.height + 'cm · ' + p.weight + 'kg</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  document.getElementById('player-list').innerHTML = html;
+}
+
+function applyFilters() {
+  var search = document.getElementById('search-input').value.toLowerCase();
+  var gender = document.getElementById('filter-gender').value;
+  filtered = allPlayers.filter(function(p) {
+    if (gender && p.gender !== gender) return false;
+    if (search && p.name.toLowerCase().indexOf(search) < 0) return false;
+    return true;
+  });
+  renderPlayers();
+}
+
+// Expose for inline handlers
+window.applyFilters = applyFilters;
+
+// Init
+document.addEventListener('DOMContentLoaded', function() {
+  renderPlayers();
+  console.log('Simple test: cards rendered', filtered.length);
+});
+</script>
+</body>
+</html>
