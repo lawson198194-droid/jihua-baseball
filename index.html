@@ -189,7 +189,7 @@
   </div>
 
   <div class="modules-grid">
-    <a href="01_球员资料库.html" class="module-card fade-in" style="animation-delay:0.1s">
+    <a href="players.html" class="module-card fade-in" style="animation-delay:0.1s">
       <span class="module-num">Module 01</span>
       <span class="module-icon">👥</span>
       <div class="module-name">球员资料库</div>
@@ -197,7 +197,7 @@
       <div class="module-arrow">→</div>
     </a>
 
-    <a href="02_球队梯队管理.html" class="module-card fade-in" style="animation-delay:0.15s">
+    <a href="teams.html" class="module-card fade-in" style="animation-delay:0.15s">
       <span class="module-num">Module 02</span>
       <span class="module-icon">🏆</span>
       <div class="module-name">球队 & 梯队</div>
@@ -205,7 +205,7 @@
       <div class="module-arrow">→</div>
     </a>
 
-    <a href="03_赛事管理与记分.html" class="module-card fade-in" style="animation-delay:0.2s">
+    <a href="games.html" class="module-card fade-in" style="animation-delay:0.2s">
       <span class="module-num">Module 03</span>
       <span class="module-icon">📊</span>
       <div class="module-name">赛事与记分</div>
@@ -213,7 +213,7 @@
       <div class="module-arrow">→</div>
     </a>
 
-    <a href="04_球员技术档案.html" class="module-card fade-in" style="animation-delay:0.25s">
+    <a href="profiles.html" class="module-card fade-in" style="animation-delay:0.25s">
       <span class="module-num">Module 04</span>
       <span class="module-icon">📈</span>
       <div class="module-name">技术档案</div>
@@ -221,7 +221,7 @@
       <div class="module-arrow">→</div>
     </a>
 
-    <a href="05_权限与后台管理.html" class="module-card fade-in" style="animation-delay:0.3s">
+    <a href="admin.html" class="module-card fade-in" style="animation-delay:0.3s">
       <span class="module-num">Module 05</span>
       <span class="module-icon">⚙️</span>
       <div class="module-name">权限与后台</div>
@@ -252,23 +252,14 @@
   </div>
 </div>
 
-<script src="db.js"></script>
 <script>
   setTimeout(() => {
-    const mode = window.DB ? DB.getMode() : 'error';
     const banner = document.getElementById('db-banner');
     const status = document.getElementById('db-status');
-    if (mode === 'Supabase') {
-      banner.style.background = 'rgba(16,185,129,0.08)';
-      banner.style.borderColor = 'rgba(16,185,129,0.2)';
-      banner.style.color = '#10b981';
-      status.textContent = '🟢 Supabase 云端数据库已连接';
-    } else {
-      banner.style.background = 'rgba(245,158,11,0.08)';
-      banner.style.borderColor = 'rgba(245,158,11,0.2)';
-      banner.style.color = '#f59e0b';
-      status.textContent = '🟡 本地 localStorage 演示模式';
-    }
+    banner.style.background = 'rgba(16,185,129,0.08)';
+    banner.style.borderColor = 'rgba(16,185,129,0.2)';
+    banner.style.color = '#10b981';
+    status.textContent = '🟢 内置演示数据已加载 · 完全离线可用';
   }, 500);
 </script>
 
