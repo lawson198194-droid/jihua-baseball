@@ -11,7 +11,7 @@
 
   .hero-section {
     background: linear-gradient(135deg, #0a1628 0%, #1a2d4a 50%, #0f1f3a 100%);
-    padding: 48px 28px;
+    padding: 32px 28px;
     text-align: center;
     border-bottom: 1px solid rgba(249,115,22,0.15);
     position: relative;
@@ -201,12 +201,18 @@
 
 <script src="assets/nav.js"></script>
 
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  initNav({ title: 'AI 专属教练', subtitle: 'Module 06 · AI Coach' });
+
+  // Hero + Tabs 进入 page-content
+  var pc = document.getElementById('page-content');
+  pc.innerHTML = `
 <div class="hero-section">
   <div class="hero-title">🤖 AI 专属教练</div>
   <div class="hero-sub">BaseAI 智能棒球分析系统 · Powered by AI</div>
   <div class="ai-badge">AI 实时分析 · 智能训练推荐 · 成长追踪</div>
 </div>
-
 <div class="tabs-section">
   <button class="tab-btn active" onclick="switchTab('swing')">⚡ 挥棒分析</button>
   <button class="tab-btn" onclick="switchTab('pitch')">🎯 投手分析</button>
@@ -214,13 +220,8 @@
   <button class="tab-btn" onclick="switchTab('coach')">💬 AI 教练</button>
   <button class="tab-btn" onclick="switchTab('history')">📊 历史记录</button>
 </div>
+<div id="tab-content"></div>`;
 
-<div class="page-content" id="page-content">
-  <!-- Dynamic content loaded here -->
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', async function() {
   var allPlayers = [];
   var currentTab = 'swing';
   var analysisHistory = JSON.parse(localStorage.getItem('baseai_ai_history') || '[]');
@@ -255,7 +256,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   function renderTab() {
-    var pc = document.getElementById('page-content');
+    var pc = document.getElementById('tab-content');
+    if (!pc) return;
     if (currentTab === 'swing') {
       renderSwingTab(pc);
     } else if (currentTab === 'pitch') {
