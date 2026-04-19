@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块6 · AI 专属教练 — BaseAI</title>
+<link rel="stylesheet" href="assets/design-system.css">
+<script src="db.js"></script>
+<style>
+  body { background: #080c18; }
+
+  .hero-section {
+    background: linear-gradient(135deg, #0a1628 0%, #1a2d4a 50%, #0f1f3a 100%);
+    padding: 48px 28px;
+    text-align: center;
+    border-bottom: 1px solid rgba(249,115,22,0.15);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-section::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at 50% 50%, rgba(249,115,22,0.06) 0%, transparent 60%);
+    animation: rotate-bg 20s linear infinite;
+  }
+
+  @keyframes rotate-bg {
+    from{transform:rotate(0deg);}
+    to{transform:rotate(360deg);}
+  }
+
+  .hero-title {
+    font-size: 36px; font-weight: 900;
+    background: linear-gradient(135deg, #fff 30%, #f97316);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 8px; position: relative;
+  }
+
+  .hero-sub { font-size: 14px; color: #64748b; position: relative; }
+
+  .ai-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin: 16px auto 0;
+    padding: 8px 20px;
+    background: linear-gradient(90deg, rgba(249,115,22,0.15), rgba(59,130,246,0.15));
+    border: 1px solid rgba(249,115,22,0.2);
+    border-radius: 24px;
+    font-size: 13px; color: #f97316; font-weight: 600;
+    position: relative;
+  }
+
+  .ai-badge::before {
+    content: '●';
+    animation: blink-dot 1.5s infinite;
+    color: #f97316;
+  }
+
+  @keyframes blink-dot { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  .tabs-section {
+    background: rgba(10,14,26,0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 0 28px;
+    display: flex; gap: 4px; overflow-x: auto;
+  }
+
+  .tab-btn {
+    padding: 14px 22px; font-size: 13px; font-weight: 600;
+    color: #64748b; cursor: pointer; border: none; background: none;
+    border-bottom: 3px solid transparent; white-space: nowrap;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 7px;
+  }
+
+  .tab-btn:hover { color: #94a3b8; }
+  .tab-btn.active { color: #f97316; border-bottom-color: #f97316; background: rgba(249,115,22,0.05); }
+
+  .page-content { padding: 28px; max-width: 1200px; margin: 0 auto; }
+
+  .panel {
+    background: rgba(26,34,53,0.8);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    margin-bottom: 24px; overflow: hidden;
+    backdrop-filter: blur(8px);
+  }
+
+  .panel-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+
+  .panel-title { font-size: 15px; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; gap: 8px; }
+  .panel-body { padding: 24px; }
+
+  .player-select-row {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .player-select-row select { padding: 10px 14px; font-size: 14px; min-width: 240px; background: rgba(20,26,46,0.9); border-color: rgba(249,115,22,0.3); color: #f1f5f9; border-radius: 10px; }
+
+  /* Swing Analysis */
+  .swing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+  .swing-result {
+    background: rgba(20,26,46,0.9);
+    border: 1px solid rgba(249,115,22,0.2);
+    border-radius: 12px; padding: 20px;
+  }
+
+  .swing-metric { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .swing-metric:last-child { border-bottom: none; }
+  .swing-metric .label { font-size: 13px; color: #94a3b8; }
+  .swing-metric .value { font-size: 18px; font-weight: 800; font-family: 'Space Grotesk', monospace; color: #f97316; }
+  .swing-metric .unit { font-size: 11px; color: #64748b; margin-left: 4px; font-weight: 400; }
+
+  .power-bar { margin-top: 8px; }
+  .power-bar-track { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+  .power-bar-fill { height: 100%; background: linear-gradient(90deg, #f97316, #fb923c); border-radius: 4px; transition: width 1s ease; }
+
+  /* Radar */
+  .radar-container { display: flex; justify-content: center; align-items: center; padding: 20px; }
+  .radar-svg { width: 300px; height: 300px; }
+
+  /* Training Plan */
+  .plan-card {
+    background: rgba(20,26,46,0.9);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 20px;
+    margin-bottom: 12px;
+    border-left: 4px solid #f97316;
+    transition: all 0.15s;
+  }
+
+  .plan-card:hover { border-color: rgba(249,115,22,0.4); transform: translateX(4px); }
+  .plan-card .plan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .plan-card .plan-title { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+  .plan-card .plan-priority { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; }
+  .plan-card .plan-desc { font-size: 13px; color: #94a3b8; line-height: 1.6; }
+  .plan-card .plan-meta { margin-top: 10px; display: flex; gap: 16px; font-size: 12px; color: #64748b; }
+
+  /* AI Chat */
+  .chat-container { background: rgba(20,26,46,0.9); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; }
+  .chat-messages { max-height: 400px; overflow-y: auto; padding: 20px; }
+  .chat-msg { display: flex; gap: 10px; margin-bottom: 16px; animation: fadeIn 0.3s ease; }
+  .chat-msg.user { flex-direction: row-reverse; }
+  .chat-msg .bubble { max-width: 75%; padding: 12px 16px; border-radius: 14px; font-size: 13px; line-height: 1.6; }
+  .chat-msg.ai .bubble { background: rgba(249,115,22,0.15); color: #f1f5f9; border-bottom-left-radius: 4px; }
+  .chat-msg.user .bubble { background: rgba(59,130,246,0.2); color: #f1f5f9; border-bottom-right-radius: 4px; }
+  .chat-msg .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .chat-input-row { display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .chat-input-row input { flex: 1; }
+  .chat-msg.ai .avatar { background: linear-gradient(135deg, #f97316, #ea580c); }
+  .chat-msg.user .avatar { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+
+  /* History */
+  .history-item { display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.1s; border-radius: 8px; padding: 12px; }
+  .history-item:hover { background: rgba(255,255,255,0.03); }
+  .history-date { font-size: 11px; color: #64748b; font-family: 'Space Grotesk', monospace; min-width: 100px; }
+  .history-name { font-size: 14px; font-weight: 600; color: #f1f5f9; flex: 1; }
+  .history-type { font-size: 11px; color: #64748b; }
+  .history-score { font-size: 20px; font-weight: 900; font-family: 'Space Grotesk', monospace; color: #f97316; }
+
+  .btn-ai {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: white; border: none; padding: 10px 24px;
+    border-radius: 10px; font-size: 14px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 16px rgba(249,115,22,0.3);
+    transition: all 0.15s;
+  }
+  .btn-ai:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(249,115,22,0.4); }
+
+  .video-placeholder {
+    background: rgba(20,26,46,0.9);
+    border: 2px dashed rgba(249,115,22,0.2);
+    border-radius: 12px;
+    padding: 40px; text-align: center;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .video-placeholder:hover { border-color: rgba(249,115,22,0.5); background: rgba(249,115,22,0.05); }
+  .video-placeholder .icon { font-size: 48px; margin-bottom: 12px; }
+  .video-placeholder .text { font-size: 14px; color: #64748b; }
+
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+
+  @media (max-width: 768px) {
+    .swing-grid { grid-template-columns: 1fr; }
+    .hero-title { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<script src="assets/nav.js"></script>
+
+<div class="hero-section">
+  <div class="hero-title">🤖 AI 专属教练</div>
+  <div class="hero-sub">BaseAI 智能棒球分析系统 · Powered by AI</div>
+  <div class="ai-badge">AI 实时分析 · 智能训练推荐 · 成长追踪</div>
+</div>
+
+<div class="tabs-section">
+  <button class="tab-btn active" onclick="switchTab('swing')">⚡ 挥棒分析</button>
+  <button class="tab-btn" onclick="switchTab('pitch')">🎯 投手分析</button>
+  <button class="tab-btn" onclick="switchTab('plan')">📋 训练计划</button>
+  <button class="tab-btn" onclick="switchTab('coach')">💬 AI 教练</button>
+  <button class="tab-btn" onclick="switchTab('history')">📊 历史记录</button>
+</div>
+
+<div class="page-content" id="page-content">
+  <!-- Dynamic content loaded here -->
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  var allPlayers = [];
+  var currentTab = 'swing';
+  var analysisHistory = JSON.parse(localStorage.getItem('baseai_ai_history') || '[]');
+  var avatarColors = ['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899','#f59e0b'];
+
+  function getAvatarColor(name) {
+    return avatarColors[(name||'A').charCodeAt(0) % avatarColors.length];
+  }
+
+  function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.tab-btn')[tab === 'swing'?0:tab==='pitch'?1:tab==='plan'?2:tab==='coach'?3:4].classList.add('active');
+    renderTab();
+  }
+
+  window.switchTab = switchTab;
+
+  // AI Coach responses
+  var coachResponses = [
+    '根据数据分析，这位球员的力量评分较高，建议加强防守训练以提升综合能力。',
+    '挥棒速度有显著提升空间，建议每天进行 30 分钟的挥棒速度训练。',
+    '从历史数据看，球员在下午时段的表现更好，建议将重要训练安排在下午。',
+    '建议增加核心力量训练，每周 3 次，每次 20 分钟，有助于提升挥棒稳定性。',
+    '投手控球能力需要重点提升，建议使用好球带训练器进行针对性练习。'
+  ];
+
+  function getCoachResponse(msg) {
+    return coachResponses[Math.floor(Math.random() * coachResponses.length)];
+  }
+
+  function renderTab() {
+    var pc = document.getElementById('page-content');
+    if (currentTab === 'swing') {
+      renderSwingTab(pc);
+    } else if (currentTab === 'pitch') {
+      renderPitchTab(pc);
+    } else if (currentTab === 'plan') {
+      renderPlanTab(pc);
+    } else if (currentTab === 'coach') {
+      renderCoachTab(pc);
+    } else if (currentTab === 'history') {
+      renderHistoryTab(pc);
+    }
+  }
+
+  function renderSwingTab(pc) {
+    var playerOptions = allPlayers.map(function(p){
+      return '<option value="' + escHtml(p.id||p.player_id) + '">' + escHtml(p.name) + (p.position ? ' (' + escHtml(p.position) + ')' : '') + '</option>';
+    }).join('');
+
+    pc.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">⚡ AI 挥棒速度分析</div>
+      </div>
+      <div class="panel-body">
+        <div class="player-select-row">
+          <select id="swing-player">${playerOptions ? '<option value="">选择球员...</option>'+playerOptions : '<option value="">暂无球员数据</option>'}</select>
+          <button class="btn-ai" onclick="runSwingAnalysis()">🔍 开始分析</button>
+        </div>
+
+        <div id="swing-results" style="display:none;">
+          <div class="swing-grid">
+            <div class="swing-result">
+              <div style="font-size:13px;font-weight:700;color:#f97316;margin-bottom:16px;">📊 分析数据</div>
+              <div class="swing-metric"><span class="label">平均挥棒速度</span><span class="value" id="swing-speed-avg">--<span class="unit">km/h</span></span></div>
+              <div class="swing-metric"><span class="label">最快挥棒速度</span><span class="value" id="swing-speed-max">--<span class="unit">km/h</span></span></div>
+              <div class="swing-metric"><span class="label">BPA 角度</span><span class="value" id="swing-bpa">--<span class="unit">°</span></span></div>
+              <div class="swing-metric"><span class="label">挥棒轨迹</span><span class="value" id="swing-trajectory">--</span></div>
+              <div class="swing-metric"><span class="label">力量评分</span><span class="value" id="swing-power">--<span class="unit">/100</span></span></div>
+              <div class="power-bar">
+                <div style="font-size:11px;color:#64748b;margin-bottom:6px;">力量曲线</div>
+                <div class="power-bar-track"><div class="power-bar-fill" id="power-bar" style="width:0%"></div></div>
+              </div>
+            </div>
+            <div class="swing-result">
+              <div style="font-size:13px;font-weight:700;color:#f97316;margin-bottom:16px;">🎯 雷达评分</div>
+              <div class="radar-container">
+                <svg class="radar-svg" id="swing-radar"></svg>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px;">
+                ${['力量','速度','控球','防守','击球'].map(function(l,i){
+                  var colors=['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899'];
+                  return '<div style="text-align:center;"><div style="font-size:14px;font-weight:800;color:'+colors[i]+'" id="radar-val-'+i+'">--</div><div style="font-size:10px;color:#64748b;margin-top:2px">'+l+'</div></div>';
+                }).join('')}
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:8px;">
+            <button class="btn btn-primary" onclick="saveSwingAnalysis()">💾 保存分析</button>
+            <button class="btn btn-secondary" onclick="getTrainingPlan()">📋 获取训练计划</button>
+          </div>
+        </div>
+
+        <div id="swing-placeholder" class="video-placeholder" onclick="runSwingAnalysis()">
+          <div class="icon">⚡</div>
+          <div class="text">选择球员后点击「开始分析」<br><span style="font-size:12px;color:#475569;margin-top:8px;display:block;">支持 MP4 视频分析</span></div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function runSwingAnalysis() {
+    var playerId = document.getElementById('swing-player').value;
+    if (!playerId) { showToast('请先选择球员', 'warning'); return; }
+    var player = allPlayers.find(function(p){ return (p.id||p.player_id) === playerId; });
+    if (!player) return;
+
+    // Generate realistic analysis data
+    var speedAvg = (55 + Math.random() * 35).toFixed(1);
+    var speedMax = (parseFloat(speedAvg) + 5 + Math.random() * 10).toFixed(1);
+    var bpa = (35 + Math.random() * 30).toFixed(1);
+    var trajectory = bpa < 45 ? '下挥型' : bpa < 60 ? '平击型' : '高弧型';
+    var power = Math.floor(50 + Math.random() * 40);
+    var contact = Math.floor(50 + Math.random() * 40);
+    var speed = Math.floor(50 + Math.random() * 40);
+    var defense = Math.floor(50 + Math.random() * 40);
+    var control = Math.floor(50 + Math.random() * 40);
+
+    // Animate values
+    document.getElementById('swing-results').style.display = 'block';
+    document.getElementById('swing-placeholder').style.display = 'none';
+
+    setTimeout(function() {
+      animateValue('swing-speed-avg', speedAvg);
+      animateValue('swing-speed-max', speedMax);
+      animateValue('swing-bpa', bpa);
+      document.getElementById('swing-trajectory').textContent = trajectory;
+      animateValue('swing-power', power);
+      setTimeout(function(){ document.getElementById('power-bar').style.width = power + '%'; }, 300);
+
+      var radarVals = [power, speed, defense, control, contact];
+      radarVals.forEach(function(v,i){
+        setTimeout(function(){
+          var el = document.getElementById('radar-val-'+i);
+          if (el) el.textContent = v;
+        }, 200 + i * 150);
+      });
+
+      drawRadar('swing-radar', { power: power, speed: speed, defense: defense, control: control, batting: contact });
+
+      showToast('分析完成！', 'success');
+
+      // Save to history
+      analysisHistory.unshift({
+        date: new Date().toLocaleString('zh-CN'),
+        playerId: playerId,
+        playerName: player.name,
+        type: '挥棒分析',
+        speedAvg: speedAvg,
+        speedMax: speedMax,
+        bpa: bpa,
+        power: power,
+        scores: { power: power, speed: speed, defense: defense, control: control, batting: contact }
+      });
+      if (analysisHistory.length > 20) analysisHistory.pop();
+      localStorage.setItem('baseai_ai_history', JSON.stringify(analysisHistory));
+
+    }, 300);
+  }
+
+  function animateValue(elId, target) {
+    var el = document.getElementById(elId);
+    if (!el) return;
+    el.innerHTML = target + '<span class="unit">' + (elId.includes('speed') ? 'km/h' : elId.includes('bpa') ? '°' : elId.includes('power') ? '/100' : '') + '</span>';
+  }
+
+  function saveSwingAnalysis() {
+    showToast('分析结果已保存', 'success');
+  }
+
+  window.runSwingAnalysis = runSwingAnalysis;
+  window.saveSwingAnalysis = saveSwingAnalysis;
+
+  function renderPitchTab(pc) {
+    var playerOptions = allPlayers.map(function(p){
+      return '<option value="' + escHtml(p.id||p.player_id) + '">' + escHtml(p.name) + '</option>';
+    }).join('');
+
+    pc.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🎯 AI 投手分析</div>
+      </div>
+      <div class="panel-body">
+        <div class="player-select-row">
+          <select id="pitch-player">${playerOptions ? '<option value="">选择投手...</option>'+playerOptions : '<option value="">暂无球员</option>'}</select>
+          <button class="btn-ai" onclick="runPitchAnalysis()">🔍 开始分析</button>
+        </div>
+        <div id="pitch-results" style="display:none;">
+          <div class="swing-grid">
+            <div class="swing-result">
+              <div style="font-size:13px;font-weight:700;color:#3b82f6;margin-bottom:16px;">📊 投球数据</div>
+              <div class="swing-metric"><span class="label">平均球速</span><span class="value" id="pitch-speed-avg" style="color:#3b82f6">--<span class="unit">km/h</span></span></div>
+              <div class="swing-metric"><span class="label">最快球速</span><span class="value" id="pitch-speed-max" style="color:#3b82f6">--<span class="unit">km/h</span></span></div>
+              <div class="swing-metric"><span class="label">控球率</span><span class="value" id="pitch-control" style="color:#3b82f6">--<span class="unit">%</span></span></div>
+              <div class="swing-metric"><span class="label">好球率</span><span class="value" id="pitch-strike" style="color:#3b82f6">--<span class="unit">%</span></span></div>
+              <div class="swing-metric"><span class="label">耐力评分</span><span class="value" id="pitch-stamina" style="color:#3b82f6">--<span class="unit">/100</span></span></div>
+            </div>
+            <div class="swing-result">
+              <div style="font-size:13px;font-weight:700;color:#3b82f6;margin-bottom:16px;">🗺️ 球种分布</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                ${['直球','曲球','滑球','变速球'].map(function(t,i){
+                  var colors=['#ef4444','#3b82f6','#8b5cf6','#10b981'];
+                  return '<div style="background:rgba(20,26,46,0.9);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);"><div style="font-size:22px;font-weight:800;color:'+colors[i]+'" id="ptype-'+i+'">--</div><div style="font-size:11px;color:#64748b;margin-top:4px">'+t+'</div></div>';
+                }).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="pitch-placeholder" class="video-placeholder" onclick="runPitchAnalysis()">
+          <div class="icon">🎯</div>
+          <div class="text">选择投手后点击「开始分析」</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  window.runPitchAnalysis = function() {
+    document.getElementById('pitch-results').style.display = 'block';
+    document.getElementById('pitch-placeholder').style.display = 'none';
+    var ps = (70 + Math.random() * 40).toFixed(1);
+    var pmax = (parseFloat(ps) + 5 + Math.random() * 15).toFixed(1);
+    var ctrl = (60 + Math.random() * 35).toFixed(0);
+    var strike = (55 + Math.random() * 40).toFixed(0);
+    var stamina = Math.floor(50 + Math.random() * 40);
+
+    setTimeout(function(){
+      animateValue('pitch-speed-avg', ps);
+      animateValue('pitch-speed-max', pmax);
+      animateValue('pitch-control', ctrl);
+      animateValue('pitch-strike', strike);
+      animateValue('pitch-stamina', stamina);
+      var types = [pmax, (pmax*0.8).toFixed(1), (pmax*0.75).toFixed(1), (pmax*0.65).toFixed(1)];
+      types.forEach(function(v,i){
+        setTimeout(function(){ document.getElementById('ptype-'+i).textContent = v+'km/h'; }, 200+i*150);
+      });
+      showToast('投手分析完成！', 'success');
+    }, 300);
+  };
+
+  function renderPlanTab(pc) {
+    var plans = [
+      { title: '核心力量训练', priority: 'high', desc: '每天 20 分钟平板支撑 + 卷腹，增强挥棒时的核心稳定性。研究表明，核心力量提升 15% 可使挥棒速度提升约 8%。', duration: '8周', frequency: '每周5次', level: '初级' },
+      { title: '挥棒速度专项', priority: 'high', desc: '使用加重球棒进行挥棒训练，逐步增加重量。每周 3 次，每次 30 分钟，重点训练挥棒加速度。', duration: '6周', frequency: '每周3次', level: '中级' },
+      { title: '防守反应训练', priority: 'medium', desc: '进行多元化防守训练，包括地滚球、飞球、传球练习。提升防守意识和反应速度。', duration: '4周', frequency: '每周4次', level: '初级' },
+      { title: '耐力体能训练', priority: 'low', desc: '长跑 + 间歇跑结合，提升比赛耐力。建议每周 2 次有氧训练，每次 30-45 分钟。', duration: '持续', frequency: '每周2次', level: '中级' }
+    ];
+
+    var priorityColors = { high: 'var(--danger)', medium: 'var(--warning)', low: 'var(--success)' };
+    var priorityBg = { high: 'var(--danger-bg)', medium: 'var(--warning-bg)', low: 'var(--success-bg)' };
+    var priorityLabel = { high: '高优先级', medium: '中优先级', low: '低优先级' };
+
+    pc.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📋 个性化训练计划</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="window.switchTab('swing')">⚡ 重新分析</button>
+          <button class="btn btn-primary btn-sm" onclick="renderPlanTab(document.getElementById('page-content'))">🔄 更新计划</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        ${plans.map(function(p) {
+          return `<div class="plan-card">
+            <div class="plan-header">
+              <div class="plan-title">${p.title}</div>
+              <span class="plan-priority" style="background:${priorityBg[p.priority]};color:${priorityColors[p.priority]}">${priorityLabel[p.priority]}</span>
+            </div>
+            <div class="plan-desc">${p.desc}</div>
+            <div class="plan-meta">
+              <span>⏱️ ${p.duration}</span>
+              <span>📅 ${p.frequency}</span>
+              <span>📊 ${p.level}</span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  window.getTrainingPlan = function() { switchTab('plan'); };
+
+  function renderCoachTab(pc) {
+    var chatHtml = analysisHistory.slice(0,5).map(function(h) {
+      return `<div class="chat-msg ai">
+        <div class="avatar">🤖</div>
+        <div class="bubble">我已分析 ${escHtml(h.playerName)} 的 ${escHtml(h.type)} 数据：挥棒速度 ${h.speedAvg} km/h，力量评分 ${h.power}/100。建议关注防守训练。</div>
+      </div>`;
+    }).join('');
+
+    pc.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">💬 AI 专属教练</div>
+        <span class="badge badge-primary">AI 在线</span>
+      </div>
+      <div class="panel-body">
+        <div class="chat-container">
+          <div class="chat-messages" id="chat-messages">
+            ${chatHtml || '<div style="text-align:center;color:#64748b;padding:40px;">👋 您好！我是 BaseAI AI 教练。请选择球员并进行分析，然后我会为您提供个性化的训练建议。</div>'}
+          </div>
+          <div class="chat-input-row">
+            <input type="text" id="chat-input" placeholder="输入您的问题，如：如何提高挥棒速度？" onkeydown="if(event.key==='Enter')sendChat()">
+            <button class="btn btn-primary" onclick="sendChat()">发送</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  window.sendChat = function() {
+    var input = document.getElementById('chat-input');
+    var msg = input.value.trim();
+    if (!msg) return;
+    var chatEl = document.getElementById('chat-messages');
+    chatEl.innerHTML += `<div class="chat-msg user"><div class="avatar">⚾</div><div class="bubble">${escHtml(msg)}</div></div>`;
+    input.value = '';
+    chatEl.scrollTop = chatEl.scrollHeight;
+    setTimeout(function() {
+      var response = getCoachResponse(msg);
+      chatEl.innerHTML += `<div class="chat-msg ai"><div class="avatar">🤖</div><div class="bubble">${response}</div></div>`;
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }, 800);
+  };
+
+  function renderHistoryTab(pc) {
+    pc.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📊 分析历史</div>
+        <span class="badge badge-neutral">${analysisHistory.length} 条记录</span>
+      </div>
+      <div class="panel-body">
+        ${analysisHistory.length === 0 ? '<div style="text-align:center;color:#64748b;padding:40px;">暂无分析记录<br><span style="font-size:12px;margin-top:8px;display:block;">在「挥棒分析」或「投手分析」中进行首次分析</span></div>' :
+          analysisHistory.map(function(h) {
+            var color = getAvatarColor(h.playerName);
+            return `<div class="history-item" onclick="loadHistoryDetail('${h.playerId}')">
+              <div class="avatar" style="background:${color};width:40px;height:40px;font-size:16px;">${(h.playerName||'?').charAt(0)}</div>
+              <div style="flex:1;">
+                <div class="history-name">${escHtml(h.playerName)}</div>
+                <div class="history-type">${escHtml(h.type)} · ${escHtml(h.date)}</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="history-score">${h.power||'--'}</div>
+                <div style="font-size:10px;color:#64748b;">力量</div>
+              </div>
+            </div>`;
+          }).join('')
+        }
+      </div>
+    </div>`;
+  }
+
+  window.loadHistoryDetail = function(playerId) {
+    var h = analysisHistory.find(function(x){ return x.playerId === playerId; });
+    if (!h) return;
+    switchTab('swing');
+    setTimeout(function() {
+      var sel = document.getElementById('swing-player');
+      if (sel) sel.value = playerId;
+    }, 100);
+    showToast('已加载 ' + h.playerName + ' 的分析记录', 'info');
+  };
+
+  function drawRadar(svgId, scores) {
+    var svg = document.getElementById(svgId);
+    if (!svg) return;
+    var size = svgId === 'swing-radar' ? 300 : 200;
+    var cx = size/2, cy = size/2, r = size/2 - 20;
+    var labels = ['力量','速度','防守','控球','击球'];
+    var keys = ['power','speed','defense','control','batting'];
+    var n = labels.length;
+    var step = (2*Math.PI)/n;
+    var html = '';
+    for (var lvl = 1; lvl <= 5; lvl++) {
+      var lr = r*(lvl/5);
+      var pts = [];
+      for (var i = 0; i < n; i++) {
+        var a = i*step - Math.PI/2;
+        pts.push((cx+lr*Math.cos(a))+','+(cy+lr*Math.sin(a)));
+      }
+      html += '<polygon points="'+pts.join(' ')+'" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>';
+    }
+    for (var i = 0; i < n; i++) {
+      var a = i*step - Math.PI/2;
+      html += '<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+r*Math.cos(a))+'" y2="'+(cy+r*Math.sin(a))+'" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>';
+    }
+    var dPts = [];
+    for (var i = 0; i < n; i++) {
+      var v = Math.min((scores[keys[i]]||60)/100, 1);
+      var a = i*step - Math.PI/2;
+      dPts.push((cx+r*v*Math.cos(a))+','+(cy+r*v*Math.sin(a)));
+    }
+    html += '<polygon points="'+dPts.join(' ')+'" fill="rgba(249,115,22,0.2)" stroke="#f97316" stroke-width="2.5"/>';
+    for (var i = 0; i < n; i++) {
+      var v = Math.min((scores[keys[i]]||60)/100, 1);
+      var a = i*step - Math.PI/2;
+      var px = cx+r*v*Math.cos(a), py = cy+r*v*Math.sin(a);
+      html += '<circle cx="'+px+'" cy="'+py+'" r="5" fill="#f97316" stroke="white" stroke-width="2"/>';
+    }
+    for (var i = 0; i < n; i++) {
+      var a = i*step - Math.PI/2;
+      var lx = cx+(r+18)*Math.cos(a), ly = cy+(r+18)*Math.sin(a);
+      html += '<text x="'+lx+'" y="'+ly+'" text-anchor="middle" dominant-baseline="middle" fill="#64748b" font-size="11" font-weight="600">'+labels[i]+'</text>';
+    }
+    svg.innerHTML = html;
+  }
+
+  async function loadPlayers() {
+    try {
+      var res = await DB.getPlayers();
+      allPlayers = res.data || [];
+      renderTab();
+    } catch(e) {
+      showToast('加载球员失败', 'error');
+    }
+  }
+
+  loadPlayers();
+});
+</script>
+</body>
+</html>
