@@ -64,6 +64,7 @@
     return `<header class="topbar">
       <div class="topbar-left">
         <button class="menu-toggle" id="menu-toggle">☰</button>
+        <a href="index.html" class="topbar-home-btn" title="返回首页">🏠</a>
         <div>
           <div class="topbar-title">${title || ''}</div>
           ${subtitle ? `<div style="font-size:11px;color:var(--text-muted);">${subtitle}</div>` : ''}
