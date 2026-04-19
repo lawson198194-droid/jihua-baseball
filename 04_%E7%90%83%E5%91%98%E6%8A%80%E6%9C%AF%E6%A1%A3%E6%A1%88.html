@@ -241,6 +241,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     renderProfiles(filtered);
   }
 
+  window.applyFilter = applyFilter;
+
   window.generateAllProfiles = async function() {
     showToast('正在生成技术档案...', 'info');
     for (var i = 0; i < allPlayers.length; i++) {
