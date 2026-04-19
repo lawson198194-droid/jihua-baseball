@@ -103,16 +103,19 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   function renderTeams(teams) {
     var pc = getPlayerCount();
-    initNav({
-      title: '球队与梯队',
-      subtitle: 'Module 02 · Team Management',
-      stats: [
-        { label: '球队总数', value: pc.total },
-        { label: 'U12球队', value: pc.u12 },
-        { label: 'U15球队', value: pc.u15 },
-        { label: 'U18球队', value: pc.u18 }
-      ]
-    });
+    // Update topbar stats without rebuilding the whole nav
+    var topbar = document.querySelector('.topbar');
+    if (topbar) {
+      var statsBar = topbar.querySelector('.topbar-stats');
+      if (statsBar) {
+        statsBar.innerHTML = [
+          '<div class="topbar-stat"><div class="num">' + pc.total + '</div><div class="label">球队总数</div></div>',
+          '<div class="topbar-stat"><div class="num">' + pc.u12 + '</div><div class="label">U12球队</div></div>',
+          '<div class="topbar-stat"><div class="num">' + pc.u15 + '</div><div class="label">U15球队</div></div>',
+          '<div class="topbar-stat"><div class="num">' + pc.u18 + '</div><div class="label">U18球队</div></div>'
+        ].join('');
+      }
+    }
 
     var container = document.getElementById('page-content');
     var html = `
