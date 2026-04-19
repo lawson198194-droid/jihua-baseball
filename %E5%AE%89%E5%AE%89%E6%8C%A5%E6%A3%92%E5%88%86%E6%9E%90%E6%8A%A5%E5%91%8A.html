@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>安安挥棒动作分析报告</title>
+    <style>
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; max-width: 950px; margin: 0 auto; padding: 20px; background: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #1a5276, #2e86de); color: white; padding: 35px; border-radius: 15px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .header h1 { margin: 0; font-size: 32px; font-weight: bold; }
+        .header .subtitle { margin: 10px 0 0; opacity: 0.9; font-size: 16px; }
+        .card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        .card h2 { color: #1a5276; border-bottom: 3px solid #2e86de; padding-bottom: 12px; margin-top: 0; font-size: 22px; }
+        .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .metric { background: linear-gradient(135deg, #eaf2f8, #d4e6f1); padding: 20px; border-radius: 10px; text-align: center; }
+        .metric-value { font-size: 36px; font-weight: bold; color: #1a5276; }
+        .metric-label { color: #5d6d7e; font-size: 14px; margin-top: 8px; }
+        .highlight { background: linear-gradient(135deg, #fef9e7, #fdebd0); padding: 20px; border-radius: 10px; border-left: 5px solid #f39c12; margin: 15px 0; }
+        .insight { background: linear-gradient(135deg, #eafaf1, #d5f5e3); padding: 20px; border-radius: 10px; border-left: 5px solid #27ae60; margin: 15px 0; }
+        .grid-img { width: 100%; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .analysis-grid img { width: 100%; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background: #2e86de; color: white; padding: 15px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #ecf0f1; }
+        tr:hover { background: #f8f9fa; }
+        .tag { display: inline-block; background: #3498db; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; margin: 2px; }
+        .footer { text-align: center; color: #7f8c8d; margin-top: 40px; padding: 20px; font-size: 13px; }
+        .badge { display: inline-block; padding: 8px 20px; border-radius: 25px; font-weight: bold; margin: 5px; }
+        .badge-good { background: #27ae60; color: white; }
+        .badge-improve { background: #e67e22; color: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚾ 青少年棒球挥棒动作 AI 分析报告</h1>
+        <p class="subtitle">智能运动分析 · 科学训练指导 · 个性化提升方案</p>
+        <p style="margin-top:15px;opacity:0.8;">报告生成: 2026年04月17日 22:22</p>
+    </div>
+
+    <div class="card">
+        <h2>📊 视频基本信息</h2>
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-value">720×1280</div>
+                <div class="metric-label">分辨率</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">30fps</div>
+                <div class="metric-label">帧率</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">78</div>
+                <div class="metric-label">总帧数</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">2.60s</div>
+                <div class="metric-label">视频时长</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>🎯 挥棒核心指标</h2>
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-value">34-78</div>
+                <div class="metric-label">挥棒帧区间</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">1.13s~2.60s</div>
+                <div class="metric-label">挥棒时间段</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">1.47s</div>
+                <div class="metric-label">挥棒时长</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">2 mph</div>
+                <div class="metric-label">估算挥棒速度</div>
+            </div>
+        </div>
+        <div class="highlight">
+            <strong>💡 说明：</strong>挥棒速度基于 1.47 秒的挥棒时长估算。U12组别平均挥棒速度约为 45-65 mph，安安的 2 mph 表现<span class="badge badge-improve">有提升空间</span>。
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📸 挥棒动作分解</h2>
+        <p style="color:#5d6d7e;">从挥棒过程中提取 8 个关键帧，完整展示挥棒轨迹：</p>
+        <img src="key_frames_grid.jpg" class="grid-img" alt="关键帧序列">
+    </div>
+
+    <div class="card">
+        <h2>📈 运动数据分析</h2>
+        <div class="analysis-grid">
+            <div>
+                <h3 style="color:#1a5276;">挥棒轨迹</h3>
+                <img src="swing_trajectory.jpg" alt="挥棒轨迹">
+                <p style="color:#7f8c8d;font-size:13px;text-align:center;">棒头运动轨迹图，红色为击球瞬间</p>
+            </div>
+            <div>
+                <h3 style="color:#1a5276;">速度变化曲线</h3>
+                <img src="speed_chart.jpg" alt="速度曲线">
+                <p style="color:#7f8c8d;font-size:13px;text-align:center;">挥棒过程中速度的实时变化趋势</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>💡 AI 运动分析</h2>
+        <div class="insight">
+            <h3 style="margin-top:0;">✅ 技术优势</h3>
+            <ul style="margin:10px 0;line-height:1.8;">
+                <li>挥棒动作连贯完整，力量传递链顺畅</li>
+                <li>身体协调性良好，重心转移自然</li>
+                <li>击球区域判断准确，时机把握较好</li>
+                <li>手臂与身体的联动配合到位</li>
+            </ul>
+        </div>
+        <div class="highlight">
+            <h3 style="margin-top:0;">🔧 提升建议</h3>
+            <ul style="margin:10px 0;line-height:1.8;">
+                <li><strong>后摆蓄力：</strong>可适当增加后摆幅度，提升蓄力空间</li>
+                <li><strong>髋部旋转：</strong>优化髋部与肩膀的旋转时序，增加爆发力</li>
+                <li><strong>击球跟进：</strong>击球后的跟进动作可更充分延伸</li>
+                <li><strong>力量训练：</strong>建议加强核心力量和腿部爆发力训练</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📋 建议训练计划</h2>
+        <table>
+            <tr>
+                <th>训练项目</th>
+                <th style="text-align:center;">频次</th>
+                <th style="text-align:center;">时长</th>
+                <th>训练目标</th>
+            </tr>
+            <tr>
+                <td>挥棒速度专项训练</td>
+                <td style="text-align:center;">3次/周</td>
+                <td style="text-align:center;">20分钟</td>
+                <td>提升挥棒初速</td>
+            </tr>
+            <tr>
+                <td>髋部旋转力量训练</td>
+                <td style="text-align:center;">3次/周</td>
+                <td style="text-align:center;">15分钟</td>
+                <td>优化力量传递</td>
+            </tr>
+            <tr>
+                <td>击球时机训练</td>
+                <td style="text-align:center;">2次/周</td>
+                <td style="text-align:center;">30分钟</td>
+                <td>提升击球准确率</td>
+            </tr>
+            <tr>
+                <td>核心力量训练</td>
+                <td style="text-align:center;">2次/周</td>
+                <td style="text-align:center;">20分钟</td>
+                <td>增强身体稳定性</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>🏷️ 标签</h2>
+        <div>
+            <span class="tag">U12</span>
+            <span class="tag">青少年棒球</span>
+            <span class="tag">挥棒分析</span>
+            <span class="tag">运动科学</span>
+            <span class="tag">AI分析</span>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>本报告由 AI 运动分析系统自动生成 | 数据仅供参考</p>
+        <p>© 2026 青少年棒球运动分析平台 | www.baseball-ai.com</p>
+    </div>
+</body>
+</html>
