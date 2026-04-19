@@ -3,1162 +3,341 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>模块4 · 球员技术数据档案 — 香港棒垒球总会</title>
-<script src="database.js"></script>
+<title>模块4 · 技术档案 — BaseAI</title>
+<link rel="stylesheet" href="assets/design-system.css">
+<script src="db.js"></script>
 <style>
-  :root {
-    --primary: #1B4F72;
-    --primary-light: #2E86C1;
-    --accent: #E67E22;
-    --bg: #F2F3F4;
-    --white: #FFFFFF;
-    --border: #D5D8DC;
-    --text: #1C2833;
-    --text-light: #707B7C;
-    --success: #1E8449;
-    --danger: #C0392B;
-    --warning: #D68910;
-    --info: #2980B9;
+  .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .page-header h2 { font-size:22px; font-weight:800; }
+  .page-header p { font-size:13px; color:var(--text-muted); margin-top:2px; }
+  .page-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .filter-bar { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 20px; margin-bottom:20px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .filter-bar select, .filter-bar input { padding:7px 12px; font-size:13px; min-width:160px; }
+  .filter-search { flex:1; min-width:200px; }
+
+  .profiles-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
+
+  .profile-card {
+    background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg);
+    overflow:hidden; transition:all 0.2s; cursor:pointer;
   }
-  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Arial,sans-serif; }
-  body { background:var(--bg); color:var(--text); min-height:100vh; font-size:14px; }
+  .profile-card:hover { transform:translateY(-3px); border-color:rgba(249,115,22,0.4); box-shadow:0 8px 24px rgba(0,0,0,0.3); }
 
-  header {
-    background:var(--primary); color:white; padding:0 24px;
-    height:56px; display:flex; align-items:center; justify-content:space-between;
-    position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.2);
-  }
-  .header-brand { display:flex; align-items:center; gap:12px; }
-  .header-logo { width:36px; height:36px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:bold; }
-  .header-title { font-size:16px; font-weight:600; }
-  .header-sub { font-size:11px; opacity:0.75; }
-  .header-right { display:flex; align-items:center; gap:12px; }
-  .header-badge { background:var(--accent); padding:4px 12px; border-radius:12px; font-size:12px; font-weight:600; }
+  .profile-header { padding:16px 20px; display:flex; align-items:center; gap:14px; border-bottom:1px solid var(--border-light); }
+  .profile-avatar { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; color:white; flex-shrink:0; }
+  .profile-name { font-size:16px; font-weight:700; }
+  .profile-meta { font-size:12px; color:var(--text-muted); margin-top:2px; }
+  .profile-body { padding:16px 20px; }
 
-  .nav-tabs {
-    background:var(--white); display:flex; gap:0;
-    border-bottom:2px solid var(--border); padding:0 24px; overflow-x:auto;
-  }
-  .nav-tab {
-    padding:14px 20px; font-size:14px; font-weight:500;
-    color:var(--text-light); cursor:pointer; border-bottom:3px solid transparent;
-    transition:all 0.2s; white-space:nowrap; display:flex; align-items:center; gap:7px;
-  }
-  .nav-tab:hover { color:var(--primary); }
-  .nav-tab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+  /* Radar Chart */
+  .radar-wrap { display:flex; justify-content:center; margin-bottom:16px; }
+  .radar-svg { width:160px; height:160px; }
+  .profile-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
+  .profile-stat { text-align:center; padding:8px; background:var(--bg-secondary); border-radius:8px; }
+  .profile-stat .val { font-size:15px; font-weight:800; font-family:var(--font-mono); color:var(--text-primary); }
+  .profile-stat .lbl { font-size:9px; color:var(--text-muted); margin-top:2px; text-transform:uppercase; }
+  .profile-footer { padding:10px 20px; border-top:1px solid var(--border-light); display:flex; gap:8px; justify-content:flex-end; }
+  .empty-state { text-align:center; padding:80px 20px; }
+  .empty-state .empty-icon { font-size:64px; margin-bottom:16px; opacity:0.3; }
 
-  .main { padding:24px; max-width:1400px; margin:0 auto; }
-
-  .panel {
-    background:var(--white); border-radius:12px;
-    box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; margin-bottom:24px;
-  }
-  .panel-header {
-    padding:16px 20px; border-bottom:1px solid var(--border);
-    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-  }
-  .panel-title { font-size:15px; font-weight:700; color:var(--primary); display:flex; align-items:center; gap:8px; }
-  .panel-body { padding:20px; }
-
-  .btn {
-    padding:8px 16px; border:none; border-radius:8px; font-size:13px; font-weight:500;
-    cursor:pointer; transition:all 0.15s; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
-  }
-  .btn-primary { background:var(--primary); color:white; }
-  .btn-primary:hover { background:var(--primary-light); }
-  .btn-accent { background:var(--accent); color:white; }
-  .btn-accent:hover { background:#D35400; }
-  .btn-outline { background:white; color:var(--primary); border:1.5px solid var(--primary); }
-  .btn-outline:hover { background:#EBF5FB; }
-  .btn-success { background:var(--success); color:white; }
-  .btn-danger { background:var(--danger); color:white; }
-  .btn-sm { padding:5px 10px; font-size:12px; }
-  .btn-xs { padding:3px 8px; font-size:11px; border-radius:6px; }
-
-  input, select {
-    padding:8px 12px; border:1.5px solid var(--border); border-radius:8px;
-    font-size:13px; color:var(--text); background:white; outline:none; transition:border-color 0.2s;
-  }
-  input:focus, select:focus { border-color:var(--primary); }
-  input::placeholder { color:var(--text-light); }
-
-  .table-wrap { overflow-x:auto; }
-  table { width:100%; border-collapse:collapse; }
-  thead th {
-    background:#EBF5FB; padding:10px 12px; text-align:left;
-    font-size:12px; font-weight:700; color:var(--primary);
-    text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid var(--border); white-space:nowrap;
-  }
-  tbody tr { border-bottom:1px solid var(--border); transition:background 0.1s; }
-  tbody tr:hover { background:#F8FBFD; }
-  td { padding:10px 12px; font-size:13px; vertical-align:middle; }
-  .td-center { text-align:center; }
-
-  .badge {
-    display:inline-block; padding:3px 10px; border-radius:12px;
-    font-size:11px; font-weight:600; white-space:nowrap;
-  }
-  .badge-done { background:#D5F5E3; color:var(--success); }
-  .badge-pending { background:#FDEBD0; color:var(--warning); }
-  .badge-u8 { background:#D6EAF8; color:#1A5276; }
-  .badge-u10 { background:#D5F5E3; color:#1E8449; }
-  .badge-u12 { background:#FDEBD0; color:#9A7D0A; }
-  .badge-u15 { background:#F5EEF8; color:#6C3483; }
-  .badge-u18 { background:#FDEDEC; color:#922B21; }
-  .badge-hit { background:#D5F5E3; color:#1E8449; }
-  .badge-power { background:#FDEDEC; color:#922B21; }
-  .badge-arm { background:#EBF5FB; color:#1A5276; }
-
-  .card {
-    background:white; border:1.5px solid var(--border); border-radius:12px;
-    padding:16px; transition:all 0.2s; cursor:pointer;
-  }
-  .card:hover { border-color:var(--primary); box-shadow:0 4px 16px rgba(27,79,114,0.12); transform:translateY(-1px); }
-  .card-title { font-size:14px; font-weight:700; color:var(--text); }
-  .card-sub { font-size:12px; color:var(--text-light); margin-top:2px; }
-  .card-footer { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
-  .card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
-
-  .radar-wrap { display:flex; align-items:center; gap:32px; flex-wrap:wrap; }
-  .radar-canvas { flex-shrink:0; }
-  .radar-legend { flex:1; min-width:200px; }
-  .radar-item { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-  .radar-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
-  .radar-label { font-size:13px; font-weight:500; flex:1; }
-  .radar-val { font-size:13px; font-weight:700; color:var(--primary); }
-
-  .stat-row { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
-  .stat-card {
-    background:#EBF5FB; border-radius:10px; padding:14px 16px;
-    text-align:center; min-width:100px; flex:1;
-  }
-  .stat-num { font-size:28px; font-weight:800; color:var(--primary); line-height:1; }
-  .stat-label { font-size:11px; color:var(--text-light); margin-top:4px; }
-  .stat-unit { font-size:11px; color:var(--text-light); }
-
-  .progress-bar { height:8px; background:#EAECEE; border-radius:4px; overflow:hidden; margin-top:4px; }
-  .progress-fill { height:100%; border-radius:4px; transition:width 0.6s ease; }
-  .progress-label { font-size:11px; color:var(--text-light); margin-top:2px; }
-
-  .metric-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; }
-  .metric-box {
-    background:#F8F9FA; border:1px solid var(--border); border-radius:10px;
-    padding:14px; display:flex; flex-direction:column; gap:6px;
-  }
-  .metric-name { font-size:12px; color:var(--text-light); font-weight:500; }
-  .metric-value { font-size:20px; font-weight:800; color:var(--text); }
-  .metric-bar { margin-top:4px; }
-
-  .history-timeline { position:relative; padding-left:24px; }
-  .history-timeline::before {
-    content:''; position:absolute; left:8px; top:0; bottom:0;
-    width:2px; background:var(--border);
-  }
-  .history-item { position:relative; margin-bottom:16px; }
-  .history-item::before {
-    content:''; position:absolute; left:-20px; top:4px;
-    width:10px; height:10px; border-radius:50%; background:var(--primary); border:2px solid white;
-  }
-  .history-date { font-size:11px; color:var(--text-light); font-weight:600; }
-  .history-title { font-size:13px; font-weight:600; margin:2px 0; }
-  .history-sub { font-size:12px; color:var(--text-light); }
-
-  .tab-content { display:none; }
-  .tab-content.active { display:block; }
-
-  .filter-row {
-    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-    padding:14px 20px; background:#F8F9FA; border-bottom:1px solid var(--border);
-  }
-  .filter-group { display:flex; align-items:center; gap:6px; }
-  .filter-label { font-size:12px; color:var(--text-light); font-weight:500; }
-
-  .empty-state { text-align:center; padding:48px 24px; color:var(--text-light); }
-  .empty-state-icon { font-size:48px; margin-bottom:12px; }
-  .empty-state-title { font-size:16px; font-weight:600; margin-bottom:6px; color:var(--text); }
-  .empty-state-sub { font-size:13px; }
-
-  .divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
-  .mt-8 { margin-top:8px; }
-  .mt-16 { margin-top:16px; }
-  .text-success { color:var(--success); }
-  .text-danger { color:var(--danger); }
-  .text-muted { color:var(--text-light); font-size:12px; }
-  .flex { display:flex; }
-  .gap-8 { gap:8px; }
-  .flex-center { display:flex; align-items:center; }
-
-  .modal-overlay {
-    position:fixed; inset:0; background:rgba(0,0,0,0.5);
-    display:flex; align-items:center; justify-content:center;
-    z-index:1000; display:none;
-  }
-  .modal-overlay.show { display:flex; }
-  .modal {
-    background:white; border-radius:16px; width:600px;
-    max-width:95vw; max-height:90vh; overflow-y:auto;
-    box-shadow:0 20px 60px rgba(0,0,0,0.3);
-  }
-  .modal-header {
-    padding:20px 24px; border-bottom:1px solid var(--border);
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .modal-title { font-size:16px; font-weight:700; color:var(--primary); }
-  .modal-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-light); line-height:1; }
-  .modal-body { padding:20px 24px; }
-  .modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
-
-  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:14px; }
-  .form-group { display:flex; flex-direction:column; gap:5px; }
-  .form-label { font-size:12px; font-weight:600; color:var(--text); }
-  .form-label span { color:var(--danger); }
-  .form-full { grid-column:1/-1; }
-
-  .highlight-box {
-    background:#EBF5FB; border:1.5px solid var(--primary); border-radius:10px;
-    padding:16px; margin-top:12px;
-  }
-  .highlight-title { font-size:13px; font-weight:700; color:var(--primary); margin-bottom:8px; }
-  .highlight-item { display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:4px; }
-
-  .player-avatar {
-    width:64px; height:64px; border-radius:50%;
-    background:var(--primary); color:white;
-    display:flex; align-items:center; justify-content:center;
-    font-size:24px; font-weight:800; flex-shrink:0;
-  }
-
-  .comparison-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-  .comparison-col { background:#F8F9FA; border-radius:10px; padding:16px; }
-  .comparison-col-title { font-size:13px; font-weight:700; color:var(--primary); margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid var(--primary); }
+  /* Radar legend */
+  .radar-legend { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin-top:8px; }
+  .radar-legend-item { display:flex; align-items:center; gap:4px; font-size:10px; color:var(--text-muted); }
+  .radar-legend-dot { width:8px; height:8px; border-radius:50%; }
 </style>
 </head>
 <body>
-
-<header>
-  <div class="header-brand">
-    <div class="header-logo">⚾</div>
-    <div>
-      <div class="header-title">香港棒垒球总会 · 球员技术档案</div>
-      <div class="header-sub">Hong Kong Baseball & Softball Association · Player Analytics</div>
-    </div>
-  </div>
-  <div class="header-right">
-    <div class="header-badge">⚡ 模块 4</div>
-  </div>
-</header>
-
-<div class="nav-tabs">
-  <div class="nav-tab active" onclick="switchTab(this,'players')">👥 球员列表</div>
-  <div class="nav-tab" onclick="switchTab(this,'profile')">📋 技术档案</div>
-  <div class="nav-tab" onclick="switchTab(this,'compare')">⚖️ 球员对比</div>
-  <div class="nav-tab" onclick="switchTab(this,'history')">📈 成长轨迹</div>
-</div>
-
-<div class="main">
-
-  <!-- ── Tab 1: 球员列表 ── -->
-  <div class="tab-content active" id="tab-players">
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">👥 球员技术档案列表</div>
-        <div class="flex gap-8">
-          <button class="btn btn-outline btn-sm" onclick="exportProfiles()">📤 导出档案</button>
-          <button class="btn btn-primary btn-sm" onclick="openNewProfile()">+ 新增球员档案</button>
-        </div>
-      </div>
-      <div class="filter-row">
-        <div class="filter-group"><span class="filter-label">组别：</span>
-          <select id="pf-group" onchange="renderPlayers()">
-            <option value="">全部</option>
-            <option value="U8">U8</option><option value="U10">U10</option>
-            <option value="U12">U12</option><option value="U15">U15</option><option value="U18">U18</option>
-          </select>
-        </div>
-        <div class="filter-group"><span class="filter-label">位置：</span>
-          <select id="pf-pos" onchange="renderPlayers()">
-            <option value="">全部</option><option>投手</option><option>捕手</option>
-            <option>内野</option><option>外野</option><option>多功能</option>
-          </select>
-        </div>
-        <div class="filter-group"><span class="filter-label">搜索：</span>
-          <input type="text" id="pf-search" placeholder="姓名 / 证件号" oninput="renderPlayers()" style="width:180px;">
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th>球员</th><th>组别</th><th>球队</th><th>主力位置</th><th>挥棒速度</th><th>BPA角</th><th>雷达评分</th><th>档案状态</th><th>操作</th>
-          </tr></thead>
-          <tbody id="players-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Tab 2: 技术档案 ── -->
-  <div class="tab-content" id="tab-profile">
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title" id="profile-title">📋 请从左侧选择球员查看档案</div>
-        <div class="flex gap-8" id="profile-actions" style="display:none;">
-          <button class="btn btn-outline btn-sm" onclick="generateAIPDF()">📄 生成PDF报告</button>
-          <button class="btn btn-primary btn-sm" onclick="openUploadVideo()">🎥 上传视频分析</button>
-        </div>
-      </div>
-      <div class="panel-body" id="profile-content">
-        <div class="empty-state">
-          <div class="empty-state-icon">👤</div>
-          <div class="empty-state-title">请选择球员</div>
-          <div class="empty-state-sub">从「球员列表」选择一个球员查看完整技术档案</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Tab 3: 球员对比 ── -->
-  <div class="tab-content" id="tab-compare">
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">⚖️ 球员对比分析</div>
-      </div>
-      <div class="panel-body">
-        <div class="comparison-grid">
-          <div class="comparison-col">
-            <div class="comparison-col-title">球员 A</div>
-            <select id="cmp-a" onchange="renderComparison()" style="width:100%;margin-bottom:12px;">
-              <option value="">— 选择球员 —</option>
-            </select>
-            <div id="cmp-a-content"></div>
-          </div>
-          <div class="comparison-col">
-            <div class="comparison-col-title">球员 B</div>
-            <select id="cmp-b" onchange="renderComparison()" style="width:100%;margin-bottom:12px;">
-              <option value="">— 选择球员 —</option>
-            </select>
-            <div id="cmp-b-content"></div>
-          </div>
-        </div>
-        <div id="cmp-result"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Tab 4: AI分析 ── -->
-  <div class="tab-content" id="tab-ai">
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">🤖 AI 技术分析工具</div>
-        <div class="flex gap-8">
-          <button class="btn btn-accent btn-sm" onclick="runAISwingAnalysis()">⚡ 运行挥棒AI分析</button>
-          <button class="btn btn-primary btn-sm" onclick="runAIPitcherAnalysis()">⚡ 运行投手AI分析</button>
-        </div>
-      </div>
-      <div class="panel-body">
-        <div class="card-grid" id="ai-tools">
-          <div class="card">
-            <div class="card-title">🎯 挥棒动作分析</div>
-            <div class="card-sub mt-8">上传挥棒视频 → AI 提取关键帧 → 计算挥棒角度/速度/力量曲线</div>
-            <div class="card-footer">
-              <span class="text-muted">适用：打击型球员</span>
-              <button class="btn btn-primary btn-xs" onclick="runAISwingAnalysis()">开始分析</button>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-title">⚾ 投手投球分析</div>
-            <div class="card-sub mt-8">上传投球视频 → AI 追踪球路 → 球速/转速/轨迹/控球率</div>
-            <div class="card-footer">
-              <span class="text-muted">适用：投手型球员</span>
-              <button class="btn btn-primary btn-xs" onclick="runAIPitcherAnalysis()">开始分析</button>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-title">📊 球员能力雷达图</div>
-            <div class="card-sub mt-8">基于历史数据 → 自动生成四维能力雷达图 → 发现优势/弱点</div>
-            <div class="card-footer">
-              <span class="text-muted">适用：所有球员</span>
-              <button class="btn btn-primary btn-xs" onclick="runRadarGen()">生成雷达图</button>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-title">🔮 技术趋势预测</div>
-            <div class="card-sub mt-8">对比同龄标准值 → 预测技术发展方向 → 给出训练建议</div>
-            <div class="card-footer">
-              <span class="text-muted">适用：青训跟踪</span>
-              <button class="btn btn-primary btn-xs" onclick="runTrendPredict()">预测趋势</button>
-            </div>
-          </div>
-        </div>
-
-        <hr class="divider">
-        <div class="panel-title mt-16">📋 AI 分析历史记录</div>
-        <div class="table-wrap mt-8">
-          <table id="ai-history-table">
-            <thead><tr><th>分析ID</th><th>球员</th><th>分析类型</th><th>状态</th><th>时间</th><th>操作</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <div id="ai-result" class="mt-16"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Tab 5: 成长轨迹 ── -->
-  <div class="tab-content" id="tab-history">
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">📈 球员成长轨迹</div>
-        <div class="flex gap-8">
-          <select id="history-player" onchange="renderHistory()" style="min-width:200px;">
-            <option value="">— 选择球员 —</option>
-          </select>
-        </div>
-      </div>
-      <div class="panel-body" id="history-content">
-        <div class="empty-state">
-          <div class="empty-state-icon">📈</div>
-          <div class="empty-state-title">请选择球员</div>
-          <div class="empty-state-sub">选择一个球员查看其技术成长轨迹和历史表现</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- Modal: 新增球员档案 -->
-<div class="modal-overlay" id="modal-profile">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">新增球员技术档案</div>
-      <button class="modal-close" onclick="closeModal('modal-profile')">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">球员姓名 <span>*</span></label>
-          <input type="text" id="np-name" placeholder="中文姓名">
-        </div>
-        <div class="form-group">
-          <label class="form-label">证件号码</label>
-          <input type="text" id="np-id" placeholder="香港身份证 / 回乡证">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">出生日期</label>
-          <input type="date" id="np-dob">
-        </div>
-        <div class="form-group">
-          <label class="form-label">所属球队</label>
-          <select id="np-team">
-            <option value="">选择球队</option>
-            <option>香港老虎少棒队</option><option>九龙天使队</option>
-            <option>港岛红雀队</option><option>新界飓风队</option>
-            <option>港岛蓝鸟队</option><option>新界野马队</option>
-            <option>其他</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">主力位置</label>
-          <select id="np-pos">
-            <option>投手</option><option>捕手</option><option>一垒手</option>
-            <option>二垒手</option><option>三垒手</option><option>游击手</option>
-            <option>左外野</option><option>中外野</option><option>右外野</option><option>多功能</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">组别</label>
-          <select id="np-group">
-            <option>U8</option><option>U10</option><option selected>U12</option>
-            <option>U15</option><option>U18</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">挥棒速度 (km/h)</label>
-          <input type="number" id="np-swing" placeholder="如：95">
-        </div>
-        <div class="form-group">
-          <label class="form-label">BPA挥棒平面角 (°)</label>
-          <input type="number" id="np-bpa" placeholder="如：28" step="0.1">
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-profile')">取消</button>
-      <button class="btn btn-primary" onclick="saveNewProfile()">保存档案</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: 上传视频 -->
-<div class="modal-overlay" id="modal-upload">
-  <div class="modal" style="width:480px;">
-    <div class="modal-header">
-      <div class="modal-title">🎥 上传视频进行AI分析</div>
-      <button class="modal-close" onclick="closeModal('modal-upload')">×</button>
-    </div>
-    <div class="modal-body">
-      <div style="border:2px dashed var(--border);border-radius:12px;padding:40px;text-align:center;margin-bottom:16px;">
-        <div style="font-size:40px;margin-bottom:12px;">📹</div>
-        <div style="font-size:14px;font-weight:600;margin-bottom:4px;">拖拽视频文件到这里</div>
-        <div style="font-size:12px;color:var(--text-light);">或点击选择文件</div>
-        <div style="margin-top:12px;font-size:12px;color:var(--text-light);">支持 mp4 / mov / avi，时长 1-30 秒</div>
-      </div>
-      <div class="form-row">
-        <div class="form-group form-full">
-          <label class="form-label">分析类型</label>
-          <select id="up-type">
-            <option>挥棒分析</option><option>投球分析</option>
-          </select>
-        </div>
-      </div>
-      <div class="highlight-box">
-        <div class="highlight-title">📌 上传说明</div>
-        <div class="highlight-item">• 视频建议正面或侧面角度拍摄</div>
-        <div class="highlight-item">• 尽量拍到完整的挥棒 / 投球轨迹</div>
-        <div class="highlight-item">• 手机横向拍摄效果最佳</div>
-        <div class="highlight-item">• 分析完成后自动生成PDF报告</div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-upload')">取消</button>
-      <button class="btn btn-accent" onclick="simulateUpload()">开始分析</button>
-    </div>
-  </div>
-</div>
-
+<script src="assets/nav.js"></script>
 <script>
-// ═══════════════════════════════════════════════
-// DATA
-// ═══════════════════════════════════════════════
-const SAMPLE_PLAYERS = [
-  {id:'P001', name:'陈俊轩', team:'香港老虎少棒队', group:'U12', pos:'游击手', dob:'2014-05-12',
-   swing:97.2, bpa:26.8, aa:42.1, radar:{speed:82,angle:75,plane:70,efficiency:68}, status:'已分析', note:'攻击角度偏大，建议加强后摆训练'},
-  {id:'P002', name:'林可晴', team:'九龙天使队', group:'U12', pos:'投手', dob:'2014-08-03',
-   swing:88.5, bpa:24.1, aa:38.9, radar:{speed:72,angle:88,plane:80,efficiency:85}, status:'已分析', note:'投手型，控球稳定，需加强力量'},
-  {id:'P003', name:'张浩然', team:'港岛红雀队', group:'U12', pos:'捕手', dob:'2014-03-22',
-   swing:102.8, bpa:28.5, aa:45.2, radar:{speed:95,angle:68,plane:65,efficiency:72}, status:'已分析', note:'挥棒速度出色，攻击角度偏大'},
-  {id:'P004', name:'王家耀', team:'新界飓风队', group:'U15', pos:'中外野', dob:'2012-11-08',
-   swing:115.3, bpa:22.4, aa:36.8, radar:{speed:98,angle:90,plane:88,efficiency:80}, status:'已分析', note:'综合能力优秀，是梯队核心'},
-  {id:'P005', name:'李芷晴', team:'港岛蓝鸟队', group:'U10', pos:'一垒手', dob:'2016-02-14',
-   swing:78.2, bpa:21.3, aa:39.5, radar:{speed:60,angle:78,plane:72,efficiency:70}, status:'待分析', note:'U10潜力股，需加强基础训练'},
-  {id:'P006', name:'周柏豪', team:'新界野马队', group:'U18', pos:'投手', dob:'2009-07-30',
-   swing:95.8, bpa:25.0, aa:40.1, radar:{speed:80,angle:85,plane:82,efficiency:78}, status:'已分析', note:'U18主力投手，具备代表队实力'},
-];
+document.addEventListener('DOMContentLoaded', async function() {
+  initNav({ title:'技术档案', subtitle:'Module 04 · Player Profiles' });
 
-let profiles = JSON.parse(localStorage.getItem('hkba_profiles') || 'null') || [...SAMPLE_PLAYERS];
-let currentPlayer = null;
-let aiHistory = JSON.parse(localStorage.getItem('hkba_ai_history') || 'null') || [
-  {id:'AI001', player:'陈俊轩', type:'挥棒分析', status:'已完成', time:'2026-04-12 14:32'},
-  {id:'AI002', player:'林可晴', type:'投手分析', status:'已完成', time:'2026-04-11 10:15'},
-  {id:'AI003', player:'张浩然', type:'挥棒分析', status:'已完成', time:'2026-04-10 16:48'},
-  {id:'AI004', player:'王家耀', type:'挥棒分析', status:'处理中', time:'2026-04-18 09:05'},
-];
+  var allPlayers = [];
+  var allProfiles = [];
+  var filterText = '';
 
-// ─── Tab Switch ───
-function switchTab(el, id) {
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  document.getElementById('tab-' + id).classList.add('active');
-  if (id === 'compare') initCompare();
-  if (id === 'history') initHistory();
-}
+  var avatarColors = ['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899','#f59e0b','#06b6d4','#84cc16'];
 
-function initCompare() {
-  const opts = profiles.map(p => `<option value="${p.id}">${p.name} (${p.group})</option>`).join('');
-  document.getElementById('cmp-a').innerHTML = '<option value="">— 选择球员 —</option>' + opts;
-  document.getElementById('cmp-b').innerHTML = '<option value="">— 选择球员 —</option>' + opts;
-}
-
-function initHistory() {
-  const opts = profiles.map(p => `<option value="${p.id}">${p.name} (${p.group} · ${p.team})</option>`).join('');
-  document.getElementById('history-player').innerHTML = '<option value="">— 选择球员 —</option>' + opts;
-}
-
-// ─── Players List ───
-function calcAge(dob) {
-  const b = new Date(dob);
-  const now = new Date();
-  return now.getFullYear() - b.getFullYear();
-}
-
-function getRadarScore(r) {
-  return Math.round((r.speed + r.angle + r.plane + r.efficiency) / 4);
-}
-
-function getRadarColor(score) {
-  if (score >= 85) return '#1E8449';
-  if (score >= 70) return '#D68910';
-  return '#C0392B';
-}
-
-function renderPlayers() {
-  const g = document.getElementById('pf-group').value;
-  const p = document.getElementById('pf-pos').value;
-  const q = document.getElementById('pf-search').value.toLowerCase();
-  const filtered = profiles.filter(x => {
-    if (g && x.group !== g) return false;
-    if (p && !x.pos.includes(p === '内野' ? ['一','二','三','游'].some(c=>x.pos.includes(c)) : p)) return false;
-    if (q && !x.name.includes(q) && !x.id.includes(q)) return false;
-    return true;
-  });
-
-  const tbody = document.getElementById('players-tbody');
-  if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-light)">暂无球员档案</td></tr>`;
-    return;
+  function getAvatarColor(name) {
+    return avatarColors[(name||'A').charCodeAt(0) % avatarColors.length];
   }
-  tbody.innerHTML = filtered.map(p => {
-    const score = p.radar ? getRadarScore(p.radar) : '—';
-    const color = p.radar ? getRadarColor(score) : '#ccc';
-    const initials = p.name.slice(0,2);
-    return `<tr onclick="openProfile('${p.id}')" style="cursor:pointer;">
-      <td>
-        <div class="flex flex-center gap-8">
-          <div class="player-avatar" style="width:36px;height:36px;font-size:13px;">${initials}</div>
-          <div>
-            <div style="font-weight:600;">${p.name}</div>
-            <div class="text-muted">${p.id}</div>
-          </div>
-        </div>
-      </td>
-      <td><span class="badge badge-${p.group.toLowerCase()}">${p.group}</span></td>
-      <td>${p.team}</td>
-      <td>${p.pos}</td>
-      <td class="td-center">${p.swing ? p.swing.toFixed(1) : '—'}<span class="text-muted" style="font-size:11px;"> km/h</span></td>
-      <td class="td-center">${p.bpa ? p.bpa.toFixed(1) : '—'}°</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:80px;height:6px;background:#EAECEE;border-radius:3px;overflow:hidden;">
-            <div style="width:${score}%;height:100%;background:${color};border-radius:3px;"></div>
-          </div>
-          <span style="font-weight:700;color:${color};font-size:13px;">${score}</span>
-        </div>
-      </td>
-      <td><span class="badge ${p.status==='已分析'?'badge-done':'badge-pending'}">${p.status}</span></td>
-      <td>
-        <button class="btn btn-xs btn-outline" onclick="event.stopPropagation();openProfile('${p.id}')">查看</button>
-        <button class="btn btn-xs btn-outline" onclick="event.stopPropagation();editProfile('${p.id}')">编辑</button>
-      </td>
-    </tr>`;
-  }).join('');
-}
 
-// ─── Profile Detail ───
-function openProfile(id) {
-  currentPlayer = profiles.find(p => p.id === id);
-  if (!currentPlayer) return;
+  function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 
-  document.getElementById('profile-title').textContent = `📋 ${currentPlayer.name} — 技术档案`;
-  document.getElementById('profile-actions').style.display = 'flex';
+  function drawRadar(svgId, scores, size) {
+    size = size || 160;
+    var svg = document.getElementById(svgId);
+    if (!svg) return;
+    var cx = size/2, cy = size/2, r = size/2 - 10;
+    var labels = ['力量', '速度', '防守', '控球', '击球'];
+    var keys = ['power','speed','defense','control','batting'];
+    var n = labels.length;
+    var angleStep = (2 * Math.PI) / n;
 
-  const initials = currentPlayer.name.slice(0,2);
-  const score = currentPlayer.radar ? getRadarScore(currentPlayer.radar) : '—';
-  const radarColors = ['#1B4F72','#E67E22','#1E8449','#8E44AD'];
-
-  const html = `
-    <div class="flex gap-8" style="align-items:flex-start;">
-      <div class="player-avatar" style="width:72px;height:72px;font-size:26px;">${initials}</div>
-      <div style="flex:1;">
-        <div style="font-size:20px;font-weight:800;">${currentPlayer.name}</div>
-        <div style="font-size:13px;color:var(--text-light);margin-top:4px;">
-          ${currentPlayer.team} · <span class="badge badge-${currentPlayer.group.toLowerCase()}" style="font-size:10px;">${currentPlayer.group}</span>
-          · ${currentPlayer.pos} · ${currentPlayer.dob ? '生于'+currentPlayer.dob : '无出生日期'}
-        </div>
-        <div style="margin-top:8px;">
-          <span class="badge ${currentPlayer.status==='已分析'?'badge-done':'badge-pending'}">${currentPlayer.status}</span>
-          ${currentPlayer.note ? `<span style="font-size:12px;color:var(--text-light);margin-left:8px;">📝 ${currentPlayer.note}</span>` : ''}
-        </div>
-      </div>
-    </div>
-
-    <hr class="divider">
-
-    <div class="stat-row">
-      <div class="stat-card"><div class="stat-num">${currentPlayer.swing ? currentPlayer.swing.toFixed(1) : '—'}</div><div class="stat-label">挥棒速度</div><div class="stat-unit">km/h</div></div>
-      <div class="stat-card"><div class="stat-num">${currentPlayer.bpa ? currentPlayer.bpa.toFixed(1) : '—'}</div><div class="stat-label">BPA 挥棒平面角</div><div class="stat-unit">度</div></div>
-      <div class="stat-card"><div class="stat-num">${currentPlayer.aa ? currentPlayer.aa.toFixed(1) : '—'}</div><div class="stat-label">AA 攻击角度</div><div class="stat-unit">度</div></div>
-      <div class="stat-card" style="background:#FEF9E7;"><div class="stat-num" style="color:var(--accent);">${score}</div><div class="stat-label">雷达综合评分</div><div class="stat-unit">/100</div></div>
-    </div>
-
-    <div class="panel-title mt-16">🎯 四维能力雷达图</div>
-    <div class="radar-wrap mt-8">
-      <canvas class="radar-canvas" id="radar-canvas" width="280" height="280"></canvas>
-      <div class="radar-legend">
-        ${['速度 (挥棒/投球)','角度 (攻击角/出手)','平面 (挥杆轨迹)','效率 (力量转化)'].map((l,i) => `
-          <div class="radar-item">
-            <div class="radar-dot" style="background:${radarColors[i]};"></div>
-            <div class="radar-label">${l}</div>
-            <div class="radar-val">${currentPlayer.radar ? currentPlayer.radar[['speed','angle','plane','efficiency'][i]] : '—'}</div>
-          </div>
-        `).join('')}
-        <div style="margin-top:12px;padding:10px;background:#F8F9FA;border-radius:8px;">
-          <div style="font-size:12px;font-weight:700;color:var(--primary);">综合评分</div>
-          <div style="font-size:24px;font-weight:800;color:${currentPlayer.radar ? getRadarColor(score) : '#ccc'};">${score}<span style="font-size:13px;color:var(--text-light);"> / 100</span></div>
-          <div style="font-size:11px;color:var(--text-light);margin-top:2px;">${score >= 85 ? '⭐ 优秀' : score >= 70 ? '👍 良好' : '📈 待提升'}</div>
-        </div>
-      </div>
-    </div>
-
-    <hr class="divider">
-
-    <div class="panel-title">📊 详细技术指标</div>
-    <div class="metric-grid mt-8">
-      <div class="metric-box">
-        <div class="metric-name">挥棒速度</div>
-        <div class="metric-value">${currentPlayer.swing ? currentPlayer.swing.toFixed(1) : '—'}<span style="font-size:13px;color:var(--text-light);"> km/h</span></div>
-        <div class="progress-bar metric-bar">
-          <div class="progress-fill" style="width:${currentPlayer.swing ? Math.min(currentPlayer.swing,120) : 0}%;background:#1B4F72;"></div>
-        </div>
-        <div class="progress-label">U12均值约 85-100 km/h</div>
-      </div>
-      <div class="metric-box">
-        <div class="metric-name">BPA 挥棒平面角</div>
-        <div class="metric-value">${currentPlayer.bpa ? currentPlayer.bpa.toFixed(1) : '—'}<span style="font-size:13px;color:var(--text-light);">°</span></div>
-        <div class="progress-bar metric-bar">
-          <div class="progress-fill" style="width:${currentPlayer.bpa ? Math.min(currentPlayer.bpa,45) : 0}%;background:#E67E22;"></div>
-        </div>
-        <div class="progress-label">理想范围：18°-26°</div>
-      </div>
-      <div class="metric-box">
-        <div class="metric-name">AA 攻击角度</div>
-        <div class="metric-value">${currentPlayer.aa ? currentPlayer.aa.toFixed(1) : '—'}<span style="font-size:13px;color:var(--text-light);">°</span></div>
-        <div class="progress-bar metric-bar">
-          <div class="progress-fill" style="width:${currentPlayer.aa ? Math.min(currentPlayer.aa,60) : 0}%;background:#1E8449;"></div>
-        </div>
-        <div class="progress-label">理想范围：20°-35°</div>
-      </div>
-      <div class="metric-box">
-        <div class="metric-name">雷达综合评分</div>
-        <div class="metric-value">${score}</div>
-        <div class="progress-bar metric-bar">
-          <div class="progress-fill" style="width:${score}%;background:${getRadarColor(score)};"></div>
-        </div>
-        <div class="progress-label">${score >= 85 ? '优秀' : score >= 70 ? '良好' : '待提升'} 水平</div>
-      </div>
-    </div>
-
-    <hr class="divider">
-
-    <div class="highlight-box">
-      <div class="highlight-title">💡 AI 技术建议</div>
-      <div>${currentPlayer.note ? currentPlayer.note : '暂无AI分析建议，请上传挥棒视频进行完整分析。'}</div>
-    </div>`;
-
-  document.getElementById('profile-content').innerHTML = html;
-  drawRadar(currentPlayer.radar || {speed:0,angle:0,plane:0,efficiency:0}, radarColors);
-}
-
-function drawRadar(data, colors) {
-  const canvas = document.getElementById('radar-canvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const cx = 140, cy = 140, r = 110;
-  const labels = ['速度','角度','平面','效率'];
-  const vals = [data.speed, data.angle, data.plane, data.efficiency];
-  ctx.clearRect(0, 0, 280, 280);
-
-  // Grid
-  for (let level = 1; level <= 5; level++) {
-    const rr = r * level / 5;
-    ctx.beginPath();
-    for (let i = 0; i < 4; i++) {
-      const angle = (i * 90 - 90) * Math.PI / 180;
-      const x = cx + rr * Math.cos(angle);
-      const y = cy + rr * Math.sin(angle);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    var html = '';
+    // Background circles
+    for (var level = 1; level <= 5; level++) {
+      var lr = r * (level / 5);
+      var pts = [];
+      for (var i = 0; i < n; i++) {
+        var a = i * angleStep - Math.PI/2;
+        pts.push(cx + lr * Math.cos(a) + ',' + (cy + lr * Math.sin(a)));
+      }
+      html += '<polygon points="' + pts.join(' ') + '" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>';
     }
-    ctx.closePath();
-    ctx.strokeStyle = '#EAECEE';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    // Axis lines
+    for (var i = 0; i < n; i++) {
+      var a = i * angleStep - Math.PI/2;
+      html += '<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx + r*Math.cos(a)) + '" y2="' + (cy + r*Math.sin(a)) + '" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>';
+    }
+    // Data polygon
+    var dataPts = [];
+    var dataPtsFill = [];
+    var colors = ['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899'];
+    for (var i = 0; i < n; i++) {
+      var val = scores[keys[i]] || 0;
+      var norm = Math.min(val / 100, 1);
+      var a = i * angleStep - Math.PI/2;
+      var px = cx + r * norm * Math.cos(a);
+      var py = cy + r * norm * Math.sin(a);
+      dataPts.push(px + ',' + py);
+      dataPtsFill.push(px + ',' + py);
+    }
+    html += '<polygon points="' + dataPts.join(' ') + '" fill="rgba(249,115,22,0.2)" stroke="#f97316" stroke-width="2"/>';
+    // Data dots
+    for (var i = 0; i < n; i++) {
+      var val = scores[keys[i]] || 0;
+      var norm = Math.min(val / 100, 1);
+      var a = i * angleStep - Math.PI/2;
+      var px = cx + r * norm * Math.cos(a);
+      var py = cy + r * norm * Math.sin(a);
+      html += '<circle cx="' + px + '" cy="' + py + '" r="4" fill="#f97316" stroke="white" stroke-width="1.5"/>';
+    }
+    // Labels
+    for (var i = 0; i < n; i++) {
+      var a = i * angleStep - Math.PI/2;
+      var lx = cx + (r + 14) * Math.cos(a);
+      var ly = cy + (r + 14) * Math.sin(a);
+      html += '<text x="' + lx + '" y="' + ly + '" text-anchor="middle" dominant-baseline="middle" fill="#64748b" font-size="10" font-weight="600">' + labels[i] + '</text>';
+    }
+    svg.innerHTML = html;
   }
 
-  // Axes
-  for (let i = 0; i < 4; i++) {
-    const angle = (i * 90 - 90) * Math.PI / 180;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
-    ctx.strokeStyle = '#D5D8DC';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.fillStyle = '#707B7C';
-    ctx.font = '12px Segoe UI';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(labels[i], cx + (r + 16) * Math.cos(angle), cy + (r + 16) * Math.sin(angle));
+  function getRandomProfile(player) {
+    var base = player.name ? (player.name.charCodeAt(0) % 30) + 50 : 60;
+    return {
+      player_id: player.id || player.player_id,
+      name: player.name,
+      overall_rating: base + Math.floor(Math.random() * 20),
+      power_rating: base + Math.floor(Math.random() * 20),
+      speed_rating: base + Math.floor(Math.random() * 20),
+      defense_rating: base + Math.floor(Math.random() * 20),
+      control_rating: base + Math.floor(Math.random() * 20),
+      batting_rating: base + Math.floor(Math.random() * 20),
+      swing_speed_avg: (60 + Math.floor(Math.random() * 30)).toFixed(1),
+      pitch_speed_avg: (70 + Math.floor(Math.random() * 40)).toFixed(1),
+      last_analysis_at: new Date().toISOString()
+    };
   }
 
-  // Data polygon
-  ctx.beginPath();
-  for (let i = 0; i < 4; i++) {
-    const angle = (i * 90 - 90) * Math.PI / 180;
-    const val = vals[i] / 100 * r;
-    const x = cx + val * Math.cos(angle);
-    const y = cy + val * Math.sin(angle);
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  }
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(27,79,114,0.25)';
-  ctx.fill();
-  ctx.strokeStyle = '#1B4F72';
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  function renderProfiles(profiles) {
+    var container = document.getElementById('page-content');
+    initNav({
+      title: '技术档案',
+      subtitle: 'Module 04 · Player Profiles',
+      stats: [{ label: '注册球员', value: allPlayers.length }, { label: '已建档', value: profiles.length }]
+    });
 
-  // Dots
-  for (let i = 0; i < 4; i++) {
-    const angle = (i * 90 - 90) * Math.PI / 180;
-    const val = vals[i] / 100 * r;
-    ctx.beginPath();
-    ctx.arc(cx + val * Math.cos(angle), cy + val * Math.sin(angle), 4, 0, Math.PI * 2);
-    ctx.fillStyle = colors[i];
-    ctx.fill();
-  }
-}
-
-// ─── Comparison ───
-function renderComparison() {
-  const aId = document.getElementById('cmp-a').value;
-  const bId = document.getElementById('cmp-b').value;
-  const a = profiles.find(p => p.id === aId);
-  const b = profiles.find(p => p.id === bId);
-
-  const renderCol = (player, target) => {
-    if (!player) return '<div style="color:var(--text-light);padding:16px;text-align:center;">请选择球员</div>';
-    const score = player.radar ? getRadarScore(player.radar) : '—';
-    return `<div style="margin-bottom:8px;">
-      <div style="font-weight:700;font-size:14px;">${player.name} <span class="badge badge-${player.group.toLowerCase()}" style="font-size:10px;">${player.group}</span></div>
-      <div style="font-size:12px;color:var(--text-light);">${player.team} · ${player.pos}</div>
-      <div class="flex gap-8 mt-8">
-        <div class="stat-card" style="min-width:60px;padding:8px;"><div style="font-size:16px;font-weight:800;">${player.swing||'—'}</div><div style="font-size:10px;color:var(--text-light);">挥棒速度</div></div>
-        <div class="stat-card" style="min-width:60px;padding:8px;"><div style="font-size:16px;font-weight:800;">${player.bpa||'—'}°</div><div style="font-size:10px;color:var(--text-light);">BPA角</div></div>
-        <div class="stat-card" style="min-width:60px;padding:8px;background:#FEF9E7;"><div style="font-size:16px;font-weight:800;color:var(--accent);">${score}</div><div style="font-size:10px;color:var(--text-light);">综合</div></div>
-      </div>
-    </div>`;
-  };
-
-  document.getElementById('cmp-a-content').innerHTML = renderCol(a);
-  document.getElementById('cmp-b-content').innerHTML = renderCol(b);
-
-  if (a && b) {
-    const items = [
-      {label:'挥棒速度 (km/h)', a: a.swing, b: b.swing, high: true, unit:'km/h'},
-      {label:'BPA 挥棒平面角 (°)', a: a.bpa, b: b.bpa, high: false, unit:'°', ideal:[18,26]},
-      {label:'AA 攻击角度 (°)', a: a.aa, b: b.aa, high: false, unit:'°', ideal:[20,35]},
-      {label:'雷达综合评分', a: a.radar ? getRadarScore(a.radar) : 0, b: b.radar ? getRadarScore(b.radar) : 0, high: true, unit:'分'},
-    ];
-    document.getElementById('cmp-result').innerHTML = `
-      <hr class="divider">
-      <div class="panel-title mt-8">📊 对比结论</div>
-      <table class="mt-8" style="width:100%;">
-        <thead><tr><th>指标</th><th style="text-align:center;">${a.name}</th><th style="text-align:center;">${b.name}</th><th style="text-align:center;">优势方</th></tr></thead>
-        <tbody>${items.map(item => {
-          const aVal = item.a ? item.a.toFixed(1) : '—';
-          const bVal = item.b ? item.b.toFixed(1) : '—';
-          let winner = '—';
-          if (item.a && item.b) {
-            if (item.high) winner = item.a > item.b ? a.name : item.b > item.a ? b.name : '持平';
-            else winner = item.a < item.b ? a.name : item.b < item.a ? b.name : '持平';
-          }
-          const winClass = winner === a.name ? 'text-success' : winner === b.name ? 'text-info' : '';
-          return `<tr>
-            <td>${item.label}</td>
-            <td class="td-center" style="font-weight:700;">${aVal} ${item.unit||''}</td>
-            <td class="td-center" style="font-weight:700;">${bVal} ${item.unit||''}</td>
-            <td class="td-center ${winClass}" style="font-weight:600;">${winner}</td>
-          </tr>`;
-        }).join('')}</tbody>
-      </table>`;
-  } else {
-    document.getElementById('cmp-result').innerHTML = '';
-  }
-}
-
-// ─── AI Analysis ───
-function renderAIHistory() {
-  const tbody = document.querySelector('#ai-history-table tbody');
-  tbody.innerHTML = aiHistory.map(h => `<tr>
-    <td><span class="text-muted">${h.id}</span></td>
-    <td><strong>${h.player}</strong></td>
-    <td>${h.type}</td>
-    <td><span class="badge ${h.status==='已完成'?'badge-done':h.status==='处理中'?'badge-pending':'badge-draft'}">${h.status}</span></td>
-    <td class="text-muted">${h.time}</td>
-    <td><button class="btn btn-xs btn-outline" onclick="viewAIResult('${h.id}')">查看</button></td>
-  </tr>`).join('');
-}
-
-function runAISwingAnalysis() {
-  const player = profiles[0];
-  const newId = 'AI' + String(aiHistory.length + 1).padStart(3,'0');
-  const newEntry = {id: newId, player: player.name, type:'挥棒分析', status:'处理中', time: new Date().toLocaleString('zh-CN')};
-  aiHistory.unshift(newEntry);
-  localStorage.setItem('hkba_ai_history', JSON.stringify(aiHistory));
-  renderAIHistory();
-
-  const scores = {speed:72,angle:88,plane:75,efficiency:80};
-  document.getElementById('ai-result').innerHTML = `
-    <div class="panel" style="border:2px solid var(--primary);">
-      <div class="panel-header" style="background:#EBF5FB;">
-        <div class="panel-title">🤖 AI 分析报告 — ${player.name} · 挥棒分析</div>
-        <span class="badge badge-done">已完成</span>
-      </div>
-      <div class="panel-body">
-        <div class="stat-row">
-          <div class="stat-card"><div class="stat-num">95.2</div><div class="stat-label">挥棒速度</div><div class="stat-unit">km/h</div></div>
-          <div class="stat-card"><div class="stat-num">28.5°</div><div class="stat-label">BPA 挥棒平面角</div><div class="stat-unit">理想 18-26°</div></div>
-          <div class="stat-card"><div class="stat-num">2.30s</div><div class="stat-label">力量峰值时间</div><div class="stat-unit">t=2.30s</div></div>
-          <div class="stat-card" style="background:#FEF9E7;"><div class="stat-num" style="color:var(--accent);">68</div><div class="stat-label">综合评分</div><div class="stat-unit">/100</div></div>
-        </div>
-        <hr class="divider">
-        <div class="radar-wrap">
-          <canvas class="radar-canvas" id="ai-radar-canvas" width="240" height="240"></canvas>
-          <div style="flex:1;">
-            <div class="panel-title">💡 AI 建议</div>
-            <div style="margin-top:8px;font-size:13px;line-height:1.8;">
-              <div style="display:flex;gap:8px;margin-bottom:4px;"><span style="color:var(--success);">✅</span><strong>挥棒速度 72分</strong> — 速度处于U12同龄人良好水平，力量充足</div>
-              <div style="display:flex;gap:8px;margin-bottom:4px;"><span style="color:var(--warning);">🔧</span><strong>BPA 角度 88分</strong> — 挥棒平面角偏大，建议加强后摆蓄力训练</div>
-              <div style="display:flex;gap:8px;margin-bottom:4px;"><span style="color:var(--success);">✅</span><strong>力量效率 80分</strong> — 力量转化效率良好</div>
-              <div style="display:flex;gap:8px;"><span style="color:var(--warning);">🔧</span><strong>髋部旋转</strong> — 髋部旋转时序可进一步优化，与挥棒平面角配合训练</div>
-            </div>
-            <div class="highlight-box mt-16">
-              <div class="highlight-title">📋 个性化训练计划建议</div>
-              <div>• 每日后摆蓄力练习 10分钟（重点）<br>• 髋部旋转时序训练 8分钟<br>• 每周2次视频复盘，对比进步</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>`;
-
-  setTimeout(() => {
-    const radarColors = ['#1B4F72','#E67E22','#1E8449','#8E44AD'];
-    drawRadarOnCanvas(document.getElementById('ai-radar-canvas'), scores, radarColors);
-    newEntry.status = '已完成';
-    localStorage.setItem('hkba_ai_history', JSON.stringify(aiHistory));
-    renderAIHistory();
-  }, 1000);
-}
-
-function runAIPitcherAnalysis() {
-  document.getElementById('ai-result').innerHTML = `
-    <div class="panel" style="border:2px solid var(--accent);">
-      <div class="panel-header" style="background:#FEF5E7;">
-        <div class="panel-title">🤖 AI 分析报告 — 林可晴 · 投手分析</div>
-        <span class="badge badge-done">已完成</span>
-      </div>
-      <div class="panel-body">
-        <div class="stat-row">
-          <div class="stat-card"><div class="stat-num">85</div><div class="stat-label">最快球速</div><div class="stat-unit">km/h</div></div>
-          <div class="stat-card"><div class="stat-num">72°</div><div class="stat-label">出手角度</div><div class="stat-unit">理想 70-80°</div></div>
-          <div class="stat-card"><div class="stat-num">良好</div><div class="stat-label">球路控制</div><div class="stat-unit">四角均有</div></div>
-          <div class="stat-card" style="background:#FEF9E7;"><div class="stat-num" style="color:var(--accent);">76</div><div class="stat-label">综合评分</div><div class="stat-unit">/100</div></div>
-        </div>
-        <hr class="divider">
-        <div class="highlight-box">
-          <div class="highlight-title">💡 投手专项AI建议</div>
-          <div>• 球速处于U12女子投手优秀水平<br>• 出手角度稳定，需加强变化球训练<br>• 建议每周增加上肢力量训练 2次<br>• 控球率持续提升中，是梯队核心投手</div>
-        </div>
-      </div>
-    </div>`;
-}
-
-function runRadarGen() {
-  const p = profiles[0];
-  if (!p.radar) return;
-  document.getElementById('ai-result').innerHTML = `
-    <div class="panel">
-      <div class="panel-header"><div class="panel-title">🎯 雷达图已生成 — ${p.name}</div></div>
-      <div class="panel-body" style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
-        <canvas width="240" height="240" id="cmp-radar-a"></canvas>
-        <div>
-          <div class="panel-title">${p.name} 能力分析</div>
-          <div class="radar-legend mt-8">${['速度','角度','平面','效率'].map((l,i) => {
-            const val = p.radar[['speed','angle','plane','efficiency'][i]];
-            return `<div class="radar-item">
-              <div class="radar-dot" style="background:${['#1B4F72','#E67E22','#1E8449','#8E44AD'][i]};"></div>
-              <div class="radar-label">${l}</div><div class="radar-val">${val}</div>
-            </div>`;
-          }).join('')}</div>
-        </div>
-      </div>
-    </div>`;
-  setTimeout(() => {
-    const canvas = document.getElementById('cmp-radar-a');
-    if (canvas) drawRadarOnCanvas(canvas, profiles[0].radar, ['#1B4F72','#E67E22','#1E8449','#8E44AD']);
-  }, 100);
-}
-
-function runTrendPredict() {
-  document.getElementById('ai-result').innerHTML = `
-    <div class="panel">
-      <div class="panel-header"><div class="panel-title">📈 技术趋势预测报告</div></div>
-      <div class="panel-body">
-        <div class="history-timeline">
-          <div class="history-item">
-            <div class="history-date">当前水平（2026年4月）</div>
-            <div class="history-title">挥棒速度 95.2 km/h · 雷达评分 68</div>
-            <div class="history-sub">处于U12组别第65百分位</div>
-          </div>
-          <div class="history-item">
-            <div class="history-date">6个月预测（2026年10月）</div>
-            <div class="history-title">预计挥棒速度 100-105 km/h</div>
-            <div class="history-sub">进入U15组别后仍有竞争力，建议加强技术细节</div>
-          </div>
-          <div class="history-item">
-            <div class="history-date">12个月预测（2027年4月）</div>
-            <div class="history-title">预计进入 U15 代表队候选</div>
-            <div class="history-sub">需将BPA角度优化至26°以下，攻击角度降至35°以下</div>
-          </div>
-          <div class="history-item">
-            <div class="history-date">长期目标</div>
-            <div class="history-title">U18 代表队正式成员</div>
-            <div class="history-sub">建议同步发展投手技能，增加双向能力，提升升学竞争力</div>
-          </div>
-        </div>
-      </div>
-    </div>`;
-}
-
-function drawRadarOnCanvas(canvas, data, colors) {
-  if (!canvas) return;
-  drawRadar({speed: data.speed||0, angle: data.angle||0, plane: data.plane||0, efficiency: data.efficiency||0}, colors);
-}
-
-// ─── History ───
-function renderHistory() {
-  const id = document.getElementById('history-player').value;
-  if (!id) return;
-  const p = profiles.find(x => x.id === id);
-  if (!p) return;
-
-  document.getElementById('history-content').innerHTML = `
-    <div class="flex gap-8" style="align-items:center;margin-bottom:16px;">
-      <div class="player-avatar">${p.name.slice(0,2)}</div>
-      <div>
-        <div style="font-size:18px;font-weight:800;">${p.name}</div>
-        <div style="font-size:12px;color:var(--text-light);">${p.team} · ${p.pos} · ${p.group}</div>
+    var html = `
+    <div class="page-header">
+      <div><h2>📈 球员技术档案</h2><p>雷达评分、成长曲线、历史数据分析</p></div>
+      <div class="page-actions">
+        <button class="btn btn-secondary btn-sm" onclick="generateAllProfiles()">🔄 生成档案</button>
+        <button class="btn btn-primary" onclick="window.location.href='06_AI_运动分析_专属教练.html'">🤖 AI分析</button>
       </div>
     </div>
-
-    <div class="history-timeline">
-      <div class="history-item">
-        <div class="history-date">2025年9月 — 首次注册</div>
-        <div class="history-title">加入 ${p.team}</div>
-        <div class="history-sub">初次录入系统，技术数据尚未建立</div>
-      </div>
-      <div class="history-item">
-        <div class="history-date">2025年11月 — 秋季杯</div>
-        <div class="history-title">首场正式比赛</div>
-        <div class="history-sub">获得最佳新秀奖提名</div>
-      </div>
-      <div class="history-item">
-        <div class="history-date">2026年1月 — 首次分析</div>
-        <div class="history-title">完成首次AI挥棒分析</div>
-        <div class="history-sub">挥棒速度 88.5 km/h，雷达评分 62</div>
-      </div>
-      <div class="history-item">
-        <div class="history-date">2026年3月 — 技术提升</div>
-        <div class="history-title">第二次AI分析：挥棒速度提升至 ${p.swing ? p.swing.toFixed(1) : '—'} km/h</div>
-        <div class="history-sub">雷达评分提升至 ${p.radar ? getRadarScore(p.radar) : '—'}，攻击角度有所改善</div>
-      </div>
-      <div class="history-item">
-        <div class="history-date">2026年4月 — 当前水平</div>
-        <div class="history-title">正式进入梯队候选名单</div>
-        <div class="history-sub">${p.group} 代表队候选 ${p.pos}，预计进入 U15 后正式入选</div>
-      </div>
-    </div>
-
-    <div class="highlight-box mt-16">
-      <div class="highlight-title">📋 成长总结</div>
-      <div>• 技术进步明显，尤其挥棒速度提升约 ${p.swing ? (p.swing - 88.5).toFixed(1) : '—'} km/h<br>
-      • 建议继续加强 ${p.bpa && p.bpa > 26 ? '挥棒平面角' : '力量稳定性'} 训练<br>
-      • 下一阶段目标：${p.group.replace('U','U+')} 代表队正式成员</div>
+    <div class="filter-bar">
+      <input type="text" id="filter-search" class="filter-search" placeholder="🔍 搜索球员姓名..." oninput="applyFilter()">
+      <select id="filter-pos" onchange="applyFilter()"><option value="">全部位置</option><option>投手</option><option>捕手</option><option>内野</option><option>外野</option></select>
     </div>`;
-}
 
-// ─── CRUD ───
-function openNewProfile() { openModal('modal-profile'); }
-function editProfile(id) {
-  const p = profiles.find(x => x.id === id);
-  if (!p) return;
-  document.getElementById('np-name').value = p.name;
-  document.getElementById('np-id').value = p.id;
-  document.getElementById('np-dob').value = p.dob || '';
-  document.getElementById('np-team').value = p.team;
-  document.getElementById('np-pos').value = p.pos;
-  document.getElementById('np-group').value = p.group;
-  document.getElementById('np-swing').value = p.swing || '';
-  document.getElementById('np-bpa').value = p.bpa || '';
-  openModal('modal-profile');
-}
-function saveNewProfile() {
-  const name = document.getElementById('np-name').value.trim();
-  if (!name) { alert('请填写球员姓名'); return; }
-  const p = {
-    id: 'P' + String(profiles.length + 1).padStart(3,'0'),
-    name, dob: document.getElementById('np-dob').value,
-    team: document.getElementById('np-team').value,
-    pos: document.getElementById('np-pos').value,
-    group: document.getElementById('np-group').value,
-    swing: parseFloat(document.getElementById('np-swing').value) || null,
-    bpa: parseFloat(document.getElementById('np-bpa').value) || null,
-    aa: 40.0,
-    radar: {speed:70,angle:75,plane:70,efficiency:70},
-    status: document.getElementById('np-swing').value ? '已分析' : '待分析',
-    note: '',
-  };
-  profiles.push(p);
-  localStorage.setItem('hkba_profiles', JSON.stringify(profiles));
-  closeModal('modal-profile');
-  renderPlayers();
-}
-function openUploadVideo() { openModal('modal-upload'); }
-function simulateUpload() {
-  closeModal('modal-upload');
-  runAISwingAnalysis();
-}
-function exportProfiles() {
-  const headers = ['ID','姓名','球队','组别','位置','挥棒速度(km/h)','BPA角(°)','雷达评分','状态'];
-  const rows = profiles.map(p => [p.id,p.name,p.team,p.group,p.pos,p.swing||'',p.bpa||'',p.radar?getRadarScore(p.radar):'',p.status]);
-  const csv = [headers,...rows].map(r=>r.join(',')).join('\n');
-  downloadFile('\uFEFF'+csv, '球员技术档案.csv', 'text/csv;charset=utf-8');
-}
-function generateAIPDF() { alert('PDF报告生成功能：\n\n将球员完整档案 + 雷达图 + AI建议 打包为PDF文件，\n可供打印及发送给家长/教练。'); }
-function viewAIResult(id) { runAISwingAnalysis(); }
-function downloadFile(content, name, type) {
-  const blob = new Blob([content], {type});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = name; a.click();
-}
-function openModal(id) { document.getElementById(id).classList.add('show'); }
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+    if (profiles.length === 0) {
+      html += `<div class="empty-state"><div class="empty-icon">📈</div><h3>暂无技术档案</h3><p>点击右上角「生成档案」为球员创建技术评分</p><button class="btn btn-primary" onclick="generateAllProfiles()" style="margin-top:16px;">🔄 生成档案</button></div>`;
+    } else {
+      html += `<div class="profiles-grid">`;
+      profiles.forEach(function(p) {
+        var color = getAvatarColor(p.name);
+        var scores = {
+          power: p.power_rating || 60,
+          speed: p.speed_rating || 60,
+          defense: p.defense_rating || 60,
+          control: p.control_rating || 60,
+          batting: p.batting_rating || 60
+        };
+        html += `
+        <div class="profile-card" onclick="viewProfile('${p.player_id}')">
+          <div class="profile-header">
+            <div class="profile-avatar" style="background:${color}">${(p.name||'?').charAt(0)}</div>
+            <div>
+              <div class="profile-name">${escHtml(p.name)}</div>
+              <div class="profile-meta">综合评分: ${p.overall_rating || '-'}</div>
+            </div>
+          </div>
+          <div class="profile-body">
+            <div class="radar-wrap">
+              <svg class="radar-svg" id="radar-${p.player_id}"></svg>
+            </div>
+            <div class="profile-stats">
+              <div class="profile-stat"><div class="val">${p.swing_speed_avg || '-'}</div><div class="lbl">挥棒km/h</div></div>
+              <div class="profile-stat"><div class="val">${p.pitch_speed_avg || '-'}</div><div class="lbl">球速km/h</div></div>
+              <div class="profile-stat"><div class="val" style="color:${(p.power_rating||60)>70?'var(--primary)':'var(--text-secondary)'}">${p.power_rating||'-'}</div><div class="lbl">力量</div></div>
+              <div class="profile-stat"><div class="val" style="color:${(p.speed_rating||60)>70?'var(--success)':'var(--text-secondary)'}">${p.speed_rating||'-'}</div><div class="lbl">速度</div></div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <span class="badge badge-primary">综合 ${p.overall_rating || '-'}</span>
+              <span class="badge badge-success">击球 ${p.batting_rating || '-'}</span>
+              <span class="badge badge-warning">防守 ${p.defense_rating || '-'}</span>
+            </div>
+          </div>
+          <div class="profile-footer">
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();viewProfile('${p.player_id}')">📊 详情</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="event.stopPropagation();deleteProfile('${p.player_id}')">🗑️</button>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
 
-// Init
-(async function init() {
-  await DB.load();
-  const dbPlayers = DB.cache().players;
-  if (dbPlayers && dbPlayers.length > 0) {
-    const merged = dbPlayers.map(p => ({
-      id: p.id, name: p.name, age: p.age || 11, position: p.position || '',
-      throw_speed: p.throw_speed || 0, swing_speed: p.swing_speed || 0,
-      throw_hand: p.throw_hand || 'R', bat_hand: p.bat_hand || 'R',
-      team: p.team || '', height: p.height_cm || 0, weight: p.weight_kg || 0,
-      school: p.school || '', notes: p.notes || '',
-      radarScore: 0, trendData: []
-    }));
-    localStorage.setItem('hkba_profiles', JSON.stringify(merged));
-    profiles = merged;
+    container.innerHTML = html;
+
+    // Draw radars after DOM is ready
+    setTimeout(function() {
+      profiles.forEach(function(p) {
+        var scores = {
+          power: p.power_rating || 60,
+          speed: p.speed_rating || 60,
+          defense: p.defense_rating || 60,
+          control: p.control_rating || 60,
+          batting: p.batting_rating || 60
+        };
+        drawRadar('radar-' + p.player_id, scores);
+      });
+    }, 50);
   }
-  renderPlayers();
-  renderAIHistory();
-})();
+
+  function applyFilter() {
+    var text = document.getElementById('filter-search').value.trim().toLowerCase();
+    filterText = text;
+    var filtered = allProfiles.filter(function(p) {
+      if (!text) return true;
+      return p.name && p.name.toLowerCase().indexOf(text) >= 0;
+    });
+    renderProfiles(filtered);
+  }
+
+  window.generateAllProfiles = async function() {
+    showToast('正在生成技术档案...', 'info');
+    for (var i = 0; i < allPlayers.length; i++) {
+      var p = allPlayers[i];
+      var profile = getRandomProfile(p);
+      await DB.upsertPlayerProfile(profile);
+    }
+    showToast('已为 ' + allPlayers.length + ' 名球员生成技术档案', 'success');
+    loadAll();
+  };
+
+  window.deleteProfile = async function(playerId) {
+    confirmAction('确定删除该技术档案？', async function() {
+      try {
+        var all = await DB.getPlayerProfiles();
+        var profiles = all.data || [];
+        var p = profiles.find(function(x){ return x.player_id === playerId; });
+        if (p && p.id) {
+          await DB.deletePlayerProfile(p.id);
+        } else if (p && p.profile_id) {
+          await DB.deletePlayerProfile(p.profile_id);
+        }
+        showToast('档案已删除', 'success');
+        loadAll();
+      } catch(e) { showToast('删除失败', 'error'); }
+    });
+  };
+
+  window.viewProfile = function(playerId) {
+    var p = allProfiles.find(function(x){ return x.player_id === playerId; });
+    var player = allPlayers.find(function(x){ return (x.id||x.player_id) === playerId; });
+    if (!p) return;
+    var color = getAvatarColor(p.name);
+    var scores = {
+      power: p.power_rating || 60,
+      speed: p.speed_rating || 60,
+      defense: p.defense_rating || 60,
+      control: p.control_rating || 60,
+      batting: p.batting_rating || 60
+    };
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:600px;">
+        <div class="modal-header">
+          <div class="modal-title">📊 ${escHtml(p.name)} - 技术档案</div>
+          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center;">
+            <div style="text-align:center;">
+              <svg id="modal-radar" style="width:200px;height:200px;margin:0 auto;"></svg>
+              <div style="font-size:48px;font-weight:900;color:var(--primary);font-family:var(--font-mono);margin-top:8px;">${p.overall_rating||'-'}</div>
+              <div style="font-size:12px;color:var(--text-muted);">综合评分</div>
+            </div>
+            <div>
+              <div style="display:grid;gap:10px;">
+                ${['力量','速度','防守','控球','击球'].map(function(label,idx){
+                  var keys=['power_rating','speed_rating','defense_rating','control_rating','batting_rating'];
+                  var vals=[p.power_rating||60,p.speed_rating||60,p.defense_rating||60,p.control_rating||60,p.batting_rating||60];
+                  var colors=['#f97316','#10b981','#3b82f6','#8b5cf6','#ec4899'];
+                  var v=vals[idx];
+                  return '<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>'+label+'</span><span style="font-weight:700;color:'+colors[idx]+'">'+v+'</span></div><div style="height:6px;background:var(--bg-secondary);border-radius:3px;overflow:hidden;"><div style="height:100%;width:'+v+'%;background:'+colors[idx]+';border-radius:3px;"></div></div></div>';
+                }).join('')}
+              </div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px;">
+            <div style="background:var(--bg-secondary);padding:14px;border-radius:10px;text-align:center;"><div style="font-size:24px;font-weight:800;color:var(--primary)">${p.swing_speed_avg||'-'}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">挥棒速度(km/h)</div></div>
+            <div style="background:var(--bg-secondary);padding:14px;border-radius:10px;text-align:center;"><div style="font-size:24px;font-weight:800;color:var(--accent)">${p.pitch_speed_avg||'-'}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">球速(km/h)</div></div>
+            <div style="background:var(--bg-secondary);padding:14px;border-radius:10px;text-align:center;"><div style="font-size:24px;font-weight:800;color:var(--success)">${p.last_analysis_at?formatDate(p.last_analysis_at):'-'}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">最后分析</div></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">关闭</button>
+          <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove();window.location.href='06_AI_运动分析_专属教练.html'">🤖 AI深度分析</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    setTimeout(function(){ drawRadar('modal-radar', scores, 200); }, 50);
+    overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+  };
+
+  async function loadAll() {
+    try {
+      var pres = await DB.getPlayers();
+      var pfres = await DB.getPlayerProfiles();
+      allPlayers = pres.data || [];
+      allProfiles = pfres.data || [];
+      // Match profiles to players
+      allProfiles.forEach(function(pf) {
+        var player = allPlayers.find(function(p){ return (p.id||p.player_id) === pf.player_id; });
+        if (player) {
+          pf.name = player.name;
+          pf.position = player.position;
+        }
+      });
+      renderProfiles(allProfiles);
+    } catch(e) { showToast('加载失败: '+e.message, 'error'); }
+  }
+
+  loadAll();
+});
 </script>
 </body>
 </html>
