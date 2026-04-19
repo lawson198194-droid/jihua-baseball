@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块1 · 球员资料库 — BaseAI</title>
+<link rel="stylesheet" href="assets/design-system.css">
+<script src="db.js"></script>
+<style>
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+  }
+
+  .page-title-wrap h2 {
+    font-size: 22px; font-weight: 800; color: var(--text-primary);
+  }
+
+  .page-title-wrap p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+  .page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .filter-bar {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+  }
+
+  .filter-bar input, .filter-bar select {
+    padding: 7px 12px; font-size: 13px; min-width: 160px;
+  }
+
+  .filter-search { flex: 1; min-width: 200px; }
+
+  .player-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .player-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .player-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(249,115,22,0.4);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+
+  .player-card-header {
+    padding: 16px 20px 12px;
+    display: flex; align-items: center; gap: 14px;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .player-avatar-lg {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 800; color: white;
+    flex-shrink: 0;
+  }
+
+  .player-info h3 {
+    font-size: 16px; font-weight: 700; color: var(--text-primary);
+  }
+
+  .player-info .player-meta {
+    font-size: 12px; color: var(--text-muted); margin-top: 3px;
+  }
+
+  .player-card-body { padding: 14px 20px; }
+
+  .player-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px; margin-bottom: 14px;
+  }
+
+  .player-stat {
+    text-align: center; padding: 10px 8px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+  }
+
+  .player-stat .val {
+    font-size: 16px; font-weight: 700; font-family: var(--font-mono);
+    color: var(--text-primary);
+  }
+
+  .player-stat .lbl { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  .player-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .player-card-footer {
+    padding: 10px 20px;
+    border-top: 1px solid var(--border-light);
+    display: flex; gap: 8px; justify-content: flex-end;
+  }
+
+  .empty-state {
+    text-align: center; padding: 80px 20px;
+    color: var(--text-muted);
+  }
+
+  .empty-state .empty-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
+  .empty-state h3 { font-size: 18px; color: var(--text-secondary); margin-bottom: 8px; }
+
+  .modal-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .modal-form-grid .full { grid-column: span 2; }
+  .modal-form-grid label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; }
+  .modal-form-grid input, .modal-form-grid select { width: 100%; }
+
+  .view-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+
+  .view-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .view-header {
+    padding: 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 20px;
+    background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
+  }
+
+  .view-avatar {
+    width: 72px; height: 72px; border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; font-weight: 800; color: white;
+    flex-shrink: 0;
+  }
+
+  .view-name { font-size: 24px; font-weight: 800; color: var(--text-primary); }
+  .view-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+  .view-body { padding: 24px; }
+  .view-section { margin-bottom: 24px; }
+  .view-section-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .view-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .view-item { padding: 10px 12px; background: var(--bg-secondary); border-radius: 8px; }
+  .view-item .v-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .view-item .v-value { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-top: 3px; }
+  .view-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+  .close-btn { position: absolute; top: 20px; right: 20px; width: 32px; height: 32px; border: none; background: var(--bg-card-hover); border-radius: 8px; color: var(--text-secondary); cursor: pointer; font-size: 16px; }
+  .close-btn:hover { background: var(--danger-bg); color: var(--danger); }
+  .view-card { position: relative; }
+</style>
+</head>
+<body>
+
+<script src="assets/nav.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  // Init navigation
+  initNav({
+    title: '球员资料库',
+    subtitle: 'Module 01 · Player Registry',
+    stats: []
+  });
+
+  // State
+  let allPlayers = [];
+  let filteredPlayers = [];
+  let filterGender = '';
+  let filterStatus = '';
+  let searchText = '';
+
+  // Colors for avatars
+  var avatarColors = ['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899','#f59e0b','#06b6d4','#84cc16'];
+
+  function getAvatarColor(name) {
+    return avatarColors[(name || 'A').charCodeAt(0) % avatarColors.length];
+  }
+
+  function calcAge(birthDate) {
+    if (!birthDate) return '-';
+    var today = new Date();
+    var bd = new Date(birthDate);
+    var age = today.getFullYear() - bd.getFullYear();
+    var m = today.getMonth() - bd.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) age--;
+    return age;
+  }
+
+  function getPositionBadge(pos) {
+    var colors = { '投手': '#8b5cf6', '捕手': '#f97316', '内野': '#3b82f6', '外野': '#10b981', '游击手': '#ec4899', '一垒手': '#f59e0b', '三垒手': '#ef4444', '二垒手': '#06b6d4', '中外野': '#84cc16', '左右外野': '#10b981' };
+    for (var key in colors) { if (pos && pos.indexOf(key) >= 0) return colors[key]; }
+    return '#64748b';
+  }
+
+  function renderPlayers(players) {
+    var container = document.getElementById('page-content');
+    var pc = getPlayerCount();
+    initNav({
+      title: '球员资料库',
+      subtitle: 'Module 01 · Player Registry',
+      stats: [
+        { label: '注册球员', value: pc.total },
+        { label: '活跃球员', value: pc.active },
+        { label: '男生', value: pc.male },
+        { label: '女生', value: pc.female }
+      ]
+    });
+
+    var html = `
+    <div class="page-header">
+      <div class="page-title-wrap">
+        <h2>⚾ 球员资料库</h2>
+        <p>管理所有注册球员信息，数据实时保存到数据库</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary btn-sm" onclick="exportPlayers()">📤 导出</button>
+        <button class="btn btn-secondary btn-sm" onclick="importPlayers()">📥 导入</button>
+        <button class="btn btn-primary" onclick="openAddModal()">+ 新增球员</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <input type="text" id="search-input" placeholder="🔍 搜索姓名、学号、学校..." value="${escHtml(searchText)}" oninput="applyFilters()">
+      <select id="filter-gender" onchange="applyFilters()">
+        <option value="">全部性别</option>
+        <option value="M" ${filterGender==='M'?'selected':''}>男</option>
+        <option value="F" ${filterGender==='F'?'selected':''}>女</option>
+      </select>
+      <select id="filter-status" onchange="applyFilters()">
+        <option value="">全部状态</option>
+        <option value="active" ${filterStatus==='active'?'selected':''}>活跃</option>
+        <option value="inactive" ${filterStatus==='inactive'?'selected':''}>非活跃</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="resetFilters()">重置</button>
+    </div>`;
+
+    if (players.length === 0) {
+      html += `<div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <h3>暂无球员数据</h3>
+        <p>点击右上角「新增球员」添加第一条记录</p>
+        <button class="btn btn-primary" onclick="openAddModal()" style="margin-top:16px;">+ 新增球员</button>
+      </div>`;
+    } else {
+      html += `<div class="player-grid">`;
+      players.forEach(function(p) {
+        var color = getAvatarColor(p.name);
+        var age = calcAge(p.birth_date);
+        var posColor = getPositionBadge(p.position);
+        html += `
+        <div class="player-card" onclick="viewPlayer('${p.id || p.player_id}')">
+          <div class="player-card-header">
+            <div class="player-avatar-lg" style="background:${color}">${(p.name||'?').charAt(0)}</div>
+            <div class="player-info">
+              <h3>${escHtml(p.name)}</h3>
+              <div class="player-meta">
+                ${p.player_id || ''} · ${age}岁 · ${p.gender==='M'?'男':'女'}
+              </div>
+            </div>
+          </div>
+          <div class="player-card-body">
+            <div class="player-stats">
+              <div class="player-stat">
+                <div class="val">${p.height_cm || '-'}</div>
+                <div class="lbl">身高(cm)</div>
+              </div>
+              <div class="player-stat">
+                <div class="val">${p.weight_kg || '-'}</div>
+                <div class="lbl">体重(kg)</div>
+              </div>
+              <div class="player-stat">
+                <div class="val" style="font-size:13px;">${p.batting_hand==='L'?'左':p.batting_hand==='R'?'右':p.batting_hand==='S'?'双':'-'}</div>
+                <div class="lbl">打击</div>
+              </div>
+            </div>
+            <div class="player-tags">
+              <span class="badge badge-primary" style="background:${posColor}20;color:${posColor}">${p.position || '未设定'}</span>
+              <span class="badge ${p.status==='active'?'badge-success':'badge-neutral'}">${p.status==='active'?'活跃':'非活跃'}</span>
+              <span class="badge badge-info">${formatHand(p.throwing_hand)}投</span>
+            </div>
+          </div>
+          <div class="player-card-footer">
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editPlayer('${p.id || p.player_id}')">✏️ 编辑</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="event.stopPropagation();deletePlayer('${p.id || p.player_id}','${escHtml(p.name)}')">🗑️</button>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    container.innerHTML = html;
+  }
+
+  function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function getPlayerCount() {
+    return {
+      total: allPlayers.length,
+      active: allPlayers.filter(function(p){ return p.status === 'active'; }).length,
+      male: allPlayers.filter(function(p){ return p.gender === 'M'; }).length,
+      female: allPlayers.filter(function(p){ return p.gender === 'F'; }).length
+    };
+  }
+
+  function applyFilters() {
+    searchText = document.getElementById('search-input').value.trim();
+    filterGender = document.getElementById('filter-gender').value;
+    filterStatus = document.getElementById('filter-status').value;
+    filteredPlayers = allPlayers.filter(function(p) {
+      if (filterGender && p.gender !== filterGender) return false;
+      if (filterStatus && p.status !== filterStatus) return false;
+      if (searchText) {
+        var s = searchText.toLowerCase();
+        return (p.name&&p.name.toLowerCase().indexOf(s)>=0) ||
+               (p.player_id&&p.player_id.toLowerCase().indexOf(s)>=0) ||
+               (p.school&&p.school.toLowerCase().indexOf(s)>=0);
+      }
+      return true;
+    });
+    renderPlayers(filteredPlayers);
+  }
+
+  function resetFilters() {
+    searchText = ''; filterGender = ''; filterStatus = '';
+    filteredPlayers = allPlayers;
+    renderPlayers(filteredPlayers);
+  }
+
+  // Load data
+  async function loadPlayers() {
+    try {
+      var result = await DB.getPlayers();
+      allPlayers = result.data || [];
+      filteredPlayers = allPlayers;
+      renderPlayers(filteredPlayers);
+    } catch (e) {
+      showToast('加载失败: ' + e.message, 'error');
+    }
+  }
+
+  // Add/Edit Modal
+  function openAddModal(player) {
+    player = player || {};
+    var isEdit = !!(player.id || player.player_id);
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'player-modal';
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title">${isEdit ? '✏️ 编辑球员' : '➕ 新增球员'}</div>
+          <button class="modal-close" onclick="closePlayerModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-form-grid">
+            <div class="full"><label>姓名 *</label><input id="f-name" value="${escHtml(player.name||'')}" placeholder="输入球员姓名"></div>
+            <div><label>性别</label><select id="f-gender"><option value="">请选择</option><option value="M" ${(player.gender==='M')?'selected':''}>男</option><option value="F" ${(player.gender==='F')?'selected':''}>女</option></select></div>
+            <div><label>出生日期</label><input type="date" id="f-birth" value="${player.birth_date||''}"></div>
+            <div><label>学号</label><input id="f-playerid" value="${escHtml(player.player_id||'')}" placeholder="自动生成" ${isEdit?'':'disabled'}></div>
+            <div><label>位置</label><select id="f-position"><option value="">请选择</option><option value="投手" ${(player.position==='投手')?'selected':''}>投手</option><option value="捕手" ${(player.position==='捕手')?'selected':''}>捕手</option><option value="内野" ${(player.position==='内野')?'selected':''}>内野</option><option value="游击手" ${(player.position==='游击手')?'selected':''}>游击手</option><option value="一垒手" ${(player.position==='一垒手')?'selected':''}>一垒手</option><option value="二垒手" ${(player.position==='二垒手')?'selected':''}>二垒手</option><option value="三垒手" ${(player.position==='三垒手')?'selected':''}>三垒手</option><option value="外野" ${(player.position==='外野')?'selected':''}>外野</option><option value="中外野" ${(player.position==='中外野')?'selected':''}>中外野</option></select></div>
+            <div><label>身高(cm)</label><input type="number" id="f-height" value="${player.height_cm||''}" placeholder="140"></div>
+            <div><label>体重(kg)</label><input type="number" id="f-weight" value="${player.weight_kg||''}" placeholder="40"></div>
+            <div><label>打击手</label><select id="f-bat"><option value="">请选择</option><option value="L" ${(player.batting_hand==='L')?'selected':''}>左手</option><option value="R" ${(player.batting_hand==='R')?'selected':''}>右手</option><option value="S" ${(player.batting_hand==='S')?'selected':''}>左右开</option></select></div>
+            <div><label>投球手</label><select id="f-throw"><option value="">请选择</option><option value="L" ${(player.throwing_hand==='L')?'selected':''}>左手</option><option value="R" ${(player.throwing_hand==='R')?'selected':''}>右手</option></select></div>
+            <div class="full"><label>学校</label><input id="f-school" value="${escHtml(player.school||'')}" placeholder="就读学校"></div>
+            <div class="full"><label>备注</label><input id="f-notes" value="${escHtml(player.notes||'')}" placeholder="其他备注信息"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="closePlayerModal()">取消</button>
+          <button class="btn btn-primary" onclick="savePlayer('${escHtml(player.id||player.player_id||'')}')">${isEdit?'保存修改':'新增球员'}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closePlayerModal(); });
+  }
+
+  window.closePlayerModal = function() {
+    var m = document.getElementById('player-modal');
+    if (m) m.remove();
+  };
+
+  window.openAddModal = openAddModal;
+
+  window.editPlayer = async function(id) {
+    var p = allPlayers.find(function(x){ return (x.id||x.player_id) === id; });
+    if (p) openAddModal(p);
+  };
+
+  window.savePlayer = async function(existingId) {
+    var name = document.getElementById('f-name').value.trim();
+    if (!name) { showToast('请输入球员姓名', 'warning'); return; }
+
+    var playerData = {
+      name: name,
+      gender: document.getElementById('f-gender').value,
+      birth_date: document.getElementById('f-birth').value,
+      position: document.getElementById('f-position').value,
+      height_cm: parseInt(document.getElementById('f-height').value) || null,
+      weight_kg: parseInt(document.getElementById('f-weight').value) || null,
+      batting_hand: document.getElementById('f-bat').value,
+      throwing_hand: document.getElementById('f-throw').value,
+      school: document.getElementById('f-school').value.trim(),
+      notes: document.getElementById('f-notes').value.trim(),
+      status: 'active',
+      updated_at: new Date().toISOString()
+    };
+
+    if (existingId) {
+      var p = allPlayers.find(function(x){ return (x.id||x.player_id) === existingId; });
+      if (p) {
+        playerData.id = p.id;
+        playerData.player_id = p.player_id;
+      }
+    } else {
+      playerData.player_id = genPlayerId();
+    }
+
+    try {
+      await DB.upsertPlayer(playerData);
+      closePlayerModal();
+      showToast(existingId ? '球员信息已更新' : '球员已添加', 'success');
+      loadPlayers();
+    } catch (e) {
+      showToast('保存失败: ' + e.message, 'error');
+    }
+  };
+
+  window.deletePlayer = function(id, name) {
+    confirmAction('确定要删除球员「' + name + '」吗？此操作不可撤销。', async function() {
+      try {
+        await DB.deletePlayer(id);
+        showToast('球员已删除', 'success');
+        loadPlayers();
+      } catch (e) {
+        showToast('删除失败', 'error');
+      }
+    });
+  };
+
+  window.viewPlayer = function(id) {
+    var p = allPlayers.find(function(x){ return (x.id||x.player_id) === id; });
+    if (!p) return;
+    var color = getAvatarColor(p.name);
+    var age = calcAge(p.birth_date);
+    var posColor = getPositionBadge(p.position);
+
+    var overlay = document.createElement('div');
+    overlay.className = 'view-overlay';
+    overlay.id = 'view-modal';
+    overlay.innerHTML = `
+      <div class="view-card">
+        <button class="close-btn" onclick="document.getElementById('view-modal').remove()">✕</button>
+        <div class="view-header">
+          <div class="view-avatar" style="background:${color}">${(p.name||'?').charAt(0)}</div>
+          <div>
+            <div class="view-name">${escHtml(p.name)}</div>
+            <div class="view-sub">${p.player_id || ''} · ${age}岁 · ${p.gender==='M'?'男':'女'}</div>
+            <div style="margin-top:8px;display:flex;gap:6px;">
+              <span class="badge" style="background:${posColor}20;color:${posColor}">${p.position||'未设定'}</span>
+              <span class="badge ${p.status==='active'?'badge-success':'badge-neutral'}">${p.status==='active'?'活跃':'非活跃'}</span>
+            </div>
+          </div>
+        </div>
+        <div class="view-body">
+          <div class="view-section">
+            <div class="view-section-title">📋 基本信息</div>
+            <div class="view-grid">
+              <div class="view-item"><div class="v-label">出生日期</div><div class="v-value">${p.birth_date || '-'}</div></div>
+              <div class="view-item"><div class="v-label">年龄</div><div class="v-value">${age === '-' ? '-' : age + '岁'}</div></div>
+              <div class="view-item"><div class="v-label">身高</div><div class="v-value">${p.height_cm ? p.height_cm + ' cm' : '-'}</div></div>
+              <div class="view-item"><div class="v-label">体重</div><div class="v-value">${p.weight_kg ? p.weight_kg + ' kg' : '-'}</div></div>
+              <div class="view-item"><div class="v-label">打击手</div><div class="v-value">${formatHand(p.batting_hand)}</div></div>
+              <div class="view-item"><div class="v-label">投球手</div><div class="v-value">${formatHand(p.throwing_hand)}</div></div>
+              <div class="view-item" style="grid-column:span 2"><div class="v-label">就读学校</div><div class="v-value">${p.school || '-'}</div></div>
+            </div>
+          </div>
+          ${p.notes ? `<div class="view-section"><div class="view-section-title">📝 备注</div><div style="padding:10px 12px;background:var(--bg-secondary);border-radius:8px;font-size:13px;color:var(--text-secondary);">${escHtml(p.notes)}</div></div>` : ''}
+        </div>
+        <div class="view-footer">
+          <button class="btn btn-ghost" onclick="document.getElementById('view-modal').remove()">关闭</button>
+          <button class="btn btn-primary" onclick="document.getElementById('view-modal').remove();editPlayer('${id}')">✏️ 编辑</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  };
+
+  // Export/Import
+  window.exportPlayers = function() {
+    var data = JSON.stringify(allPlayers, null, 2);
+    var blob = new Blob([data], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'baseai_players_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('已导出 ' + allPlayers.length + ' 条球员记录', 'success');
+  };
+
+  window.importPlayers = function() {
+    var input = document.createElement('input');
+    input.type = 'file'; input.accept = '.json';
+    input.onchange = function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = async function(ev) {
+        try {
+          var data = JSON.parse(ev.target.result);
+          var arr = Array.isArray(data) ? data : (data.players || []);
+          await DB.importAll({ players: arr });
+          showToast('成功导入 ' + arr.length + ' 条记录', 'success');
+          loadPlayers();
+        } catch (err) {
+          showToast('导入失败: ' + err.message, 'error');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
+  // Start
+  loadPlayers();
+});
+</script>
+</body>
+</html>
