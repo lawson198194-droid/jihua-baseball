@@ -491,6 +491,14 @@ function renderStep2() {
       <div class="formats">支持格式：MP4、MOV、AVI、WebM</div>
     </div>
 
+    <!-- 显眼的独立上传按钮 -->
+    <div style="text-align:center;margin-top:16px;">
+      <button class="btn-ai" id="btn-upload-trigger" onclick="document.getElementById('video-input').click()" style="max-width:320px;">
+        🎬 选择视频文件
+      </button>
+      <div style="font-size:12px;color:#475569;margin-top:10px;">或直接拖拽视频文件到上方区域</div>
+    </div>
+
     <div id="video-preview" style="display:none;" class="fade-in">
       <div class="video-preview-wrap">
         <video id="preview-video" controls playsinline></video>
