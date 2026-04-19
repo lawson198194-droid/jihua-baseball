@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块2 · 球队与梯队 — BaseAI</title>
+<link rel="stylesheet" href="assets/design-system.css">
+<script src="db.js"></script>
+<style>
+  .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .page-header h2 { font-size:22px; font-weight:800; }
+  .page-header p { font-size:13px; color:var(--text-muted); margin-top:2px; }
+  .page-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+  .team-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
+
+  .team-card {
+    background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg);
+    overflow:hidden; transition:all 0.2s; cursor:pointer;
+  }
+  .team-card:hover { transform:translateY(-3px); border-color:rgba(249,115,22,0.4); box-shadow:0 8px 24px rgba(0,0,0,0.3); }
+  .team-card-banner {
+    height:80px; position:relative; overflow:hidden;
+    display:flex; align-items:center; padding:0 20px;
+  }
+  .team-logo { width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:28px; background:rgba(255,255,255,0.15); color:white; flex-shrink:0; }
+  .team-banner-info { margin-left:14px; }
+  .team-banner-info h3 { font-size:16px; font-weight:700; color:white; }
+  .team-banner-info p { font-size:12px; color:rgba(255,255,255,0.7); margin-top:2px; }
+  .team-card-body { padding:16px 20px; }
+  .team-meta { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+  .team-meta-item { padding:8px 10px; background:var(--bg-secondary); border-radius:8px; }
+  .team-meta-item .lbl { font-size:10px; color:var(--text-muted); }
+  .team-meta-item .val { font-size:13px; font-weight:600; color:var(--text-primary); margin-top:2px; }
+  .team-tags { display:flex; gap:6px; flex-wrap:wrap; }
+  .team-card-footer { padding:10px 20px; border-top:1px solid var(--border-light); display:flex; gap:8px; justify-content:flex-end; }
+  .filter-bar { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 20px; margin-bottom:20px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .filter-bar select, .filter-bar input { padding:7px 12px; font-size:13px; min-width:160px; }
+  .filter-bar .filter-search { flex:1; min-width:200px; }
+  .empty-state { text-align:center; padding:80px 20px; }
+  .empty-state .empty-icon { font-size:64px; margin-bottom:16px; opacity:0.3; }
+  .empty-state h3 { font-size:18px; color:var(--text-secondary); margin-bottom:8px; }
+
+  .modal-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .modal-form-grid .full { grid-column:span 2; }
+  .modal-form-grid label { display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:5px; }
+  .modal-form-grid input, .modal-form-grid select { width:100%; }
+
+  /* Category colors for banners */
+  .cat-u10 .team-card-banner { background:linear-gradient(135deg,#10b981,#059669); }
+  .cat-u12 .team-card-banner { background:linear-gradient(135deg,#f97316,#ea580c); }
+  .cat-u15 .team-card-banner { background:linear-gradient(135deg,#3b82f6,#2563eb); }
+  .cat-u18 .team-card-banner { background:linear-gradient(135deg,#8b5cf6,#7c3aed); }
+  .cat-senior .team-card-banner { background:linear-gradient(135deg,#ef4444,#dc2626); }
+
+  /* CSV Import */
+  .import-section { margin-top:32px; }
+  .import-section h3 { font-size:16px; font-weight:700; color:var(--text-primary); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .drop-zone { border:2px dashed var(--border); border-radius:var(--radius-lg); padding:32px; text-align:center; transition:all 0.2s; cursor:pointer; }
+  .drop-zone:hover, .drop-zone.dragover { border-color:var(--primary); background:var(--primary-glow); }
+  .drop-zone input { display:none; }
+  .preview-table { max-height:300px; overflow:auto; margin-top:12px; border-radius:var(--radius); border:1px solid var(--border); }
+</style>
+</head>
+<body>
+<script src="assets/nav.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  initNav({ title:'球队与梯队', subtitle:'Module 02 · Team Management' });
+
+  var allTeams = [];
+  var allPlayers = [];
+  var filterCat = '';
+  var filterGender = '';
+
+  function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+  function getCatColor(cat) {
+    var c = { u10:'#10b981', u12:'#f97316', u15:'#3b82f6', u18:'#8b5cf6', senior:'#ef4444' };
+    return c[cat] || '#64748b';
+  }
+
+  function getCatLabel(cat) {
+    var c = { u10:'U10', u12:'U12', u15:'U15', u18:'U18', senior:'成人' };
+    return c[cat] || cat || '';
+  }
+
+  function getCatIcon(cat) {
+    var i = { u10:'🌱', u12:'⚾', u15:'🏆', u18:'🎖️', senior:'⭐' };
+    return i[cat] || '👥';
+  }
+
+  function getTeamPlayers(teamId) {
+    return allPlayers.filter(function(p){ return p.team_id === teamId; }).length;
+  }
+
+  function getPlayerCount() {
+    var cats = ['u10','u12','u15','u18','senior'];
+    var result = { total: allTeams.length };
+    cats.forEach(function(c){ result[c] = allTeams.filter(function(t){ return t.category === c; }).length; });
+    return result;
+  }
+
+  function renderTeams(teams) {
+    var pc = getPlayerCount();
+    // Update topbar stats without rebuilding the whole nav
+    var topbar = document.querySelector('.topbar');
+    if (topbar) {
+      var statsBar = topbar.querySelector('.topbar-stats');
+      if (statsBar) {
+        statsBar.innerHTML = [
+          '<div class="topbar-stat"><div class="num">' + pc.total + '</div><div class="label">球队总数</div></div>',
+          '<div class="topbar-stat"><div class="num">' + pc.u12 + '</div><div class="label">U12球队</div></div>',
+          '<div class="topbar-stat"><div class="num">' + pc.u15 + '</div><div class="label">U15球队</div></div>',
+          '<div class="topbar-stat"><div class="num">' + pc.u18 + '</div><div class="label">U18球队</div></div>'
+        ].join('');
+      }
+    }
+
+    var container = document.getElementById('page-content');
+    var html = `
+    <div class="page-header">
+      <div>
+        <h2>🏆 球队与梯队管理</h2>
+        <p>管理球队信息、梯队建设，支持 CSV 批量导入球员</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary btn-sm" onclick="exportTeams()">📤 导出</button>
+        <button class="btn btn-primary" onclick="openTeamModal()">+ 新增球队</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <input type="text" id="filter-search" class="filter-search" placeholder="🔍 搜索球队名称..." oninput="applyFilters()">
+      <select id="filter-cat" onchange="applyFilters()">
+        <option value="">全部组别</option>
+        <option value="u10">🌱 U10</option>
+        <option value="u12">⚾ U12</option>
+        <option value="u15">🏆 U15</option>
+        <option value="u18">🎖️ U18</option>
+        <option value="senior">⭐ 成人</option>
+      </select>
+      <select id="filter-gender" onchange="applyFilters()">
+        <option value="">全部性别</option>
+        <option value="M">男生</option>
+        <option value="F">女生</option>
+        <option value="coed">男女混合</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="resetFilters()">重置</button>
+    </div>`;
+
+    if (teams.length === 0) {
+      html += `<div class="empty-state"><div class="empty-icon">🏆</div><h3>暂无球队数据</h3><p>点击右上角「新增球队」添加</p><button class="btn btn-primary" onclick="openTeamModal()" style="margin-top:16px;">+ 新增球队</button></div>`;
+    } else {
+      html += `<div class="team-grid">`;
+      teams.forEach(function(t) {
+        var catClass = 'cat-' + (t.category || 'senior');
+        var catColor = getCatColor(t.category);
+        var playerCount = getTeamPlayers(t.id || t.team_id);
+        var genderText = t.gender === 'M' ? '男队' : t.gender === 'F' ? '女队' : '混合';
+        html += `
+        <div class="team-card ${catClass}" onclick="viewTeam('${t.id || t.team_id}')">
+          <div class="team-card-banner">
+            <div class="team-logo">${getCatIcon(t.category)}</div>
+            <div class="team-banner-info">
+              <h3>${escHtml(t.name)}</h3>
+              <p>${getCatLabel(t.category)} · ${genderText}</p>
+            </div>
+          </div>
+          <div class="team-card-body">
+            <div class="team-meta">
+              <div class="team-meta-item"><div class="lbl">教练</div><div class="val">${t.coach_name || '-'}</div></div>
+              <div class="team-meta-item"><div class="lbl">主场</div><div class="val">${t.home_venue ? t.home_venue.substring(0,10) : '-'}</div></div>
+              <div class="team-meta-item"><div class="lbl">注册球员</div><div class="val" style="color:${catColor}">${playerCount} 人</div></div>
+              <div class="team-meta-item"><div class="lbl">成立年份</div><div class="val">${t.founded_year || '-'}</div></div>
+            </div>
+            <div class="team-tags">
+              <span class="badge" style="background:${catColor}20;color:${catColor}">${getCatLabel(t.category)}</span>
+              <span class="badge badge-info">${genderText}</span>
+              <span class="badge ${t.status==='active'?'badge-success':'badge-neutral'}">${t.status==='active'?'活跃':'非活跃'}</span>
+            </div>
+          </div>
+          <div class="team-card-footer">
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editTeam('${t.id || t.team_id}')">✏️ 编辑</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="event.stopPropagation();deleteTeam('${t.id || t.team_id}','${escHtml(t.name)}')">🗑️</button>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    // CSV Import section
+    html += `
+    <div class="import-section">
+      <h3>📥 CSV 批量导入球员</h3>
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('csv-input').click()">
+        <div style="font-size:32px;margin-bottom:8px;">📋</div>
+        <div style="font-size:14px;color:var(--text-primary);font-weight:600;">点击或拖拽上传 CSV 文件</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">支持格式：姓名,性别,出生日期,位置,学校</div>
+        <input type="file" id="csv-input" accept=".csv,.txt" style="display:none">
+      </div>
+      <div id="csv-preview"></div>
+    </div>`;
+
+    container.innerHTML = html;
+
+    // Drop zone events
+    var dz = document.getElementById('drop-zone');
+    var ci = document.getElementById('csv-input');
+    dz.addEventListener('dragover', function(e){ e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', function(){ dz.classList.remove('dragover'); });
+    dz.addEventListener('drop', function(e){ e.preventDefault(); dz.classList.remove('dragover'); handleCSVFile(e.dataTransfer.files[0]); });
+    ci.addEventListener('change', function(e){ handleCSVFile(e.target.files[0]); });
+  }
+
+  function applyFilters() {
+    var search = document.getElementById('filter-search').value.trim().toLowerCase();
+    filterCat = document.getElementById('filter-cat').value;
+    filterGender = document.getElementById('filter-gender').value;
+    var filtered = allTeams.filter(function(t) {
+      if (filterCat && t.category !== filterCat) return false;
+      if (filterGender && t.gender !== filterGender) return false;
+      if (search && !(t.name&&t.name.toLowerCase().indexOf(search)>=0) && !(t.name_en&&t.name_en.toLowerCase().indexOf(search)>=0)) return false;
+      return true;
+    });
+    renderTeams(filtered);
+  }
+
+  function resetFilters() {
+    document.getElementById('filter-search').value = '';
+    document.getElementById('filter-cat').value = '';
+    document.getElementById('filter-gender').value = '';
+    filterCat = ''; filterGender = '';
+    renderTeams(allTeams);
+  }
+
+  // Expose to window so inline on* handlers can find them
+  window.applyFilters = applyFilters;
+  window.resetFilters = resetFilters;
+
+  function handleCSVFile(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var text = e.target.result;
+      var lines = text.trim().split('\n');
+      if (lines.length < 2) { showToast('CSV 文件格式不对', 'error'); return; }
+      var headers = lines[0].split(',').map(function(h){ return h.trim().replace(/"/g,''); });
+      var rows = [];
+      for (var i = 1; i < lines.length; i++) {
+        var cols = lines[i].split(',').map(function(c){ return c.trim().replace(/"/g,''); });
+        if (cols.length >= 2) {
+          rows.push({
+            name: cols[0] || '',
+            gender: cols[1] === '男' || cols[1] === 'M' ? 'M' : cols[1] === '女' || cols[1] === 'F' ? 'F' : '',
+            birth_date: cols[2] || '',
+            position: cols[3] || '',
+            school: cols[4] || '',
+            batting_hand: cols[5] || '',
+            throwing_hand: cols[6] || '',
+            team_id: cols[7] || '',
+            status: 'active'
+          });
+        }
+      }
+      showCSVPreview(rows);
+    };
+    reader.readAsText(file);
+  }
+
+  function showCSVPreview(rows) {
+    var html = '<div class="preview-table"><table><thead><tr><th>#</th><th>姓名</th><th>性别</th><th>出生日期</th><th>位置</th><th>学校</th></tr></thead><tbody>';
+    rows.slice(0, 10).forEach(function(r, i) {
+      html += '<tr><td>' + (i+1) + '</td><td>' + escHtml(r.name) + '</td><td>' + r.gender + '</td><td>' + r.birth_date + '</td><td>' + escHtml(r.position) + '</td><td>' + escHtml(r.school) + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    html += '<div style="margin-top:12px;display:flex;gap:8px;align-items:center;">';
+    html += '<span style="font-size:13px;color:var(--text-secondary);">共 ' + rows.length + ' 条记录</span>';
+    html += '<button class="btn btn-primary" onclick="confirmCSVImport()">确认导入</button>';
+    html += '</div>';
+    html += '<div id="csv-data" style="display:none">' + encodeURIComponent(JSON.stringify(rows)) + '</div>';
+    document.getElementById('csv-preview').innerHTML = html;
+    window._csvRows = rows;
+  }
+
+  window.confirmCSVImport = async function() {
+    var rows = window._csvRows;
+    if (!rows || !rows.length) return;
+    try {
+      var genId = genPlayerId();
+      var imported = 0;
+      for (var i = 0; i < rows.length; i++) {
+        rows[i].player_id = genId + i;
+        await DB.upsertPlayer(rows[i]);
+        imported++;
+      }
+      document.getElementById('csv-preview').innerHTML = '';
+      showToast('成功导入 ' + imported + ' 条球员记录', 'success');
+      loadAll();
+    } catch (e) {
+      showToast('导入失败: ' + e.message, 'error');
+    }
+  };
+
+  // Modal
+  function openTeamModal(team) {
+    team = team || {};
+    var isEdit = !!(team.id || team.team_id);
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'team-modal';
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-header"><div class="modal-title">${isEdit ? '✏️ 编辑球队' : '➕ 新增球队'}</div><button class="modal-close" onclick="closeTeamModal()">✕</button></div>
+        <div class="modal-body">
+          <div class="modal-form-grid">
+            <div class="full"><label>球队名称 *</label><input id="t-name" value="${escHtml(team.name||'')}" placeholder="输入球队名称"></div>
+            <div class="full"><label>英文名称</label><input id="t-name-en" value="${escHtml(team.name_en||'')}" placeholder="English name"></div>
+            <div><label>年龄组别</label><select id="t-cat"><option value="">请选择</option><option value="u10" ${(team.category==='u10')?'selected':''}>U10</option><option value="u12" ${(team.category==='u12')?'selected':''}>U12</option><option value="u15" ${(team.category==='u15')?'selected':''}>U15</option><option value="u18" ${(team.category==='u18')?'selected':''}>U18</option><option value="senior" ${(team.category==='senior')?'selected':''}>成人</option></select></div>
+            <div><label>性别</label><select id="t-gender"><option value="">请选择</option><option value="M" ${(team.gender==='M')?'selected':''}>男队</option><option value="F" ${(team.gender==='F')?'selected':''}>女队</option><option value="coed" ${(team.gender==='coed')?'selected':''}>男女混合</option></select></div>
+            <div><label>主教练</label><input id="t-coach" value="${escHtml(team.coach_name||'')}" placeholder="教练姓名"></div>
+            <div><label>教练电话</label><input id="t-coach-phone" value="${escHtml(team.coach_phone||'')}" placeholder="+852 XXXX XXXX"></div>
+            <div><label>成立年份</label><input type="number" id="t-year" value="${team.founded_year||''}" placeholder="2020"></div>
+            <div><label>主场</label><input id="t-venue" value="${escHtml(team.home_venue||'')}" placeholder="主场场地"></div>
+            <div class="full"><label>备注</label><input id="t-notes" value="${escHtml(team.notes||'')}" placeholder="其他备注"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="closeTeamModal()">取消</button>
+          <button class="btn btn-primary" onclick="saveTeam('${escHtml(team.id||team.team_id||'')}')">${isEdit?'保存':'新增'}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e){ if(e.target===overlay) closeTeamModal(); });
+  }
+
+  window.closeTeamModal = function(){ var m=document.getElementById('team-modal'); if(m)m.remove(); };
+  window.openTeamModal = openTeamModal;
+
+  window.editTeam = function(id) {
+    var t = allTeams.find(function(x){ return (x.id||x.team_id)===id; });
+    if (t) openTeamModal(t);
+  };
+
+  window.saveTeam = async function(existingId) {
+    var name = document.getElementById('t-name').value.trim();
+    if (!name) { showToast('请输入球队名称', 'warning'); return; }
+    var data = {
+      name: name,
+      name_en: document.getElementById('t-name-en').value.trim(),
+      category: document.getElementById('t-cat').value,
+      gender: document.getElementById('t-gender').value,
+      coach_name: document.getElementById('t-coach').value.trim(),
+      coach_phone: document.getElementById('t-coach-phone').value.trim(),
+      founded_year: parseInt(document.getElementById('t-year').value) || null,
+      home_venue: document.getElementById('t-venue').value.trim(),
+      notes: document.getElementById('t-notes').value.trim(),
+      status: 'active'
+    };
+    if (existingId) {
+      var t = allTeams.find(function(x){ return (x.id||x.team_id)===existingId; });
+      if (t) { data.id = t.id; data.team_id = t.team_id; }
+    } else {
+      data.team_id = genTeamId();
+    }
+    try {
+      await DB.upsertTeam(data);
+      closeTeamModal();
+      showToast(existingId ? '球队已更新' : '球队已添加', 'success');
+      loadAll();
+    } catch(e) { showToast('保存失败: '+e.message, 'error'); }
+  };
+
+  window.deleteTeam = function(id, name) {
+    confirmAction('确定删除球队「' + name + '」？', async function() {
+      try {
+        await DB.deleteTeam(id);
+        showToast('球队已删除', 'success');
+        loadAll();
+      } catch(e) { showToast('删除失败', 'error'); }
+    });
+  };
+
+  window.exportTeams = function() {
+    var blob = new Blob([JSON.stringify(allTeams, null, 2)], { type:'application/json' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'baseai_teams_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('已导出 ' + allTeams.length + ' 条球队记录', 'success');
+  };
+
+  window.viewTeam = function(id) {
+    var t = allTeams.find(function(x){ return (x.id||x.team_id)===id; });
+    if (!t) return;
+    var players = allPlayers.filter(function(p){ return p.team_id === (t.id||t.team_id); });
+    var catColor = getCatColor(t.category);
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:640px;">
+        <div class="modal-header">
+          <div class="modal-title">🏆 ${escHtml(t.name)}</div>
+          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
+            <div style="background:var(--bg-secondary);padding:14px;border-radius:10px;text-align:center;">
+              <div style="font-size:28px;font-weight:800;color:${catColor}">${players.length}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">注册球员</div>
+            </div>
+            <div style="background:var(--bg-secondary);padding:14px;border-radius:10px;text-align:center;">
+              <div style="font-size:28px;font-weight:800;color:var(--text-primary)">${getCatLabel(t.category)}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">年龄组别</div>
+            </div>
+            <div style="background:var(--bg-secondary);padding:14px;border-radius:10px;text-align:center;">
+              <div style="font-size:28px;font-weight:800;color:var(--text-primary)">${t.founded_year||'-'}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">成立年份</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="view-item"><div class="v-label">主教练</div><div class="v-value">${t.coach_name||'-'}</div></div>
+            <div class="view-item"><div class="v-label">教练电话</div><div class="v-value">${t.coach_phone||'-'}</div></div>
+            <div class="view-item"><div class="v-label">主场</div><div class="v-value">${t.home_venue||'-'}</div></div>
+            <div class="view-item"><div class="v-label">性别</div><div class="v-value">${t.gender==='M'?'男队':t.gender==='F'?'女队':'混合'}</div></div>
+          </div>
+          ${players.length > 0 ? `
+          <div style="margin-top:20px;">
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">👥 球员列表</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              ${players.map(function(p){
+                return `<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg-secondary);border-radius:8px;">
+                  <div class="avatar avatar-sm" style="background:${getCatColor(p.position)}">${(p.name||'?').charAt(0)}</div>
+                  <span style="font-size:12px;font-weight:600;">${escHtml(p.name)}</span>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>` : ''}
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">关闭</button>
+          <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove();editTeam('${id}')">✏️ 编辑</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+  };
+
+  async function loadAll() {
+    try {
+      var tres = await DB.getTeams();
+      var pres = await DB.getPlayers();
+      allTeams = tres.data || [];
+      allPlayers = pres.data || [];
+      renderTeams(allTeams);
+    } catch(e) { showToast('加载失败: '+e.message, 'error'); }
+  }
+
+  loadAll();
+});
+</script>
+</body>
+</html>
