@@ -452,6 +452,7 @@ function togglePosFilter(pos, chip) {
 //  RENDER PLAYERS
 // ============================================================
 function renderPlayers() {
+  console.log('[DEBUG] renderPlayers called, filteredPlayers.length='+filteredPlayers.length);
   var list=document.getElementById('player-list');
   updateTopbarStats();
   if(filteredPlayers.length===0){
@@ -872,10 +873,14 @@ function checkAutoImport() {
 //  LOAD PLAYERS
 // ============================================================
 function loadPlayers() {
+  console.log('[DEBUG] loadPlayers start');
   DB.getPlayers().then(function(result){
+    console.log('[DEBUG] DB.getPlayers done, count='+(result.data||[]).length);
     allPlayers=result.data||[];
     filteredPlayers=allPlayers;
+    console.log('[DEBUG] calling renderPlayers, filtered='+filteredPlayers.length);
     renderPlayers();
+    console.log('[DEBUG] renderPlayers done');
     buildPosFilter();
     showToast('已加载 '+allPlayers.length+' 名球员','success');
     checkAutoImport();
@@ -933,7 +938,9 @@ document.getElementById('btn-add').addEventListener('click',function(){ openAddM
 //  INIT
 // ============================================================
 initNav({ title:'球员资料库', subtitle:'Module 01 · Player Registry v3.0' });
+console.log('[DEBUG] nav inited');
 loadPlayers();
+console.log('[DEBUG] loadPlayers called');
 </script>
 </body>
 </html>
