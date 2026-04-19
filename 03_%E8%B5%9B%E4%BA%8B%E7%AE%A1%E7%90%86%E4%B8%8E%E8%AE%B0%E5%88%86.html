@@ -101,16 +101,19 @@ document.addEventListener('DOMContentLoaded', async function() {
       live: allGames.filter(function(g){ return g.status==='in_progress'; }).length,
       scheduled: allGames.filter(function(g){ return g.status==='scheduled'; }).length
     };
-    initNav({
-      title: '赛事与记分',
-      subtitle: 'Module 03 · Game Management',
-      stats: [
-        { label: '总赛事', value: pc.total },
-        { label: '已结束', value: pc.completed },
-        { label: '进行中', value: pc.live },
-        { label: '待赛', value: pc.scheduled }
-      ]
-    });
+    // Update topbar stats without rebuilding nav
+    var topbar = document.querySelector('.topbar');
+    if (topbar) {
+      var statsBar = topbar.querySelector('.topbar-stats');
+      if (statsBar) {
+        statsBar.innerHTML = [
+          '<div class="topbar-stat"><div class="num">' + pc.total + '</div><div class="label">总赛事</div></div>',
+          '<div class="topbar-stat"><div class="num">' + pc.completed + '</div><div class="label">已结束</div></div>',
+          '<div class="topbar-stat"><div class="num">' + pc.live + '</div><div class="label">进行中</div></div>',
+          '<div class="topbar-stat"><div class="num">' + pc.scheduled + '</div><div class="label">待赛</div></div>'
+        ].join('');
+      }
+    }
 
     var container = document.getElementById('page-content');
     var html = `
