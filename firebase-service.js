@@ -152,18 +152,15 @@
       }, playerData);
 
       if (!this.isConfigured) {
-        var pending = JSON.parse(localStorage.getItem('baseai_pending_players') || '[]');
-        var id = 'PEN' + Date.now();
-        data.id = id;
-        pending.push(data);
-        localStorage.setItem('baseai_pending_players', JSON.stringify(pending));
-        setTimeout(function(){ if(callback) callback({ success: true, id: id }); }, 0);
+        // Firebase not configured - let the caller (register.html) handle localStorage backup
+        console.warn('[Firebase] Not configured, skipping Firebase submit');
+        setTimeout(function(){ if(callback) callback({ success: false, reason: 'firebase_not_configured' }); }, 0);
         return;
       }
 
       var newRef = this.db.ref('pending_players').push();
       newRef.set(data).then(function() {
-        console.log('[Firebase] Registration submitted:', newRef.key);
+        console.log('[Firebase] Registration submitted successfully:', newRef.key);
         if (callback) callback({ success: true, id: newRef.key });
       }).catch(function(e) {
         console.error('[Firebase] submitRegistration error:', e);
@@ -189,6 +186,55 @@
         console.error('[Firebase] getPendingRegistrations error:', error);
         callback({ data: [] });
       });
+    },
+
+    // Real-time listener: watch pending_players for new submissions
+    onPendingRegistrations: function(callback) {
+      if (!this.isConfigured) {
+        // Fallback: poll localStorage every 3s
+        var lastCount = 0;
+        var timer = setInterval(function() {
+          var data = JSON.parse(localStorage.getItem('baseai_pending_players') || '[]');
+          if (data.length > lastCount) {
+            var newItems = data.slice(lastCount);
+            lastCount = data.length;
+            callback(newItems);
+          }
+        }, 3000);
+        // Return a detach function
+        return { detach: function() { clearInterval(timer); } };
+      }
+      // Firebase real-time listener
+      this.db.ref('pending_players').on('child_added', function(snapshot) {
+        var item = snapshot.val();
+        item.id = snapshot.key;
+        callback([item]);
+      });
+      // Return detach function
+      return { detach: function() { FBService.db.ref('pending_players').off('child_added'); } };
+    },
+
+    removePendingRegistration: function(pendingId, callback) {
+      if (!this.isConfigured) {
+        // Remove from localStorage pending list
+        var pending = JSON.parse(localStorage.getItem('baseai_pending_players') || '[]');
+        var filtered = pending.filter(function(p) {
+          return (p.id || p._local_id) !== pendingId;
+        });
+        localStorage.setItem('baseai_pending_players', JSON.stringify(filtered));
+        setTimeout(function(){ if(callback) callback({ success: true }); }, 0);
+        return;
+      }
+      // Remove from Firebase
+      this.db.ref('pending_players/' + pendingId).remove()
+        .then(function() {
+          console.log('[Firebase] Removed pending registration:', pendingId);
+          if (callback) callback({ success: true });
+        })
+        .catch(function(e) {
+          console.error('[Firebase] removePendingRegistration error:', e);
+          if (callback) callback({ success: false, error: e });
+        });
     },
 
     approveRegistration: function(pendingId, callback) {
