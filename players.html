@@ -328,6 +328,7 @@ var CONTACT_RELATIONS = ['父亲','母亲','监护人','其他'];
 //  DB INIT (Firebase if configured, else localStorage fallback)
 // ============================================================
 DB.init(function() {
+  // DB is ready - load players and set up sync
   loadPlayers();
 
   // Step 1: Sync ALL existing pending registrations on page load
@@ -958,8 +959,7 @@ document.getElementById('btn-add').addEventListener('click',function(){ openAddM
 // ============================================================
 initNav({ title:'球员资料库', subtitle:'Module 01 · Player Registry v3.0' });
 console.log('[DEBUG] nav inited');
-loadPlayers();
-console.log('[DEBUG] loadPlayers called');
+// NOTE: loadPlayers() is called inside DB.init() callback after DB is ready
 </script>
 </body>
 </html>
