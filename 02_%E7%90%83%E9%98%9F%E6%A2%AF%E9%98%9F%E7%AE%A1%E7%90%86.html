@@ -47,11 +47,12 @@
   .modal-form-grid input, .modal-form-grid select { width:100%; }
 
   /* Category colors for banners */
+  .cat-u8 .team-card-banner { background:linear-gradient(135deg,#06b6d4,#0891b2); }
   .cat-u10 .team-card-banner { background:linear-gradient(135deg,#10b981,#059669); }
   .cat-u12 .team-card-banner { background:linear-gradient(135deg,#f97316,#ea580c); }
   .cat-u15 .team-card-banner { background:linear-gradient(135deg,#3b82f6,#2563eb); }
   .cat-u18 .team-card-banner { background:linear-gradient(135deg,#8b5cf6,#7c3aed); }
-  .cat-senior .team-card-banner { background:linear-gradient(135deg,#ef4444,#dc2626); }
+  .cat-uw18 .team-card-banner { background:linear-gradient(135deg,#ec4899,#db2777); }
 
   /* CSV Import */
   .import-section { margin-top:32px; }
@@ -76,17 +77,17 @@ document.addEventListener('DOMContentLoaded', async function() {
   function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 
   function getCatColor(cat) {
-    var c = { u10:'#10b981', u12:'#f97316', u15:'#3b82f6', u18:'#8b5cf6', senior:'#ef4444' };
+    var c = { u8:'#06b6d4', u10:'#10b981', u12:'#f97316', u15:'#3b82f6', u18:'#8b5cf6', uw18:'#ec4899' };
     return c[cat] || '#64748b';
   }
 
   function getCatLabel(cat) {
-    var c = { u10:'U10', u12:'U12', u15:'U15', u18:'U18', senior:'成人' };
+    var c = { u8:'U8', u10:'U10', u12:'U12', u15:'U15', u18:'U18', uw18:'UW18' };
     return c[cat] || cat || '';
   }
 
   function getCatIcon(cat) {
-    var i = { u10:'🌱', u12:'⚾', u15:'🏆', u18:'🎖️', senior:'⭐' };
+    var i = { u8:'🌈', u10:'🌱', u12:'⚾', u15:'🏆', u18:'🎖️', uw18:'👑' };
     return i[cat] || '👥';
   }
 
@@ -95,7 +96,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   function getPlayerCount() {
-    var cats = ['u10','u12','u15','u18','senior'];
+    var cats = ['u8','u10','u12','u15','u18','uw18'];
     var result = { total: allTeams.length };
     cats.forEach(function(c){ result[c] = allTeams.filter(function(t){ return t.category === c; }).length; });
     return result;
@@ -110,9 +111,10 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (statsBar) {
         statsBar.innerHTML = [
           '<div class="topbar-stat"><div class="num">' + pc.total + '</div><div class="label">球队总数</div></div>',
-          '<div class="topbar-stat"><div class="num">' + pc.u12 + '</div><div class="label">U12球队</div></div>',
-          '<div class="topbar-stat"><div class="num">' + pc.u15 + '</div><div class="label">U15球队</div></div>',
-          '<div class="topbar-stat"><div class="num">' + pc.u18 + '</div><div class="label">U18球队</div></div>'
+          '<div class="topbar-stat"><div class="num" style="color:#06b6d4">' + pc.u8 + '</div><div class="label">U8</div></div>',
+          '<div class="topbar-stat"><div class="num" style="color:#10b981">' + pc.u10 + '</div><div class="label">U10</div></div>',
+          '<div class="topbar-stat"><div class="num" style="color:#f97316">' + pc.u12 + '</div><div class="label">U12</div></div>',
+          '<div class="topbar-stat"><div class="num" style="color:#8b5cf6">' + pc.u18 + '</div><div class="label">U18</div></div>'
         ].join('');
       }
     }
@@ -134,11 +136,12 @@ document.addEventListener('DOMContentLoaded', async function() {
       <input type="text" id="filter-search" class="filter-search" placeholder="🔍 搜索球队名称..." oninput="applyFilters()">
       <select id="filter-cat" onchange="applyFilters()">
         <option value="">全部组别</option>
+        <option value="u8">🌈 U8</option>
         <option value="u10">🌱 U10</option>
         <option value="u12">⚾ U12</option>
         <option value="u15">🏆 U15</option>
         <option value="u18">🎖️ U18</option>
-        <option value="senior">⭐ 成人</option>
+        <option value="uw18">👑 UW18</option>
       </select>
       <select id="filter-gender" onchange="applyFilters()">
         <option value="">全部性别</option>
@@ -181,7 +184,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             </div>
           </div>
           <div class="team-card-footer">
-            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editTeam('${t.id || t.team_id}')">✏️ 编辑</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--primary)" onclick="event.stopPropagation();openManagePlayersModal('${t.id || t.team_id}')">👥 管理球员</button>
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editTeam('${t.id || t.team_id}')">✏️</button>
             <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="event.stopPropagation();deleteTeam('${t.id || t.team_id}','${escHtml(t.name)}')">🗑️</button>
           </div>
         </div>`;
@@ -316,7 +320,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           <div class="modal-form-grid">
             <div class="full"><label>球队名称 *</label><input id="t-name" value="${escHtml(team.name||'')}" placeholder="输入球队名称"></div>
             <div class="full"><label>英文名称</label><input id="t-name-en" value="${escHtml(team.name_en||'')}" placeholder="English name"></div>
-            <div><label>年龄组别</label><select id="t-cat"><option value="">请选择</option><option value="u10" ${(team.category==='u10')?'selected':''}>U10</option><option value="u12" ${(team.category==='u12')?'selected':''}>U12</option><option value="u15" ${(team.category==='u15')?'selected':''}>U15</option><option value="u18" ${(team.category==='u18')?'selected':''}>U18</option><option value="senior" ${(team.category==='senior')?'selected':''}>成人</option></select></div>
+            <div><label>年龄组别</label><select id="t-cat"><option value="">请选择</option><option value="u8" ${(team.category==='u8')?'selected':''}>U8</option><option value="u10" ${(team.category==='u10')?'selected':''}>U10</option><option value="u12" ${(team.category==='u12')?'selected':''}>U12</option><option value="u15" ${(team.category==='u15')?'selected':''}>U15</option><option value="u18" ${(team.category==='u18')?'selected':''}>U18</option><option value="uw18" ${(team.category==='uw18')?'selected':''}>UW18</option></select></div>
             <div><label>性别</label><select id="t-gender"><option value="">请选择</option><option value="M" ${(team.gender==='M')?'selected':''}>男队</option><option value="F" ${(team.gender==='F')?'selected':''}>女队</option><option value="coed" ${(team.gender==='coed')?'selected':''}>男女混合</option></select></div>
             <div><label>主教练</label><input id="t-coach" value="${escHtml(team.coach_name||'')}" placeholder="教练姓名"></div>
             <div><label>教练电话</label><input id="t-coach-phone" value="${escHtml(team.coach_phone||'')}" placeholder="+852 XXXX XXXX"></div>
@@ -444,6 +448,114 @@ document.addEventListener('DOMContentLoaded', async function() {
       </div>`;
     document.body.appendChild(overlay);
     overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+  };
+
+  // ── Player Assignment Modal ────────────────────────────────
+  window.openManagePlayersModal = function(teamId) {
+    var t = allTeams.find(function(x){ return (x.id||x.team_id)===teamId; });
+    if (!t) return;
+    var teamPlayers = allPlayers.filter(function(p){ return p.team_id === (t.id||t.team_id); });
+    var teamPlayerIds = {};
+    teamPlayers.forEach(function(p){ teamPlayerIds[p.id] = true; });
+
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'manage-players-modal';
+
+    var availablePlayers = allPlayers.filter(function(p){
+      if (teamPlayerIds[p.id]) return false;
+      if (p.status !== 'active') return false;
+      return true;
+    });
+
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:600px;">
+        <div class="modal-header">
+          <div class="modal-title">👥 管理球员 — ${escHtml(t.name)} <span style="font-size:12px;font-weight:400;color:var(--text-muted)">（${getCatLabel(t.category)}）</span></div>
+          <button class="modal-close" onclick="closeManagePlayersModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">已在队球员（${teamPlayers.length}人）</div>
+            ${teamPlayers.length > 0
+              ? '<div style="display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow-y:auto;">' +
+                  teamPlayers.map(function(p){
+                    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg-secondary);border-radius:20px;border:1px solid var(--border);">
+                      <div style="width:24px;height:24px;border-radius:50%;background:#8b5cf6;color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">${(p.name||'?').charAt(0)}</div>
+                      <span style="font-size:12px;font-weight:600;">${escHtml(p.name)}</span>
+                      <button class="btn btn-ghost btn-sm" style="padding:1px 6px;font-size:11px;color:var(--danger);border-color:var(--danger)" onclick="removePlayerFromTeam('${p.id}','${teamId}')">移除</button>
+                    </div>`;
+                  }).join('') + '</div>'
+              : '<div style="color:var(--text-muted);font-size:13px;font-style:italic;">暂无球员</div>'
+            }
+          </div>
+
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">可添加球员（${availablePlayers.length}人）</div>
+            ${availablePlayers.length > 0
+              ? '<div style="display:flex;flex-wrap:wrap;gap:6px;max-height:200px;overflow-y:auto;">' +
+                  availablePlayers.map(function(p){
+                    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg-secondary);border-radius:20px;border:1px solid var(--border);">
+                      <div style="width:24px;height:24px;border-radius:50%;background:#3b82f6;color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">${(p.name||'?').charAt(0)}</div>
+                      <span style="font-size:12px;font-weight:600;">${escHtml(p.name)}</span>
+                      <span style="font-size:11px;color:var(--text-muted)">${p.age_group||''}</span>
+                      <button class="btn btn-ghost btn-sm" style="padding:1px 6px;font-size:11px;color:#10b981;border-color:#10b981" onclick="addPlayerToTeam('${p.id}','${teamId}')">+ 添加</button>
+                    </div>`;
+                  }).join('') + '</div>'
+              : '<div style="color:var(--text-muted);font-size:13px;font-style:italic;">没有可添加的球员（先去球员资料库录入）</div>'
+            }
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="closeManagePlayersModal()">关闭</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  };
+
+  window.closeManagePlayersModal = function() {
+    var m = document.getElementById('manage-players-modal');
+    if (m) m.remove();
+  };
+
+  window.addPlayerToTeam = function(playerId, teamId) {
+    var team = allTeams.find(function(t){ return (t.id||t.team_id)===teamId; });
+    DB.getPlayer(playerId, function(result) {
+      if (!result.data) { showToast('球员不存在', 'error'); return; }
+      var player = result.data;
+      player.team_id = teamId;
+      player.age_group = team ? team.category : '';
+      DB.updatePlayer(playerId, player, function() {
+        showToast('已添加 ' + player.name + ' 到球队', 'success');
+        // Refresh player in allPlayers
+        var idx = allPlayers.findIndex(function(p){ return p.id === playerId; });
+        if (idx >= 0) allPlayers[idx] = player;
+        // Update player in players.html via localStorage event
+        localStorage.setItem('baseai_team_updated', teamId + ':' + Date.now());
+        closeManagePlayersModal();
+        openManagePlayersModal(teamId);
+      });
+    });
+  };
+
+  window.removePlayerFromTeam = function(playerId, teamId) {
+    if (!confirm('确定要将该球员移出球队？')) return;
+    DB.getPlayer(playerId, function(result) {
+      if (!result.data) return;
+      var player = result.data;
+      player.team_id = null;
+      player.age_group = null;
+      DB.updatePlayer(playerId, player, function() {
+        showToast('已移出球队', 'success');
+        // Update player in allPlayers
+        var idx = allPlayers.findIndex(function(p){ return p.id === playerId; });
+        if (idx >= 0) allPlayers[idx] = player;
+        // Notify players.html
+        localStorage.setItem('baseai_team_updated', teamId + ':' + Date.now());
+        closeManagePlayersModal();
+        openManagePlayersModal(teamId);
+      });
+    });
   };
 
   async function loadAll() {
