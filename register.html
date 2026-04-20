@@ -368,6 +368,10 @@ input,select,textarea { font-family: inherit; }
   </div>
 </div>
 
+<!-- Firebase SDK + BaseAI Data Layer -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="firebase-service.js"></script>
 <script>
 // ============================================================
 //  CONFIG
@@ -515,11 +519,23 @@ function submitRegistration(){
     status:'pending'
   };
 
-  // Save to localStorage pending list
+  // Save to localStorage pending list (fallback if no Firebase)
   var pending=JSON.parse(localStorage.getItem('baseai_pending_players')||'[]');
   data._local_id='P'+(pending.length+1).toString().padStart(3,'0');
   pending.push(data);
   localStorage.setItem('baseai_pending_players',JSON.stringify(pending));
+
+  // Also try to save directly to Firebase (if configured)
+  if (typeof FBPlayers !== 'undefined') {
+    FBPlayers.upsert(Object.assign({}, data, {
+      status: 'pending',
+      registered_via: 'self-registration-link'
+    }), function(result) {
+      if (result && result.success) {
+        console.log('[Firebase] Registration saved:', result.key);
+      }
+    });
+  }
 
   _submitData=data;
   showSuccess();
