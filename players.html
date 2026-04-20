@@ -1036,6 +1036,20 @@ window.viewPlayer=function(id){
   showModal('球员详情', content, 'detail-modal');
 };
 
+// Approve pending player → set status to active
+window.approvePlayer=function(id){
+  DB.getPlayer(id, function(result){
+    if(!result.data){ showToast('球员不存在','error'); return; }
+    var player=result.data;
+    player.status='active';
+    player.approved_at=new Date().toISOString();
+    DB.updatePlayer(id, player, function(){
+      showToast('审核通过！球员已入册','success');
+      loadPlayers();
+    });
+  });
+};
+
 // Reject & delete pending player
 window.rejectPlayer=function(id, name){
   if(!confirm('确定要否决 ['+name+'] 的注册申请吗？该记录将被删除。')) return;
