@@ -92,5 +92,19 @@ var DB = {
 
   rejectRegistration: function(pendingId, callback) {
     FirebaseService.rejectRegistration(pendingId, callback);
+  },
+
+  // ── Teams ──────────────────────────────────────────────
+
+  getTeams: function(callback) {
+    FirebaseService.getTeams(callback);
+  },
+
+  upsertTeam: function(data, callback) {
+    FirebaseService.upsertTeam(data, callback);
+  },
+
+  deleteTeam: function(id, callback) {
+    FirebaseService.deleteTeam(id, callback);
   }
 };
