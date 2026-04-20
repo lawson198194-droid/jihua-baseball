@@ -849,6 +849,9 @@ document.getElementById('btn-copy-link').addEventListener('click',function(){
 //  AUTO-IMPORT FROM REGISTER PAGE
 // ============================================================
 function checkAutoImport() {
+  var imported=0;
+
+  // 1) From URL ?prefill=... (for direct invite link)
   var params=new URLSearchParams(window.location.search);
   var prefill=params.get('prefill');
   if(prefill){
@@ -859,14 +862,36 @@ function checkAutoImport() {
           status:'active', positions:[], batting_hand:'', throwing_hand:'',
           height_cm:null, weight_kg:null, photo:null, notes:''
         }, data)).then(function(){
-          showToast('球员 ['+data.name+'] 已自动导入！','success');
-          loadPlayers();
-          // Clean URL
+          imported++;
           window.history.replaceState({},'',window.location.pathname);
+          if(imported>0) showToast('球员 ['+data.name+'] 已自动导入！','success');
         });
       }
-    }catch(e){ console.warn('Auto-import failed:',e); }
+    }catch(e){ console.warn('Auto-import from URL failed:',e); }
   }
+
+  // 2) From localStorage pending list (register.html saves here)
+  try{
+    var pending=JSON.parse(localStorage.getItem('baseai_pending_players')||'[]');
+    if(pending.length>0){
+      pending.forEach(function(data){
+        DB.upsertPlayer(Object.assign({
+          status:'pending', positions:[], batting_hand:'', throwing_hand:'',
+          height_cm:null, weight_kg:null, photo:null, notes:''
+        }, data)).then(function(){
+          imported++;
+        });
+      });
+      // Clear after importing
+      localStorage.removeItem('baseai_pending_players');
+      setTimeout(function(){
+        if(imported>0){
+          showToast('检测到 '+imported+' 条新球员注册申请，已导入待审核！','success');
+          loadPlayers();
+        }
+      },500);
+    }
+  }catch(e){ console.warn('Auto-import from localStorage failed:',e); }
 }
 
 // ============================================================
