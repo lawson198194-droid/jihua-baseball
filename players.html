@@ -848,23 +848,62 @@ document.getElementById('btn-copy-link').addEventListener('click',function(){
 // ============================================================
 //  AUTO-IMPORT FROM REGISTER PAGE
 // ============================================================
-function checkAutoImport() {
-  var imported=0;
 
-  // 1) From URL ?prefill=... (for direct invite link)
+// Convert register.html field names → player field names
+function normalizeRegData(data){
+  var pos=[];
+  if(data.position_1) pos.push(data.position_1);
+  if(data.position_2) pos.push(data.position_2);
+  if(data.position_3) pos.push(data.position_3);
+  return {
+    name: data.name||'',
+    gender: data.gender||'',
+    birth_year: data.birth_date ? parseInt(data.birth_date.split('-')[0]) : null,
+    school: data.school||'',
+    grade: data.grade||'',
+    positions: pos,
+    contact_name: data.contact_name||'',
+    phone_main: data.phone_main||'',
+    phone_backup: data.phone_backup||'',
+    relationship: data.relationship||'',
+    club: data.club||'',
+    hkab_id: data.hkab_id||'',
+    notes: data.notes||'',
+    status: 'pending',
+    batting_hand: '',
+    throwing_hand: '',
+    height_cm: null,
+    weight_kg: null,
+    photo: null
+  };
+}
+
+function doImportPlayer(data, onDone){
+  var normalized=normalizeRegData(data);
+  DB.upsertPlayer(normalized).then(function(){
+    if(onDone) onDone();
+  }).catch(function(e){
+    console.warn('Import failed:', e);
+    if(onDone) onDone();
+  });
+}
+
+function checkAutoImport() {
+  var pendingCount=0;
+  var totalImported=0;
+  var names=[];
+
+  // 1) From URL ?prefill=... (direct invite link, prefill is light data)
   var params=new URLSearchParams(window.location.search);
   var prefill=params.get('prefill');
   if(prefill){
     try{
       var data=JSON.parse(decodeURIComponent(escape(atob(prefill))));
       if(data.name){
-        DB.upsertPlayer(Object.assign({
-          status:'active', positions:[], batting_hand:'', throwing_hand:'',
-          height_cm:null, weight_kg:null, photo:null, notes:''
-        }, data)).then(function(){
-          imported++;
+        doImportPlayer(data, function(){
+          names.push(data.name);
+          totalImported++;
           window.history.replaceState({},'',window.location.pathname);
-          if(imported>0) showToast('球员 ['+data.name+'] 已自动导入！','success');
         });
       }
     }catch(e){ console.warn('Auto-import from URL failed:',e); }
@@ -873,23 +912,22 @@ function checkAutoImport() {
   // 2) From localStorage pending list (register.html saves here)
   try{
     var pending=JSON.parse(localStorage.getItem('baseai_pending_players')||'[]');
+    pendingCount=pending.length;
     if(pending.length>0){
       pending.forEach(function(data){
-        DB.upsertPlayer(Object.assign({
-          status:'pending', positions:[], batting_hand:'', throwing_hand:'',
-          height_cm:null, weight_kg:null, photo:null, notes:''
-        }, data)).then(function(){
-          imported++;
+        doImportPlayer(data, function(){
+          names.push(data.name);
+          totalImported++;
+          pendingCount--;
+          if(pendingCount===0){
+            localStorage.removeItem('baseai_pending_players');
+            loadPlayers();
+            if(totalImported>0){
+              showToast('检测到 '+totalImported+' 条新注册申请，已导入待审核！','success');
+            }
+          }
         });
       });
-      // Clear after importing
-      localStorage.removeItem('baseai_pending_players');
-      setTimeout(function(){
-        if(imported>0){
-          showToast('检测到 '+imported+' 条新球员注册申请，已导入待审核！','success');
-          loadPlayers();
-        }
-      },500);
     }
   }catch(e){ console.warn('Auto-import from localStorage failed:',e); }
 }
