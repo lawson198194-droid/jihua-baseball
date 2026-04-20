@@ -1075,7 +1075,7 @@ window.viewPlayer=function(id){
       makeFieldRow('就读学校', p.school) +
       makeFieldRow('所属俱乐部', p.club, 'var(--accent)') +
       makeFieldRow('🏆 梯队组别', p.age_group ? '<span style="color:'+getAgeGroupColor(p.age_group)+';font-weight:600">'+getAgeGroupLabel(p.age_group)+'</span>' : '— 未分配 —', p.age_group ? getAgeGroupColor(p.age_group) : '') +
-      makeFieldRow('所属球队', p.team_id ? escHtml(getTeamName(p.team_id)) : '— 未分配 —', p.team_id ? 'var(--accent)' : '')
+      makeFieldRow('所属球队', p.team_id ? escHtml(getTeamName(p.team_id)) : '— 未分配 —', p.team_id ? 'var(--accent)' : '') +
       makeFieldRow('🏅 棒总会员编号', p.hkab_id, 'var(--purple)') +
       makeFieldRow('球员编号', p.player_id)
     ) +
