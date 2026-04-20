@@ -534,26 +534,30 @@ function submitRegistration(){
 
   _submitData=data;
 
-  // Always save to localStorage first
+  // Strip photo from localStorage backup (too large, will go to Firebase only)
+  var dataNoPhoto = Object.assign({}, data);
+  delete dataNoPhoto.photo;
+  delete dataNoPhoto._local_id;
+
+  // Save lightweight data to localStorage backup (no photo)
   var pending=JSON.parse(localStorage.getItem('baseai_pending_players')||'[]');
-  data._local_id='P'+(pending.length+1).toString().padStart(3,'0');
-  pending.push(data);
+  dataNoPhoto._local_id='P'+(pending.length+1).toString().padStart(3,'0');
+  pending.push(dataNoPhoto);
   localStorage.setItem('baseai_pending_players',JSON.stringify(pending));
-  console.log('[Register] Saved to localStorage, DB available:', typeof DB !== 'undefined');
+  console.log('[Register] Backup saved to localStorage (no photo)');
 
   // Show processing state
   showToast('正在提交...','info');
 
-  // Try Firebase submit (async, non-blocking)
+  // Submit to Firebase (includes photo - Firebase has 5GB limit, enough for photos)
   if (typeof DB !== 'undefined' && typeof DB.submitRegistration === 'function') {
-    console.log('[Register] Calling DB.submitRegistration...');
+    console.log('[Register] Calling DB.submitRegistration with photo...');
     DB.submitRegistration(data, function(result) {
       console.log('[Register] Firebase submit callback, result:', result);
       showSuccess();
     });
   } else {
     console.warn('[Register] DB not available - localStorage fallback only');
-    // Still show success after a short delay to let the toast appear
     setTimeout(function(){ showSuccess(); }, 100);
   }
 }
