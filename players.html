@@ -881,8 +881,8 @@ function openAddModal(player) {
           '<div class="form-group"><label>身高 (cm)</label><input type="number" id="f-h" value="'+(player.height_cm||'')+'" placeholder="140"></div>'+
           '<div class="form-group"><label>体重 (kg)</label><input type="number" id="f-w" value="'+(player.weight_kg||'')+'" placeholder="40"></div>'+
           // Row 7: Batting + Throwing
-          '<div class="form-group"><label>打击</label><select id="f-bat"><option value="">请选择</option><option value="L"'+(player.batting_hand==='L'?' selected':'')+'>左手</option><option value="R"'+(player.batting_hand==='R'?' selected':'')+'>右手</option><option value="S"'+(player.batting_hand==='S'?' selected':'')+'>左右开</option></select></div>'+
-          '<div class="form-group"><label>投球</label><select id="f-throw"><option value="">请选择</option><option value="L"'+(player.throwing_hand==='L'?' selected':'')+'>左手</option><option value="R"'+(player.throwing_hand==='R'?' selected':'')+'>右手</option></select></div>'+
+          '<div class="form-group"><label>打击</label><select id="f-bat"><option value="">请选择</option><option value="左打"'+(player.batting_hand==='L'||player.batting_hand==='左打'?' selected':'')+'>左打</option><option value="右打"'+(player.batting_hand==='R'||player.batting_hand==='右打'?' selected':'')+'>右打</option><option value="左右皆可"'+(player.batting_hand==='S'||player.batting_hand==='左右开'||player.batting_hand==='左右皆可'?' selected':'')+'>左右皆可</option></select></div>'+
+          '<div class="form-group"><label>投球</label><select id="f-throw"><option value="">请选择</option><option value="左投"'+(player.throwing_hand==='L'||player.throwing_hand==='左投'?' selected':'')+'>左投</option><option value="右投"'+(player.throwing_hand==='R'||player.throwing_hand==='右投'?' selected':'')+'>右投</option></select></div>'+
           // Row 8: Contact
           '<div class="form-group"><label>📞 联系人（家长）</label><input id="f-contact-name" value="'+escAttr(player.contact_name||'')+'" placeholder="家长姓名"></div>'+
           '<div class="form-group"><label>电话</label><input id="f-contact-phone" value="'+escAttr(player.contact_phone||'')+'" placeholder="+852 6xxx xxxx"></div>'+
