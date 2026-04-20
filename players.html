@@ -328,9 +328,7 @@ var CONTACT_RELATIONS = ['父亲','母亲','监护人','其他'];
 //  DB INIT (Firebase if configured, else localStorage fallback)
 // ============================================================
 DB.init(function() {
-  if (typeof testFirebaseConnection === 'function') {
-    testFirebaseConnection();
-  }
+  loadPlayers();
 });
 
 // ============================================================
