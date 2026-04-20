@@ -2,89 +2,93 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>诊断页面 — BaseAI</title>
+<title>BaseAI · 系统诊断</title>
 <style>
-  body { font-family: system-ui; padding: 40px; background: #1a1a2e; color: #e0e0e0; }
-  h1 { color: #f97316; }
-  .test { padding: 12px 16px; margin: 8px 0; border-radius: 8px; font-size: 14px; }
-  .pass { background: #065f46; color: #6ee7b7; }
-  .fail { background: #7f1d1d; color: #fca5a5; }
-  .warn { background: #78350f; color: #fde68a; }
-  pre { background: #111; padding: 16px; border-radius: 8px; overflow: auto; font-size: 12px; max-height: 200px; }
-  .data-section { margin-top: 20px; }
-  button { padding: 10px 20px; background: #f97316; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 16px; }
-  button:hover { background: #ea580c; }
+  body { font-family: 'Space Grotesk', system-ui; max-width: 600px; margin: 40px auto; padding: 20px; background: #0a0a1a; color: #e0e0e0; }
+  h1 { color: #00ff88; font-size: 24px; }
+  .diag { background: #111; border: 1px solid #333; border-radius: 12px; padding: 20px; margin: 16px 0; }
+  .ok { color: #00ff88; }
+  .fail { color: #ff4757; }
+  .warn { color: #ffa502; }
+  .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; }
+  .row:last-child { border: none; }
+  button { background: #00ff88; color: #000; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer; }
+  pre { background: #1a1a2e; padding: 12px; border-radius: 8px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; max-height: 200px; }
 </style>
 </head>
 <body>
-<h1>⚾ BaseAI 诊断页面</h1>
-
-<div id="results"></div>
-
-<script src="db.js"></script>
+<h1>⚙️ BaseAI 系统诊断</h1>
+<div class="diag" id="results">
+  <div class="row"><span>检查中...</span></div>
+</div>
+<button onclick="runDiag()">🔄 重新诊断</button>
 <script>
-var r = document.getElementById('results');
-
-function test(name, pass, detail) {
-  var cls = pass ? 'pass' : 'fail';
-  var icon = pass ? '✅' : '❌';
-  r.innerHTML += '<div class="test ' + cls + '">' + icon + ' ' + name + (detail ? '<br><small>' + detail + '</small>' : '') + '</div>';
+var steps = [];
+function log(label, status, detail) {
+  steps.push({label, status, detail});
+  render();
+}
+function render() {
+  var html = '';
+  steps.forEach(function(s) {
+    var icon = s.status === 'ok' ? '✅' : s.status === 'fail' ? '❌' : '⚠️';
+    var cls = s.status === 'ok' ? 'ok' : s.status === 'fail' ? 'fail' : 'warn';
+    html += '<div class="row"><span>' + icon + ' ' + s.label + '</span><span class="' + cls + '">' + s.status.toUpperCase() + '</span></div>';
+    if (s.detail) html += '<pre style="margin:4px 0 12px">' + s.detail + '</pre>';
+  });
+  document.getElementById('results').innerHTML = html || '<div class="row"><span>无结果</span></div>';
 }
 
-function run() {
-  // Test 1: DB exists
-  test('DB 对象已加载', typeof window.DB !== 'undefined');
+function runDiag() {
+  steps = [];
+  render();
 
-  if (typeof window.DB === 'undefined') {
-    r.innerHTML += '<p style="color:#fca5a5;margin-top:16px;">❌ DB 对象不存在！db.js 加载失败。请检查网络和控制台错误。</p>';
-    return;
+  // 1. Check Firebase SDK
+  log('Firebase SDK 加载', typeof firebase !== 'undefined' && typeof firebase.app !== 'undefined' ? 'ok' : 'fail',
+    typeof firebase === 'undefined' ? 'firebase namespace 不存在' : JSON.stringify(Object.keys(firebase)));
+
+  // 2. Check FirebaseService
+  log('FirebaseService 定义', typeof FirebaseService !== 'undefined' ? 'ok' : 'fail',
+    typeof FirebaseService === 'undefined' ? 'window.FirebaseService 未定义' : '已定义');
+
+  // 3. Check DB
+  log('DB 定义', typeof DB !== 'undefined' ? 'ok' : 'fail',
+    typeof DB === 'undefined' ? 'window.DB 未定义' : '已定义');
+
+  // 4. Try init Firebase
+  if (typeof FirebaseService !== 'undefined') {
+    FirebaseService.init(function(ok) {
+      log('Firebase 连接状态', ok ? 'ok' : 'fail',
+        FirebaseService.isConfigured ? 'isConfigured=true, db=' + (FirebaseService.db ? 'OK' : 'null') : 'isConfigured=false');
+
+      // 5. Try read players
+      if (ok && FirebaseService.isConfigured && FirebaseService.db) {
+        FirebaseService.db.ref('players').limitToFirst(3).once('value').then(function(snap) {
+          var data = [];
+          snap.forEach(function(c) { data.push({key: c.key, name: c.val().name}); });
+          log('Firebase 读球员测试', 'ok', JSON.stringify(data, null, 2));
+        }).catch(function(e) {
+          log('Firebase 读球员测试', 'fail', e.message);
+        });
+      } else {
+        log('Firebase 读球员测试', 'fail', 'Firebase 未连接，跳过');
+      }
+    });
+  } else {
+    log('Firebase 连接状态', 'fail', 'FirebaseService 未定义');
   }
 
-  // Test 2: DB methods
-  test('DB.getPlayers() 可调用', typeof window.DB.getPlayers === 'function');
-  test('DB.upsertPlayer() 可调用', typeof window.DB.upsertPlayer === 'function');
-  test('DB.getMode() = ' + window.DB.getMode(), true);
-
-  // Test 3: Storage
-  var storageType = window.DB.getMode();
-  test('存储类型: ' + storageType, true);
-
-  // Test 4: Try loading players
-  window.DB.getPlayers().then(function(result) {
-    var count = (result.data || []).length;
-    test('球员数据数量: ' + count, count > 0, '数据: ' + JSON.stringify(result.data).substring(0, 200));
-  }).catch(function(e) {
-    test('球员数据加载失败', false, e.message);
-  });
-
-  // Test 5: Teams
-  window.DB.getTeams().then(function(result) {
-    var count = (result.data || []).length;
-    test('球队数据数量: ' + count, count > 0, '数据: ' + JSON.stringify(result.data).substring(0, 200));
-  });
-
-  // Test 6: Games
-  window.DB.getGames().then(function(result) {
-    var count = (result.data || []).length;
-    test('比赛数据数量: ' + count, count > 0, '数据: ' + JSON.stringify(result.data).substring(0, 200));
-  });
-
-  // Show storage content
-  setTimeout(function() {
-    var html = '<div class="data-section"><h2>📦 存储内容</h2>';
-    ['players', 'teams', 'games'].forEach(function(table) {
-      var key = 'baseai_db_' + table;
-      var val = localStorage ? localStorage.getItem(key) : null;
-      html += '<div style="margin-top:8px;"><strong>' + table + ':</strong> ' + (val ? val.substring(0, 200) : 'null/undefined') + '</div>';
-    });
-    html += '</div>';
-    r.innerHTML += html;
-  }, 500);
+  // 6. Check localStorage
+  try {
+    var ls = localStorage.getItem('baseai_players') || '[]';
+    var parsed = JSON.parse(ls);
+    log('localStorage 球员', parsed.length > 0 ? 'ok' : 'warn', parsed.length + ' 条记录');
+  } catch(e) {
+    log('localStorage 球员', 'fail', e.message);
+  }
 }
-run();
-</script>
 
-<button onclick="location.reload()">🔄 重新诊断</button>
+runDiag();
+</script>
 </body>
 </html>
