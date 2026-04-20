@@ -756,7 +756,7 @@ window.removePhoto=function(){
 window.editPlayer=function(id){ var p=allPlayers.find(function(x){return x.id===id;}); if(p) openAddModal(p); };
 
 window.confirmDelete=function(id,name){
-  if(!confirm('确定要删除球员「'+name+'」吗？此操作不可撤销。')) return;
+  if(!confirm('确定要删除球员 ['+name+'] 吗？此操作不可撤销。')) return;
   DB.deletePlayer(id).then(function(){ showToast('球员已删除','success'); loadPlayers(); });
 };
 
@@ -859,7 +859,7 @@ function checkAutoImport() {
           status:'active', positions:[], batting_hand:'', throwing_hand:'',
           height_cm:null, weight_kg:null, photo:null, notes:''
         }, data)).then(function(){
-          showToast('球员「'+data.name+'」已自动导入！','success');
+          showToast('球员 ['+data.name+'] 已自动导入！','success');
           loadPlayers();
           // Clean URL
           window.history.replaceState({},'',window.location.pathname);
