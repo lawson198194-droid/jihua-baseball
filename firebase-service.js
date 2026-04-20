@@ -318,6 +318,81 @@
           if (count === demoPlayers.length && callback) callback();
         });
       });
+    },
+
+    // ── Teams ──────────────────────────────────────────────
+
+    getTeams: function(callback) {
+      if (!this.isConfigured) {
+        var data = JSON.parse(localStorage.getItem('baseai_teams') || '[]');
+        setTimeout(function(){ callback({ data: data }); }, 0);
+        return;
+      }
+      this.db.ref('teams').once('value').then(function(snapshot) {
+        var data = [];
+        snapshot.forEach(function(child) {
+          var item = child.val();
+          item.id = child.key;
+          data.push(item);
+        });
+        callback({ data: data });
+      }).catch(function(error) {
+        console.error('[Firebase] getTeams error:', error);
+        callback({ data: [] });
+      });
+    },
+
+    upsertTeam: function(teamData, callback) {
+      if (!this.isConfigured) {
+        var teams = JSON.parse(localStorage.getItem('baseai_teams') || '[]');
+        if (teamData.id || teamData.team_id) {
+          var id = teamData.id || teamData.team_id;
+          var idx = teams.findIndex(function(t){ return (t.id||t.team_id) === id; });
+          if (idx >= 0) teams[idx] = Object.assign({}, teams[idx], teamData);
+          else teams.push(Object.assign({}, teamData, { id: id }));
+        } else {
+          var newId = 'T' + Date.now();
+          teams.push(Object.assign({}, teamData, { id: newId, team_id: newId }));
+        }
+        localStorage.setItem('baseai_teams', JSON.stringify(teams));
+        setTimeout(function(){ if(callback) callback({ success: true }); }, 0);
+        return;
+      }
+      var id = teamData.id || teamData.team_id;
+      if (id) {
+        this.db.ref('teams/' + id).update(teamData).then(function() {
+          if (callback) callback({ success: true });
+        }).catch(function(e) {
+          console.error('[Firebase] upsertTeam error:', e);
+          if (callback) callback({ success: false, error: e });
+        });
+      } else {
+        var newRef = this.db.ref('teams').push();
+        teamData.team_id = newRef.key;
+        newRef.set(teamData).then(function() {
+          if (callback) callback({ success: true, id: newRef.key });
+        }).catch(function(e) {
+          console.error('[Firebase] upsertTeam error:', e);
+          if (callback) callback({ success: false, error: e });
+        });
+      }
+    },
+
+    deleteTeam: function(id, callback) {
+      if (!this.isConfigured) {
+        var teams = JSON.parse(localStorage.getItem('baseai_teams') || '[]');
+        teams = teams.filter(function(t){ return (t.id||t.team_id) !== id; });
+        localStorage.setItem('baseai_teams', JSON.stringify(teams));
+        setTimeout(function(){ if(callback) callback({ success: true }); }, 0);
+        return;
+      }
+      this.db.ref('teams/' + id).remove().then(function() {
+        if (callback) callback({ success: true });
+      }).catch(function(e) {
+        console.error('[Firebase] deleteTeam error:', e);
+        if (callback) callback({ success: false, error: e });
+      });
     }
   };
 })();
+
