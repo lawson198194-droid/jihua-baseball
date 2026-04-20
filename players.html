@@ -321,7 +321,8 @@ var POS_COLORS = {
   '三垒手':'#ef4444','游击手':'#ec4899','左外野':'#10b981','中外野':'#22c55e',
   '右外野':'#14b8a6','指定打击':'#f97316','总教练':'#64748b','教练':'#64748b'
 };
-var GENDER_MAP = { 'M':'男','F':'女' };
+var GENDER_MAP = { 'M':'男','F':'女','男':'男','女':'女' };
+var GENDER_CODE = { '男':'M','女':'F','M':'M','F':'F' };
 var CONTACT_RELATIONS = ['父亲','母亲','监护人','其他'];
 
 // ============================================================
@@ -414,7 +415,7 @@ function syncPendingList(pending) {
 }
 
 // Normalize registration data → player data
-// IMPORTANT: preserve ALL original fields from the registration form
+// IMPORTANT: standardize gender & birth_date so all display functions work correctly
 function normalizeRegData(data) {
   var pos = [];
   if (data.positions && Array.isArray(data.positions)) {
@@ -424,12 +425,23 @@ function normalizeRegData(data) {
   if (data.position_2 && pos.indexOf(data.position_2) < 0) pos.push(data.position_2);
   if (data.position_3 && pos.indexOf(data.position_3) < 0) pos.push(data.position_3);
 
+  // Standardize gender: always store 'M' or 'F', display using GENDER_MAP
+  var gender = GENDER_CODE[data.gender] || data.gender || '';
+
+  // Ensure birth_date is set (fallback from birth_year if missing)
+  var birth_year = data.birth_year || null;
+  if (!data.birth_date && birth_year) {
+    var bd_str = String(birth_year) + '-01-01'; // approximate Jan 1
+  }
+  var birth_date = data.birth_date || bd_str || '';
+
   var result = {
     // Core fields
     name: data.name || '',
-    gender: data.gender || '',
-    birth_date: data.birth_date || '',
-    birth_year: data.birth_date ? parseInt(data.birth_date.split('-')[0]) : (data.birth_year || null),
+    gender: gender,
+    gender_raw: data.gender || '', // preserve original
+    birth_date: birth_date,
+    birth_year: birth_year,
     school: data.school || '',
     grade: data.grade || '',
     positions: pos,
@@ -454,10 +466,10 @@ function normalizeRegData(data) {
     photo: data.photo || null,
     // Meta
     status: 'pending',
-    submitted_at: data.submittedAt || data.submitted_at || (data._submitted_at) || null
+    submitted_at: data.submittedAt || data.submitted_at || null
   };
 
-  // Preserve ALL remaining original fields (e.g. any extra fields from the form)
+  // Preserve ALL remaining original fields
   for (var key in data) {
     if (data.hasOwnProperty(key) && result[key] === undefined) {
       result[key] = data[key];
@@ -472,8 +484,26 @@ function normalizeRegData(data) {
 // ============================================================
 function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function escAttr(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function calcAge(bd) { if(!bd) return '-'; var t=new Date(),b=new Date(bd); var a=t.getFullYear()-b.getFullYear(); if(t.getMonth()-b.getMonth()<0||(t.getMonth()===b.getMonth()&&t.getDate()<b.getDate())) a--; return a; }
-function calcBirthYear(bd) { if(!bd) return null; return new Date(bd).getFullYear(); }
+function calcAge(bd) {
+  if(!bd) return '-';
+  // If bd is just a year (number), calculate from that year
+  if(typeof bd === 'number') {
+    var t = new Date();
+    return t.getFullYear() - bd;
+  }
+  // If bd is a date string
+  var t=new Date(),b=new Date(bd);
+  if(isNaN(b.getTime())) return '-';
+  var a=t.getFullYear()-b.getFullYear();
+  if(t.getMonth()-b.getMonth()<0||(t.getMonth()===b.getMonth()&&t.getDate()<b.getDate())) a--;
+  return a;
+}
+function calcBirthYear(bd) {
+  if(!bd) return null;
+  if(typeof bd === 'number') return bd;
+  var d = new Date(bd);
+  return isNaN(d.getTime()) ? null : d.getFullYear();
+}
 function getAvatarColor(n) { var c=['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899','#f59e0b','#06b6d4','#84cc16']; return c[(n||'A').charCodeAt(0)%c.length]; }
 function getPosColor(p) { return POS_COLORS[p] || '#64748b'; }
 function formatHand(h) { return h==='L'?'左手':h==='R'?'右手':h==='S'?'左右开':'-'; }
@@ -584,7 +614,7 @@ function renderPlayers() {
         var isPending=(p.status==='pending');
     var cardBorder=isPending?'border:2px solid var(--orange);':'';
     html+='<div class="player-card" style="'+cardBorder+'">'+
-      '<div class="player-card-header" onclick="'+(isPending?'openPendingReview(\''+escAttr(p.id)+'\')':'viewPlayer(\''+escAttr(p.id)+'\')')+'">'+
+      '<div class="player-card-header" onclick="viewPlayer(\''+escAttr(p.id)+'\')">'+
         '<div class="player-avatar-wrap '+photoClass+'">'+
           '<div class="player-avatar-lg" style="background:'+color+'">'+initials+'</div>'+
           '<div class="player-photo-badge">✓</div>'+
@@ -611,7 +641,7 @@ function renderPlayers() {
       '</div>'+
       '<div class="player-card-footer">'+
         (isPending
-          ?'<button class="btn btn-sm" style="background:#f97316;color:#fff;flex:1" onclick="event.stopPropagation();openPendingReview(\''+escAttr(p.id)+'\')">🔍 查看详情</button>'
+          ?'<button class="btn btn-sm" style="background:#f97316;color:#fff;flex:1" onclick="event.stopPropagation();viewPlayer(\''+escAttr(p.id)+'\')">🔍 查看详情</button>'
           :'<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editPlayer(\''+escAttr(p.id)+'\')">编辑</button><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="event.stopPropagation();confirmDelete(\''+escAttr(p.id)+'\',\''+escAttr(p.name)+'\')">删除</button>'
         )+
       '</div>'+
@@ -906,72 +936,6 @@ window.confirmDelete=function(id,name){
   DB.deletePlayer(id, function(){ showToast('球员已删除','success'); loadPlayers(); });
 };
 
-// Open pending player review modal
-window.openPendingReview=function(id){
-  DB.getPlayer(id, function(result){
-    var p=result.data;
-    if(!p){ showToast('球员不存在','error'); return; }
-    var posTags2=(p.positions||[]).map(function(pos){
-      var color=POS_COLORS[pos]||'#64748b';
-      return '<span style="background:'+color+'22;color:'+color+';border:1px solid '+color+'44;padding:2px 8px;border-radius:12px;font-size:12px">'+pos+'</span>';
-    }).join(' ');
-    var submittedAt=p.submittedAt?new Date(p.submittedAt).toLocaleString('zh-CN'):'未知';
-    var dob=p.birth_date||(p.birth_year?p.birth_year+'年':'');
-    var html=
-      '<div style="background:#fff;border-radius:12px;padding:24px;max-width:480px;width:90vw;font-family:inherit">'+
-        '<div style="display:flex;align-items:center;margin-bottom:16px">'+
-          '<div style="width:56px;height:56px;border-radius:50%;background:#f97316;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:bold;margin-right:12px">'+escHtml(p.name).charAt(0)+'</div>'+
-          '<div><div style="font-size:20px;font-weight:bold">'+escHtml(p.name)+'</div><div style="color:#f97316;font-size:13px">⏳ 待审核</div></div>'+
-        '</div>'+
-        '<div style="background:#f8f8f8;border-radius:8px;padding:16px;margin-bottom:16px;font-size:14px;line-height:2">'+
-          '<div><span style="color:#888">性别：</span>'+(p.gender==='M'?'男':'女')+'</div>'+
-          '<div><span style="color:#888">年龄：</span>'+(dob?calcAge(p.birth_date)+'岁':'-')+'</div>'+
-          '<div><span style="color:#888">位置：</span>'+(posTags2||'-')+'</div>'+
-          (p.club?'<div><span style="color:#888">俱乐部：</span>'+escHtml(p.club)+'</div>':'')+
-          '<div><span style="color:#888">联系方式：</span>'+escHtml(p.contact_name||'')+' · '+escHtml(p.contact_phone||p.phone_main||'')+'</div>'+
-          (p.relationship?'<div><span style="color:#888">关系：</span>'+escHtml(p.relationship)+'</div>':'')+
-          '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #eee"><span style="color:#888">提交时间：</span>'+submittedAt+'</div>'+
-          (p.notes?'<div><span style="color:#888">备注：</span>'+escHtml(p.notes)+'</div>':'')+
-        '</div>'+
-        '<div style="display:flex;gap:12px">'+
-          '<button id="btn-approve-pending" style="flex:1;padding:12px;border:none;border-radius:8px;background:#10b981;color:#fff;font-size:16px;font-weight:bold;cursor:pointer" onclick="doApprovePlayer(\''+escAttr(id)+'\')">✅ 审核通过</button>'+
-          '<button id="btn-reject-pending" style="flex:1;padding:12px;border:1px solid #ef4444;border-radius:8px;background:#fff;color:#ef4444;font-size:16px;font-weight:bold;cursor:pointer" onclick="doRejectPlayer(\''+escAttr(id)+'\')">❌ 否决删除</button>'+
-          '<button style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#666;font-size:14px;cursor:pointer" onclick="closeModal()">取消</button>'+
-        '</div>'+
-      '</div>';
-    showModal('球员审核', html);
-  });
-};
-
-// Approve: set status to active
-window.doApprovePlayer=function(id){
-  document.getElementById('btn-approve-pending').disabled=true;
-  document.getElementById('btn-reject-pending').disabled=true;
-  DB.getPlayer(id, function(result){
-    var player=result.data;
-    if(!player){ showToast('球员不存在','error'); closeModal(); return; }
-    player.status='active';
-    player.approved_at=new Date().toISOString();
-    DB.updatePlayer(id, player, function(){
-      closeModal();
-      showToast('审核通过！['+player.name+'] 已进入系统','success');
-      loadPlayers();
-    });
-  });
-};
-
-// Reject: delete the pending player
-window.doRejectPlayer=function(id){
-  if(!confirm('确定要否决并删除此申请吗？此操作不可撤销。')) return;
-  document.getElementById('btn-approve-pending').disabled=true;
-  document.getElementById('btn-reject-pending').disabled=true;
-  DB.deletePlayer(id, function(){
-    closeModal();
-    showToast('申请已否决并删除','success');
-    loadPlayers();
-  });
-};
-
 // ============================================================
 //  VIEW PLAYER DETAIL
 // ============================================================
@@ -1039,7 +1003,7 @@ window.viewPlayer=function(id){
         : '<div style="color:#ccc;font-size:13px;font-style:italic;text-align:center;padding:8px 0">— 未填写 —</div>'
     ) +
     makeSection('注册信息',
-      makeFieldRow('提交时间', p.submitted_at ? new Date(p.submitted_at).toLocaleString('zh-CN') : '— 未填写 —') +
+      makeFieldRow('提交时间', (p.submitted_at || p.submittedAt) ? new Date(p.submitted_at || p.submittedAt).toLocaleString('zh-CN') : '— 未填写 —') +
       makeFieldRow('审核状态', isPending ? '⏳ 待审核' : '✅ 已审核', isPending ? '#f97316' : '#10b981')
     );
 
