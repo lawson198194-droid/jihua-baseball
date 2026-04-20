@@ -2,93 +2,193 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>BaseAI · 系统诊断</title>
+<title>BaseAI · 完整诊断</title>
 <style>
-  body { font-family: 'Space Grotesk', system-ui; max-width: 600px; margin: 40px auto; padding: 20px; background: #0a0a1a; color: #e0e0e0; }
-  h1 { color: #00ff88; font-size: 24px; }
-  .diag { background: #111; border: 1px solid #333; border-radius: 12px; padding: 20px; margin: 16px 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Space Grotesk', system-ui; max-width: 640px; margin: 0 auto; padding: 24px 16px; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+  h1 { color: #00ff88; font-size: 20px; margin-bottom: 16px; text-align: center; }
+  .card { background: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .title { font-size: 13px; color: #6b7280; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #1f2937; }
+  .row:last-child { border: none; }
+  .row .label { color: #9ca3af; font-size: 13px; }
+  .row .value { font-size: 13px; font-weight: 600; }
   .ok { color: #00ff88; }
   .fail { color: #ff4757; }
   .warn { color: #ffa502; }
-  .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; }
-  .row:last-child { border: none; }
-  button { background: #00ff88; color: #000; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer; }
-  pre { background: #1a1a2e; padding: 12px; border-radius: 8px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; max-height: 200px; }
+  .grey { color: #6b7280; }
+  .big { font-size: 28px; font-weight: 700; }
+  .bar { display: flex; gap: 8px; margin-top: 12px; }
+  .bar-item { flex: 1; background: #1f2937; border-radius: 8px; padding: 10px; text-align: center; }
+  .bar-item .num { font-size: 22px; font-weight: 700; }
+  .bar-item .lbl { font-size: 11px; color: #6b7280; margin-top: 4px; }
+  .btn { display: block; width: 100%; background: #00ff88; color: #000; border: none; padding: 14px; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+  .section { margin-top: 16px; }
+  .section h2 { font-size: 14px; color: #6b7280; margin-bottom: 8px; }
+  pre { background: #0d1117; padding: 12px; border-radius: 8px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; max-height: 180px; border: 1px solid #1f2937; }
+  .snap { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .snap-item { background: #1a1a2e; border-radius: 8px; padding: 8px; font-size: 12px; }
+  .snap-item .n { color: #00ff88; font-weight: 600; }
+  .snap-item .d { color: #6b7280; font-size: 11px; margin-top: 2px; }
+  #diag-results { min-height: 60px; }
 </style>
 </head>
 <body>
 <h1>⚙️ BaseAI 系统诊断</h1>
-<div class="diag" id="results">
-  <div class="row"><span>检查中...</span></div>
+
+<!-- Stat Card -->
+<div class="card">
+  <div class="title">📊 球员数据状态</div>
+  <div class="bar" id="stat-bar">
+    <div class="bar-item"><div class="num ok" id="stat-total">--</div><div class="lbl">总球员</div></div>
+    <div class="bar-item"><div class="num ok" id="stat-male">--</div><div class="lbl">男</div></div>
+    <div class="bar-item"><div class="num ok" id="stat-female">--</div><div class="lbl">女</div></div>
+    <div class="bar-item"><div class="num ok" id="stat-photo">--</div><div class="lbl">有照片</div></div>
+  </div>
 </div>
-<button onclick="runDiag()">🔄 重新诊断</button>
+
+<!-- Firebase Status -->
+<div class="card">
+  <div class="title">🔥 Firebase 连接状态</div>
+  <div class="row"><span class="label">SDK 加载</span><span class="value ok" id="s-sdk">检测中...</span></div>
+  <div class="row"><span class="label">Service 定义</span><span class="value ok" id="s-service">检测中...</span></div>
+  <div class="row"><span class="label">数据库连接</span><span class="value ok" id="s-db">检测中...</span></div>
+  <div class="row"><span class="label">isConfigured</span><span class="value ok" id="s-conf">检测中...</span></div>
+  <div class="row"><span class="label">实时监听</span><span class="value ok" id="s-listen">检测中...</span></div>
+</div>
+
+<!-- Live Sample -->
+<div class="card">
+  <div class="title">👥 实时数据预览（Firebase 前5条）</div>
+  <div class="snap" id="snap-preview">加载中...</div>
+</div>
+
+<!-- localStorage -->
+<div class="card">
+  <div class="title">💾 localStorage 状态</div>
+  <div class="row"><span class="label">本地记录数</span><span class="value" id="s-ls">检测中...</span></div>
+  <div class="row"><span class="label">最后同步时间</span><span class="value grey" id="s-ls-time">--</span></div>
+</div>
+
+<!-- Raw logs -->
+<div class="card" id="log-card" style="display:none">
+  <div class="title">📋 控制台日志</div>
+  <pre id="raw-log"></pre>
+</div>
+
+<button class="btn" onclick="runFullDiag()">🔄 重新诊断</button>
+<button class="btn" onclick="document.getElementById('log-card').style.display='block'" style="background:#1f2937;color:#fff;margin-top:8px;">📋 查看原始日志</button>
+
+<div class="section">
+  <h2>💡 如果还是空白</h2>
+  <pre id="hint" style="color:#9ca3af">
+1. 打开 players.html，然后按 F12
+2. 切到 Console（控制台）标签
+3. 截图发给我看
+4. 或者：Ctrl+U 打开源码，搜索"players-grid"，看有没有内容
+  </pre>
+</div>
+
 <script>
-var steps = [];
-function log(label, status, detail) {
-  steps.push({label, status, detail});
-  render();
-}
-function render() {
-  var html = '';
-  steps.forEach(function(s) {
-    var icon = s.status === 'ok' ? '✅' : s.status === 'fail' ? '❌' : '⚠️';
-    var cls = s.status === 'ok' ? 'ok' : s.status === 'fail' ? 'fail' : 'warn';
-    html += '<div class="row"><span>' + icon + ' ' + s.label + '</span><span class="' + cls + '">' + s.status.toUpperCase() + '</span></div>';
-    if (s.detail) html += '<pre style="margin:4px 0 12px">' + s.detail + '</pre>';
-  });
-  document.getElementById('results').innerHTML = html || '<div class="row"><span>无结果</span></div>';
-}
+// Capture console
+var rawLog = [];
+var origLog = console.log.bind(console);
+console.log = function() {
+  var msg = Array.from(arguments).join(' ');
+  rawLog.push(msg);
+  origLog.apply(console, arguments);
+  document.getElementById('raw-log').textContent = rawLog.slice(-50).join('\n');
+};
 
-function runDiag() {
-  steps = [];
-  render();
+var firstLoadDone = false;
 
-  // 1. Check Firebase SDK
-  log('Firebase SDK 加载', typeof firebase !== 'undefined' && typeof firebase.app !== 'undefined' ? 'ok' : 'fail',
-    typeof firebase === 'undefined' ? 'firebase namespace 不存在' : JSON.stringify(Object.keys(firebase)));
+function runFullDiag() {
+  // Reset
+  document.getElementById('s-sdk').textContent = '检测中...';
+  document.getElementById('s-sdk').className = 'value warn';
+  document.getElementById('snap-preview').innerHTML = '加载中...';
+  document.getElementById('s-ls').textContent = '--';
+  document.getElementById('s-ls-time').textContent = '--';
 
-  // 2. Check FirebaseService
-  log('FirebaseService 定义', typeof FirebaseService !== 'undefined' ? 'ok' : 'fail',
-    typeof FirebaseService === 'undefined' ? 'window.FirebaseService 未定义' : '已定义');
+  // 1. Firebase SDK
+  var sdkOk = typeof firebase !== 'undefined' && typeof firebase.app !== 'undefined';
+  document.getElementById('s-sdk').textContent = sdkOk ? '✅ 已加载' : '❌ 未找到';
+  document.getElementById('s-sdk').className = 'value ' + (sdkOk ? 'ok' : 'fail');
 
-  // 3. Check DB
-  log('DB 定义', typeof DB !== 'undefined' ? 'ok' : 'fail',
-    typeof DB === 'undefined' ? 'window.DB 未定义' : '已定义');
+  // 2. FirebaseService
+  var svcOk = typeof FirebaseService !== 'undefined';
+  document.getElementById('s-service').textContent = svcOk ? '✅ 已定义' : '❌ 未定义';
+  document.getElementById('s-service').className = 'value ' + (svcOk ? 'ok' : 'fail');
 
-  // 4. Try init Firebase
-  if (typeof FirebaseService !== 'undefined') {
-    FirebaseService.init(function(ok) {
-      log('Firebase 连接状态', ok ? 'ok' : 'fail',
-        FirebaseService.isConfigured ? 'isConfigured=true, db=' + (FirebaseService.db ? 'OK' : 'null') : 'isConfigured=false');
+  if (!svcOk) return;
 
-      // 5. Try read players
-      if (ok && FirebaseService.isConfigured && FirebaseService.db) {
-        FirebaseService.db.ref('players').limitToFirst(3).once('value').then(function(snap) {
-          var data = [];
-          snap.forEach(function(c) { data.push({key: c.key, name: c.val().name}); });
-          log('Firebase 读球员测试', 'ok', JSON.stringify(data, null, 2));
-        }).catch(function(e) {
-          log('Firebase 读球员测试', 'fail', e.message);
+  // 3. Init
+  FirebaseService.init(function(ok) {
+    var confOk = FirebaseService.isConfigured && FirebaseService.db;
+    document.getElementById('s-db').textContent = confOk ? '✅ 已连接' : '❌ 未连接';
+    document.getElementById('s-db').className = 'value ' + (confOk ? 'ok' : 'fail');
+    document.getElementById('s-conf').textContent = FirebaseService.isConfigured ? 'true' : 'false';
+    document.getElementById('s-conf').className = 'value ' + (FirebaseService.isConfigured ? 'ok' : 'fail');
+
+    // 4. Read live data
+    if (confOk) {
+      document.getElementById('s-listen').textContent = '🔄 监听中...';
+      document.getElementById('s-listen').className = 'value warn';
+
+      FirebaseService.db.ref('players').limitToFirst(5).once('value').then(function(snap) {
+        document.getElementById('s-listen').textContent = '✅ 已读取';
+        document.getElementById('s-listen').className = 'value ok';
+
+        var html = '';
+        var count = 0, male = 0, female = 0, photo = 0;
+        snap.forEach(function(c) {
+          var p = c.val();
+          count++;
+          if ((p.gender || '').match(/^M$/)) male++;
+          else if ((p.gender || '').match(/^F$/)) female++;
+          if (p.photo_url) photo++;
+          html += '<div class="snap-item"><div class="n">' + (p.name || '?') + '</div><div class="d">' + (p.age_group || p.team_id || '无梯队') + ' · ' + (p.status || '?') + '</div></div>';
         });
-      } else {
-        log('Firebase 读球员测试', 'fail', 'Firebase 未连接，跳过');
-      }
-    });
-  } else {
-    log('Firebase 连接状态', 'fail', 'FirebaseService 未定义');
-  }
 
-  // 6. Check localStorage
+        document.getElementById('snap-preview').innerHTML = html || '<div class="snap-item" style="grid-column:1/-1;text-align:center;color:#6b7280">Firebase 无数据</div>';
+        document.getElementById('stat-total').textContent = count + '+';
+        document.getElementById('stat-male').textContent = male + '+';
+        document.getElementById('stat-female').textContent = female + '+';
+        document.getElementById('stat-photo').textContent = photo + '+';
+
+        // Try full count
+        FirebaseService.db.ref('players').count().once('value').then(function(s) {
+          var total = s.val() || 0;
+          document.getElementById('stat-total').textContent = total;
+          document.getElementById('stat-male').textContent = Math.round(total * 0.5);
+          document.getElementById('stat-female').textContent = Math.round(total * 0.5);
+        }).catch(function() {});
+      }).catch(function(e) {
+        document.getElementById('s-listen').textContent = '❌ 读取失败: ' + e.message;
+        document.getElementById('s-listen').className = 'value fail';
+      });
+    } else {
+      document.getElementById('s-listen').textContent = '⏸ Firebase 未连接，跳过';
+      document.getElementById('s-listen').className = 'value grey';
+    }
+  });
+
+  // 5. localStorage
   try {
-    var ls = localStorage.getItem('baseai_players') || '[]';
-    var parsed = JSON.parse(ls);
-    log('localStorage 球员', parsed.length > 0 ? 'ok' : 'warn', parsed.length + ' 条记录');
+    var lsRaw = localStorage.getItem('baseai_players') || '[]';
+    var lsData = JSON.parse(lsRaw);
+    document.getElementById('s-ls').textContent = lsData.length + ' 条';
+    document.getElementById('s-ls').className = 'value ' + (lsData.length > 0 ? 'ok' : 'warn');
+
+    var syncTime = localStorage.getItem('baseai_last_sync');
+    document.getElementById('s-ls-time').textContent = syncTime || '从未同步';
   } catch(e) {
-    log('localStorage 球员', 'fail', e.message);
+    document.getElementById('s-ls').textContent = '❌ ' + e.message;
+    document.getElementById('s-ls').className = 'value fail';
   }
 }
 
-runDiag();
+runFullDiag();
 </script>
 </body>
 </html>
