@@ -93,10 +93,10 @@
       const dot = document.getElementById('nav-db-dot');
       const label = document.getElementById('nav-db-label');
       if (!dot || !label) return;
-      const mode = window.DB ? DB.getMode() : null;
+      const mode = (window.DB && window.FirebaseService) ? (FirebaseService.isConfigured ? 'Firebase' : 'localStorage') : null;
       if (mode) {
-        if (mode === 'Supabase') {
-          label.textContent = 'Supabase 云端';
+        if (mode === 'Firebase') {
+          label.textContent = 'Firebase 云端';
         } else {
           dot.classList.add('offline');
           label.textContent = '本地存储';
