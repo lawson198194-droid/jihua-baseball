@@ -211,6 +211,18 @@ input,select,textarea { font-family: inherit; }
           <label>所属俱乐部 / 球队</label>
           <input type="text" id="f-club" placeholder="如：香港棒垒球总会 U12" maxlength="50">
         </div>
+        <div class="form-group">
+          <label>🏆 梯队组别</label>
+          <select id="f-agegroup">
+            <option value="">未选择</option>
+            <option value="u8">U8</option>
+            <option value="u10">U10</option>
+            <option value="u12">U12</option>
+            <option value="u15">U15</option>
+            <option value="u18">U18</option>
+            <option value="uw18">UW18（女子组）</option>
+          </select>
+        </div>
 
         <!-- HKBA ID & School -->
         <div class="form-group">
@@ -516,6 +528,7 @@ function submitRegistration(){
     name:name, gender:gender, birth_date:birth,
     positions:_selectedPositions.slice(),
     club:document.getElementById('f-club').value.trim(),
+    age_group:document.getElementById('f-agegroup').value,
     hkab_id:document.getElementById('f-hkab').value.trim(),
     school:document.getElementById('f-school').value.trim(),
     height_cm:parseInt(document.getElementById('f-height').value)||null,
