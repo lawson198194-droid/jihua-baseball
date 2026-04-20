@@ -553,8 +553,8 @@ var searchText='';
 function updateTopbarStats() {
   var approved=allPlayers.filter(function(p){return p.status==='active';}).length;
   var pending=allPlayers.filter(function(p){return p.status==='pending';}).length;
-  var male=allPlayers.filter(function(p){return p.gender==='M' && p.status==='active';}).length;
-  var female=allPlayers.filter(function(p){return p.gender==='F' && p.status==='active';}).length;
+  var male=allPlayers.filter(function(p){return (p.gender==='M'||p.gender==='男') && p.status==='active';}).length;
+  var female=allPlayers.filter(function(p){return (p.gender==='F'||p.gender==='女') && p.status==='active';}).length;
   var withPhoto=allPlayers.filter(function(p){return !!p.photo && p.status==='active';}).length;
   document.getElementById('topbar-stats').innerHTML=
     '<div class="topbar-stat"><div class="num">'+approved+'</div><div class="label">注册球员</div></div>'+
@@ -1038,12 +1038,16 @@ window.viewPlayer=function(id){
 
 // Approve pending player → set status to active
 window.approvePlayer=function(id){
+  console.log('[approvePlayer] Called with id:', id);
   DB.getPlayer(id, function(result){
+    console.log('[approvePlayer] getPlayer result:', JSON.stringify(result));
     if(!result.data){ showToast('球员不存在','error'); return; }
     var player=result.data;
     player.status='active';
     player.approved_at=new Date().toISOString();
-    DB.updatePlayer(id, player, function(){
+    console.log('[approvePlayer] Updating player:', JSON.stringify(player));
+    DB.updatePlayer(id, player, function(res){
+      console.log('[approvePlayer] updatePlayer result:', JSON.stringify(res));
       showToast('审核通过！球员已入册','success');
       loadPlayers();
     });
