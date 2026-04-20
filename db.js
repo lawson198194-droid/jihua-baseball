@@ -74,6 +74,14 @@ var DB = {
     FirebaseService.getPendingRegistrations(callback);
   },
 
+  onPendingRegistrations: function(callback) {
+    return FirebaseService.onPendingRegistrations(callback);
+  },
+
+  removePendingRegistration: function(id, callback) {
+    FirebaseService.removePendingRegistration(id, callback);
+  },
+
   submitRegistration: function(data, callback) {
     FirebaseService.submitRegistration(data, callback);
   },
