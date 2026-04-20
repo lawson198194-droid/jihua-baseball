@@ -358,13 +358,14 @@ DB.init(function() {
 
 // Sync pending registrations → players list
 function syncPendingList(pending) {
-  // Deduplicate: skip any pending IDs already processed in this session
+  // Step 1: Deduplicate - skip IDs already marked as synced in this session
   var toSync = pending.filter(function(reg) {
     var pid = reg.id || reg._local_id;
     if (!pid || _syncedPendingIds[pid]) {
-      console.log('[Players] Skipping duplicate pending:', pid);
+      console.log('[Players] Skipping already-synced pending:', pid);
       return false;
     }
+    // Mark as synced BEFORE any async operation to prevent race conditions
     _syncedPendingIds[pid] = true;
     return true;
   });
@@ -373,10 +374,28 @@ function syncPendingList(pending) {
 
   var total = toSync.length;
   var done = 0;
+
   toSync.forEach(function(reg) {
-    var player = normalizeRegData(reg);
     var pendingId = reg.id || reg._local_id;
-    console.log('[Players] Syncing pending:', pendingId, '→', player.name, '| status:', player.status);
+    console.log('[Players] Syncing pending:', pendingId, '→', reg.name);
+
+    // Step 2: Check if a player with same name+phone already exists (another dedup layer)
+    var existing = allPlayers.find(function(p) {
+      return p.name === reg.name && (p.contact_phone === reg.contact_phone || p.phone_main === reg.contact_phone);
+    });
+    if (existing) {
+      console.log('[Players] Player already exists, skipping:', existing.id);
+      // Remove from pending (already has a player record)
+      if (pendingId) DB.removePendingRegistration(pendingId, function() {});
+      done++;
+      if (done === total) { loadPlayers(); }
+      return;
+    }
+
+    // Step 3: Normalize and upsert - pass _pending_id so upsertPlayer reuses the same key
+    var player = normalizeRegData(reg);
+    player._pending_id = pendingId; // Tell upsertPlayer to use this as the player ID
+
     DB.upsertPlayer(player, function(result) {
       done++;
       console.log('[Players] Imported:', player.name, result);
@@ -395,6 +414,7 @@ function syncPendingList(pending) {
 }
 
 // Normalize registration data → player data
+// IMPORTANT: preserve ALL original fields from the registration form
 function normalizeRegData(data) {
   var pos = [];
   if (data.positions && Array.isArray(data.positions)) {
@@ -403,28 +423,48 @@ function normalizeRegData(data) {
   if (data.position_1 && pos.indexOf(data.position_1) < 0) pos.push(data.position_1);
   if (data.position_2 && pos.indexOf(data.position_2) < 0) pos.push(data.position_2);
   if (data.position_3 && pos.indexOf(data.position_3) < 0) pos.push(data.position_3);
-  return {
+
+  var result = {
+    // Core fields
     name: data.name || '',
     gender: data.gender || '',
+    birth_date: data.birth_date || '',
     birth_year: data.birth_date ? parseInt(data.birth_date.split('-')[0]) : (data.birth_year || null),
     school: data.school || '',
     grade: data.grade || '',
     positions: pos,
+    // Contact info
     contact_name: data.contact_name || '',
+    contact_relation: data.contact_relation || data.relationship || '',
+    contact_phone: data.contact_phone || '',
+    contact_phone2: data.contact_phone2 || '',
     phone_main: data.contact_phone || data.phone_main || '',
     phone_backup: data.contact_phone2 || data.phone_backup || '',
     relationship: data.contact_relation || data.relationship || '',
-    club: data.club || '',
-    hkab_id: data.hkab_id || '',
-    notes: data.notes || '',
-    status: 'pending',
+    // Baseball info
     batting_hand: data.batting_hand || '',
     throwing_hand: data.throwing_hand || '',
     height_cm: data.height_cm || null,
     weight_kg: data.weight_kg || null,
+    // Admin
+    club: data.club || '',
+    hkab_id: data.hkab_id || '',
+    player_id: data.player_id || '',
+    notes: data.notes || '',
     photo: data.photo || null,
-    submitted_at: data.submittedAt || data.submitted_at || null
+    // Meta
+    status: 'pending',
+    submitted_at: data.submittedAt || data.submitted_at || (data._submitted_at) || null
   };
+
+  // Preserve ALL remaining original fields (e.g. any extra fields from the form)
+  for (var key in data) {
+    if (data.hasOwnProperty(key) && result[key] === undefined) {
+      result[key] = data[key];
+    }
+  }
+
+  return result;
 }
 
 // ============================================================
@@ -936,11 +976,12 @@ window.doRejectPlayer=function(id){
 //  VIEW PLAYER DETAIL
 // ============================================================
 function makeFieldRow(label, value, color) {
-  if (!value && value !== 0) return '';
+  var display = (value === null || value === undefined || value === '') ? '— 未填写 —' : String(value);
   color = color || 'var(--text-primary)';
+  var isEmpty = (value === null || value === undefined || value === '');
   return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0">' +
     '<span style="color:#888;font-size:13px">'+label+'</span>' +
-    '<span style="color:'+color+';font-size:14px;font-weight:500;max-width:65%;text-align:right">'+escHtml(value)+'</span>' +
+    '<span style="color:'+color+';font-size:14px;font-weight:'+(isEmpty?'400':'500')+';max-width:65%;text-align:right;font-style:'+(isEmpty?'italic':'')+'">'+escHtml(display)+'</span>' +
   '</div>';
 }
 
@@ -966,37 +1007,39 @@ window.viewPlayer=function(id){
     photoHtml='<div style="width:72px;height:72px;border-radius:14px;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;flex-shrink:0">'+initials+'</div>';
   }
 
-  // --- Registration Info (all fields from the registration form) ---
+  // --- All fields from the registration form ---
   var positions=getPositionsArray(p);
-  var posStr=positions.length>0 ? positions.join(' / ') : '-';
+  var posStr=positions.length>0 ? positions.join('、') : '— 未填写 —';
 
   var regInfo=
     makeSection('球员基本信息',
       makeFieldRow('姓名', p.name) +
-      makeFieldRow('性别', GENDER_MAP[p.gender] || '-') +
-      makeFieldRow('出生日期', p.birth_date || '-') +
-      makeFieldRow('年龄', p.birth_date ? calcAge(p.birth_date)+'岁' : '-') +
-      makeFieldRow('身高', p.height_cm ? p.height_cm+' cm' : '-') +
-      makeFieldRow('体重', p.weight_kg ? p.weight_kg+' kg' : '-') +
+      makeFieldRow('性别', GENDER_MAP[p.gender] || '— 未填写 —') +
+      makeFieldRow('出生日期', p.birth_date) +
+      makeFieldRow('年龄', p.birth_date ? calcAge(p.birth_date)+'岁' : '— 未填写 —') +
+      makeFieldRow('身高 (cm)', p.height_cm) +
+      makeFieldRow('体重 (kg)', p.weight_kg) +
       makeFieldRow('擅长位置', posStr) +
       makeFieldRow('打击', formatHand(p.batting_hand)) +
       makeFieldRow('投球', formatHand(p.throwing_hand)) +
-      makeFieldRow('就读学校', p.school || '-') +
-      makeFieldRow('所属俱乐部', p.club || '-') +
-      makeFieldRow('🏅 棒总会员编号', p.hkab_id || '-') +
-      makeFieldRow('球员编号', p.player_id || '-')
+      makeFieldRow('就读学校', p.school) +
+      makeFieldRow('所属俱乐部', p.club, 'var(--accent)') +
+      makeFieldRow('🏅 棒总会员编号', p.hkab_id, 'var(--purple)') +
+      makeFieldRow('球员编号', p.player_id)
     ) +
     makeSection('联系方式',
-      makeFieldRow('家长/监护人', p.contact_name || '-') +
-      makeFieldRow('与球员关系', p.contact_relation || '-') +
-      makeFieldRow('📞 联系电话', p.contact_phone || '-', 'var(--accent)') +
-      makeFieldRow('备用电话', p.contact_phone2 || '-')
+      makeFieldRow('家长/监护人姓名', p.contact_name) +
+      makeFieldRow('与球员关系', p.contact_relation) +
+      makeFieldRow('📞 联系电话', p.contact_phone, 'var(--accent)') +
+      makeFieldRow('备用联系电话', p.contact_phone2)
     ) +
-    (p.notes ? makeSection('补充说明',
-      '<div style="background:#f9f9f9;border-radius:8px;padding:10px 12px;font-size:13px;color:#555;line-height:1.6">'+escHtml(p.notes)+'</div>'
-    ) : '') +
+    makeSection('补充说明',
+      p.notes
+        ? '<div style="background:#f9f9f9;border-radius:8px;padding:10px 12px;font-size:13px;color:#555;line-height:1.6">'+escHtml(p.notes)+'</div>'
+        : '<div style="color:#ccc;font-size:13px;font-style:italic;text-align:center;padding:8px 0">— 未填写 —</div>'
+    ) +
     makeSection('注册信息',
-      makeFieldRow('提交时间', p.submitted_at ? new Date(p.submitted_at).toLocaleString('zh-CN') : '-') +
+      makeFieldRow('提交时间', p.submitted_at ? new Date(p.submitted_at).toLocaleString('zh-CN') : '— 未填写 —') +
       makeFieldRow('审核状态', isPending ? '⏳ 待审核' : '✅ 已审核', isPending ? '#f97316' : '#10b981')
     );
 
