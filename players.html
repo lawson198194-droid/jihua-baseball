@@ -329,7 +329,64 @@ var CONTACT_RELATIONS = ['父亲','母亲','监护人','其他'];
 // ============================================================
 DB.init(function() {
   loadPlayers();
+
+  // Real-time listener: auto-import new pending registrations
+  var listenerHandle = DB.onPendingRegistrations(function(pending) {
+    if (pending && pending.length > 0) {
+      console.log('[Players] New pending registrations:', pending.length);
+      var imported = 0;
+      var total = pending.length;
+      pending.forEach(function(reg) {
+        var player = normalizeRegData(reg);
+        DB.upsertPlayer(player, function(result) {
+          imported++;
+          console.log('[Players] Imported:', player.name, result);
+          if (imported === total) {
+            // Remove from pending list
+            pending.forEach(function(r) {
+              DB.removePendingRegistration(r.id || r._local_id, function() {});
+            });
+            // Reload
+            setTimeout(function() {
+              loadPlayers();
+              showToast('检测到 ' + total + ' 条新注册申请，已导入！', 'success');
+            }, 300);
+          }
+        });
+      });
+    }
+  });
 });
+
+// Normalize registration data → player data
+function normalizeRegData(data) {
+  var pos = (data.positions && data.positions.length > 0) ? data.positions : [];
+  if (data.position_1 && pos.indexOf(data.position_1) < 0) pos.push(data.position_1);
+  if (data.position_2 && pos.indexOf(data.position_2) < 0) pos.push(data.position_2);
+  if (data.position_3 && pos.indexOf(data.position_3) < 0) pos.push(data.position_3);
+  return {
+    name: data.name || '',
+    gender: data.gender || '',
+    birth_year: data.birth_date ? parseInt(data.birth_date.split('-')[0]) : (data.birth_year || null),
+    school: data.school || '',
+    grade: data.grade || '',
+    positions: pos.slice(0, 3),
+    contact_name: data.contact_name || '',
+    phone_main: data.contact_phone || data.phone_main || '',
+    phone_backup: data.contact_phone2 || data.phone_backup || '',
+    relationship: data.contact_relation || data.relationship || '',
+    club: data.club || '',
+    hkab_id: data.hkab_id || '',
+    notes: data.notes || '',
+    status: data.status || 'pending',
+    batting_hand: data.batting_hand || '',
+    throwing_hand: data.throwing_hand || '',
+    height_cm: data.height_cm || null,
+    weight_kg: data.weight_kg || null,
+    photo: data.photo || null,
+    submitted_at: data.submittedAt || data.submitted_at || null
+  };
+}
 
 // ============================================================
 //  HELPERS
