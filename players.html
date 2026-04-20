@@ -768,7 +768,7 @@ function openAddModal(player) {
       photo:window._currentPhotoBase64||player.photo||null
     };
     if(isEdit){ data.id=player.id; data.player_id=player.player_id; }
-    DB.upsertPlayer(data).then(function(){
+    DB.upsertPlayer(data, function(){
       closeModal('player-modal');
       showToast(isEdit?'球员信息已更新':'球员已添加','success');
       loadPlayers();
@@ -801,7 +801,7 @@ window.editPlayer=function(id){ var p=allPlayers.find(function(x){return x.id===
 
 window.confirmDelete=function(id,name){
   if(!confirm('确定要删除球员 ['+name+'] 吗？此操作不可撤销。')) return;
-  DB.deletePlayer(id).then(function(){ showToast('球员已删除','success'); loadPlayers(); });
+  DB.deletePlayer(id, function(){ showToast('球员已删除','success'); loadPlayers(); });
 };
 
 // ============================================================
@@ -894,7 +894,7 @@ document.getElementById('btn-copy-link').addEventListener('click',function(){
 // ============================================================
 function loadPlayers() {
   console.log('[DEBUG] loadPlayers start');
-  DB.getPlayers().then(function(result){
+  DB.getPlayers(function(result){
     console.log('[DEBUG] DB.getPlayers done, count='+(result.data||[]).length);
     allPlayers=result.data||[];
     filteredPlayers=allPlayers;
@@ -902,7 +902,9 @@ function loadPlayers() {
     renderPlayers();
     console.log('[DEBUG] renderPlayers done');
     buildPosFilter();
-    showToast('已加载 '+allPlayers.length+' 名球员','success');
+    if (allPlayers.length > 0) {
+      showToast('已加载 '+allPlayers.length+' 名球员','success');
+    }
     // checkAutoImport removed — Firebase handles real-time sync automatically
   });
 }
@@ -933,8 +935,9 @@ document.getElementById('btn-import').addEventListener('click',function(){
           p.status=p.status||'active';
           p.positions=p.positions||(p.position?[p.position]:[]);
         });
-        Promise.all(arr.map(function(p){return DB.upsertPlayer(p);})).then(function(){
-          showToast('导入 '+arr.length+' 条记录','success'); loadPlayers();
+        var imported=0;
+        arr.forEach(function(p){
+          DB.upsertPlayer(p, function(){ imported++; if(imported===arr.length){ showToast('导入 '+arr.length+' 条记录','success'); loadPlayers(); } });
         });
       }catch(err){ showToast('导入失败: '+err.message,'error'); }
     };
