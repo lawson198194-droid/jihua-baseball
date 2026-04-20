@@ -307,8 +307,18 @@ input,select,textarea { font-family: inherit; }
         <button class="btn btn-ghost btn-sm" id="btn-reset">重置</button>
       </div>
 
-      <!-- 第二排：位置筛选 -->
+      <!-- 第二排：梯队组别 + 位置筛选 -->
       <div class="filter-bar" style="border-top:none;padding-top:8px;flex-wrap:wrap;gap:6px">
+        <div class="filter-label" style="margin-top:6px">梯队</div>
+        <select id="filter-agegroup" onchange="applyFilters()" style="padding:6px 10px;font-size:13px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary)">
+          <option value="">全部</option>
+          <option value="u8">U8</option>
+          <option value="u10">U10</option>
+          <option value="u12">U12</option>
+          <option value="u15">U15</option>
+          <option value="u18">U18</option>
+          <option value="uw18">UW18</option>
+        </select>
         <div class="filter-label" style="margin-top:6px">位置</div>
         <div class="pos-filter-wrap" id="pos-filter-wrap"></div>
       </div>
@@ -335,6 +345,17 @@ var POS_COLORS = {
 };
 var GENDER_MAP = { 'M':'男','F':'女','男':'男','女':'女' };
 var GENDER_CODE = { '男':'M','女':'F','M':'M','F':'F' };
+var ALL_AGE_GROUPS = ['u8','u10','u12','u15','u18','uw18'];
+var AGE_GROUP_LABELS = { u8:'U8', u10:'U10', u12:'U12', u15:'U15', u18:'U18', uw18:'UW18' };
+var AGE_GROUP_COLORS = { u8:'#06b6d4', u10:'#10b981', u12:'#f97316', u15:'#3b82f6', u18:'#8b5cf6', uw18:'#ec4899' };
+var allTeams = [];
+
+function getAgeGroupLabel(ag) { return AGE_GROUP_LABELS[ag] || ag || ''; }
+function getAgeGroupColor(ag) { return AGE_GROUP_COLORS[ag] || '#64748b'; }
+function getTeamName(teamId) {
+  var t = allTeams.find(function(x){ return (x.id||x.team_id)===teamId; });
+  return t ? t.name : '';
+}
 var CONTACT_RELATIONS = ['父亲','母亲','监护人','其他'];
 
 // ============================================================
@@ -345,6 +366,10 @@ var _syncedPendingIds = {};
 var _pendingListenerDetached = false;
 
 DB.init(function() {
+  // Load teams first (needed for getTeamName)
+  DB.getTeams(function(tres) {
+    allTeams = tres.data || [];
+  });
   // DB is ready - load players and set up sync
   loadPlayers();
 
@@ -566,7 +591,7 @@ function initNav(opts) {
 //  APP STATE
 // ============================================================
 var allPlayers=[], filteredPlayers=[];
-var filterGender='', filterStatus='', filterYearFrom=null, filterYearTo=null, filterPositions=[];
+var filterGender='', filterStatus='', filterYearFrom=null, filterYearTo=null, filterPositions=[], filterAgeGroup='';
 var searchText='';
 
 // ============================================================
@@ -646,6 +671,8 @@ function renderPlayers() {
           '<div class="player-meta">'+(p.player_id||'')+' · '+calcAge(p.birth_date)+'岁 · '+GENDER_MAP[p.gender]+'</div>'+
           (p.club?'<div class="player-club">🏀 '+escHtml(p.club)+'</div>':'')+
           (isPending?'<div style="margin-top:4px;"><span class="badge" style="background:#f9731618;color:#f97316;border:1px solid #f9731644">⏳ 待审核</span></div>':'')+
+          (p.age_group?'<div style="margin-top:4px;"><span class="badge" style="background:'+getAgeGroupColor(p.age_group)+'20;color:'+getAgeGroupColor(p.age_group)+';border:1px solid '+getAgeGroupColor(p.age_group)+'44">'+getAgeGroupLabel(p.age_group)+'</span></div>':'')+
+          (p.team_id?'<div style="margin-top:2px;font-size:11px;color:var(--text-muted)">🏆 '+escHtml(getTeamName(p.team_id))+'</div>':'')+
         '</div>'+
       '</div>'+
       '<div class="player-card-body">'+
@@ -681,6 +708,7 @@ function applyFilters() {
   searchText=document.getElementById('search-input').value.trim().toLowerCase();
   filterGender=document.getElementById('filter-gender').value;
   filterStatus=document.getElementById('filter-status').value;
+  filterAgeGroup=document.getElementById('filter-agegroup').value;
   filterYearFrom=parseInt(document.getElementById('filter-year-from').value)||null;
   filterYearTo=parseInt(document.getElementById('filter-year-to').value)||null;
   var filterMonthFrom=parseInt(document.getElementById('filter-month-from').value)||null;
@@ -692,6 +720,7 @@ function applyFilters() {
       var isFemale=(p.gender==='F'||p.gender==='女');
       if((filterGender==='M'&&!isMale)||(filterGender==='F'&&!isFemale)) return false;
     }
+    if(filterAgeGroup && p.age_group!==filterAgeGroup) return false;
     if(filterStatus && p.status!==filterStatus) return false;
     if(filterPositions.length>0){
       var pPositions=getPositionsArray(p);
@@ -730,7 +759,9 @@ function resetFilters() {
   document.getElementById('filter-year-to').value='';
   document.getElementById('filter-month-from').value='';
   document.getElementById('filter-month-to').value='';
+  document.getElementById('filter-agegroup').value='';
   filterPositions=[];
+  filterAgeGroup='';
   document.querySelectorAll('.pos-chip').forEach(function(c){ c.classList.remove('active'); });
   applyFilters();
 }
@@ -873,6 +904,15 @@ function openAddModal(player) {
           // Row 4: HKBA ID + School
           '<div class="form-group"><label>🏅 棒总会员编号</label><input id="f-hkab" value="'+escAttr(player.hkab_id||'')+'" placeholder="如：HKBA-2024-0012"></div>'+
           '<div class="form-group"><label>就读学校</label><input id="f-school" value="'+escAttr(player.school||'')+'" placeholder="就读学校"></div>'+
+          '<div class="form-group"><label>🏆 梯队组别</label><select id="f-agegroup">'+
+            '<option value="">无</option>'+
+            '<option value="u8"'+(player.age_group==='u8'?' selected':'')+'>U8</option>'+
+            '<option value="u10"'+(player.age_group==='u10'?' selected':'')+'>U10</option>'+
+            '<option value="u12"'+(player.age_group==='u12'?' selected':'')+'>U12</option>'+
+            '<option value="u15"'+(player.age_group==='u15'?' selected':'')+'>U15</option>'+
+            '<option value="u18"'+(player.age_group==='u18'?' selected':'')+'>U18</option>'+
+            '<option value="uw18"'+(player.age_group==='uw18'?' selected':'')+'>UW18</option>'+
+          '</select></div>'+
           // Row 5: Position selector
           '<div class="full"><div class="form-group"><label>擅长位置（最多3个）</label>'+
             '<div id="pos-selector-container"></div>'+
@@ -930,6 +970,7 @@ function openAddModal(player) {
       throwing_hand:document.getElementById('f-throw').value,
       school:document.getElementById('f-school').value.trim(),
       club:document.getElementById('f-club').value.trim(),
+      age_group:document.getElementById('f-agegroup').value,
       hkab_id:document.getElementById('f-hkab').value.trim(),
       contact_name:document.getElementById('f-contact-name').value.trim(),
       contact_phone:document.getElementById('f-contact-phone').value.trim(),
@@ -1027,6 +1068,8 @@ window.viewPlayer=function(id){
       makeFieldRow('投球', formatHand(p.throwing_hand)) +
       makeFieldRow('就读学校', p.school) +
       makeFieldRow('所属俱乐部', p.club, 'var(--accent)') +
+      makeFieldRow('🏆 梯队组别', p.age_group ? '<span style="color:'+getAgeGroupColor(p.age_group)+';font-weight:600">'+getAgeGroupLabel(p.age_group)+'</span>' : '— 未分配 —', p.age_group ? getAgeGroupColor(p.age_group) : '') +
+      makeFieldRow('所属球队', p.team_id ? escHtml(getTeamName(p.team_id)) : '— 未分配 —', p.team_id ? 'var(--accent)' : '')
       makeFieldRow('🏅 棒总会员编号', p.hkab_id, 'var(--purple)') +
       makeFieldRow('球员编号', p.player_id)
     ) +
@@ -1211,6 +1254,16 @@ document.getElementById('btn-add').addEventListener('click',function(){ openAddM
 initNav({ title:'球员资料库', subtitle:'Module 01 · Player Registry v3.0' });
 console.log('[DEBUG] nav inited');
 // NOTE: loadPlayers() is called inside DB.init() callback after DB is ready
+
+// Listen for team assignment changes from team management module (跨页面同步)
+window.addEventListener('storage', function(e) {
+  if (e.key === 'baseai_team_updated') {
+    DB.getTeams(function(tres) {
+      allTeams = tres.data || [];
+      renderPlayers();
+    });
+  }
+});
 </script>
 </body>
 </html>
