@@ -137,7 +137,22 @@
       if (playerData.id) {
         this.updatePlayer(playerData.id, playerData, callback);
       } else {
-        this.addPlayer(playerData, callback);
+        // No ID: add new player. Use the pending record's ID as the player ID
+        // to avoid creating duplicate entries on re-sync.
+        var pendingId = playerData._pending_id;
+        delete playerData._pending_id;
+        if (pendingId) {
+          // Write with the same key as the pending record → no duplicate
+          this.db.ref('players/' + pendingId).set(playerData).then(function() {
+            playerData.id = pendingId;
+            if (callback) callback({ success: true, id: pendingId });
+          }).catch(function(e) {
+            console.error('[Firebase] upsertPlayer error:', e);
+            if (callback) callback({ success: false, error: e });
+          });
+        } else {
+          this.addPlayer(playerData, callback);
+        }
       }
     },
 
