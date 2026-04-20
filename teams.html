@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>模块2 · 球队与梯队 — BaseAI</title>
 <link rel="stylesheet" href="assets/design-system.css">
+<!-- Firebase SDK + BaseAI Data Layer -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <script src="firebase-service.js"></script>
 <script src="db.js"></script>
 <style>
@@ -569,7 +572,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     } catch(e) { showToast('加载失败: '+e.message, 'error'); }
   }
 
-  loadAll();
+  DB.init(function() {
+    loadAll();
+  });
 });
 </script>
 </body>
