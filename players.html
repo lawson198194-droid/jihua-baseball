@@ -288,17 +288,29 @@ input,select,textarea { font-family: inherit; }
           <option value="">全部性别</option><option value="M">男</option><option value="F">女</option>
         </select>
         <select id="filter-status">
-          <option value="">全部状态</option><option value="active">活跃</option><option value="inactive">非活跃</option>
+          <option value="">全部状态</option><option value="active">活跃</option><option value="pending">待审核</option>
         </select>
-        <div class="filter-label">位置</div>
-        <div class="pos-filter-wrap" id="pos-filter-wrap"></div>
         <div class="filter-label">年份</div>
         <div class="year-range">
-          <input type="number" id="filter-year-from" min="2010" max="2020" placeholder="从">
+          <input type="number" id="filter-year-from" min="2010" max="2030" placeholder="年">
+          <select id="filter-month-from" style="width:60px">
+            <option value="">月</option>
+            <script>for(var i=1;i<=12;i++) document.write('<option value="'+i+'">'+i+'月</option>');</script>
+          </select>
           <span style="color:var(--text-muted)">—</span>
-          <input type="number" id="filter-year-to" min="2010" max="2020" placeholder="到">
+          <input type="number" id="filter-year-to" min="2010" max="2030" placeholder="年">
+          <select id="filter-month-to" style="width:60px">
+            <option value="">月</option>
+            <script>for(var i=1;i<=12;i++) document.write('<option value="'+i+'">'+i+'月</option>');</script>
+          </select>
         </div>
         <button class="btn btn-ghost btn-sm" id="btn-reset">重置</button>
+      </div>
+
+      <!-- 第二排：位置筛选 -->
+      <div class="filter-bar" style="border-top:none;padding-top:8px;flex-wrap:wrap;gap:6px">
+        <div class="filter-label" style="margin-top:6px">位置</div>
+        <div class="pos-filter-wrap" id="pos-filter-wrap"></div>
       </div>
 
       <div id="player-list"></div>
@@ -504,9 +516,19 @@ function calcBirthYear(bd) {
   var d = new Date(bd);
   return isNaN(d.getTime()) ? null : d.getFullYear();
 }
+function calcBirthMonth(bd) {
+  if(!bd) return null;
+  if(typeof bd === 'number') return null;
+  var d = new Date(bd);
+  return isNaN(d.getTime()) ? null : d.getMonth()+1;
+}
 function getAvatarColor(n) { var c=['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899','#f59e0b','#06b6d4','#84cc16']; return c[(n||'A').charCodeAt(0)%c.length]; }
 function getPosColor(p) { return POS_COLORS[p] || '#64748b'; }
-function formatHand(h) { return h==='L'?'左手':h==='R'?'右手':h==='S'?'左右开':'-'; }
+function formatHand(h) {
+  if (!h) return '-';
+  var map = { 'L':'左手','R':'右手','S':'左右开','左打':'左打','右打':'右打','左右皆可':'左右皆可','左投':'左投','右投':'右投' };
+  return map[h] || h;
+}
 function getPositionsArray(p) { return Array.isArray(p.positions) ? p.positions : (p.position ? [p.position] : []); }
 function showToast(msg,type) {
   type=type||'info';
@@ -631,6 +653,7 @@ function renderPlayers() {
           '<div class="player-stat"><div class="val">'+(p.height_cm||'-')+'</div><div class="lbl">身高(cm)</div></div>'+
           '<div class="player-stat"><div class="val">'+(p.weight_kg||'-')+'</div><div class="lbl">体重(kg)</div></div>'+
           '<div class="player-stat"><div class="val" style="font-size:13px">'+formatHand(p.batting_hand)+'</div><div class="lbl">打击</div></div>'+
+          '<div class="player-stat"><div class="val" style="font-size:13px">'+formatHand(p.throwing_hand)+'</div><div class="lbl">投球</div></div>'+
         '</div>'+
         '<div class="player-tags">'+posTags+'</div>'+
         '<div class="player-extras">'+
@@ -660,17 +683,31 @@ function applyFilters() {
   filterStatus=document.getElementById('filter-status').value;
   filterYearFrom=parseInt(document.getElementById('filter-year-from').value)||null;
   filterYearTo=parseInt(document.getElementById('filter-year-to').value)||null;
+  var filterMonthFrom=parseInt(document.getElementById('filter-month-from').value)||null;
+  var filterMonthTo=parseInt(document.getElementById('filter-month-to').value)||null;
 
   filteredPlayers=allPlayers.filter(function(p){
-    if(filterGender && p.gender!==filterGender) return false;
+    if(filterGender){
+      var isMale=(p.gender==='M'||p.gender==='男');
+      var isFemale=(p.gender==='F'||p.gender==='女');
+      if((filterGender==='M'&&!isMale)||(filterGender==='F'&&!isFemale)) return false;
+    }
     if(filterStatus && p.status!==filterStatus) return false;
     if(filterPositions.length>0){
       var pPositions=getPositionsArray(p);
       if(!filterPositions.some(function(fp){ return pPositions.indexOf(fp)>=0; })) return false;
     }
     var birthYear=calcBirthYear(p.birth_date);
-    if(filterYearFrom && birthYear && birthYear<filterYearFrom) return false;
-    if(filterYearTo && birthYear && birthYear>filterYearTo) return false;
+    var birthMonth=calcBirthMonth(p.birth_date);
+    // 年月组合比较
+    if(filterYearFrom){
+      if(!birthYear || birthYear<filterYearFrom) return false;
+      if(birthYear===filterYearFrom && filterMonthFrom && (!birthMonth || birthMonth<filterMonthFrom)) return false;
+    }
+    if(filterYearTo){
+      if(!birthYear || birthYear>filterYearTo) return false;
+      if(birthYear===filterYearTo && filterMonthTo && (!birthMonth || birthMonth>filterMonthTo)) return false;
+    }
     if(searchText){
       if(p.name&&p.name.toLowerCase().indexOf(searchText)>=0) return true;
       if(p.player_id&&p.player_id.toLowerCase().indexOf(searchText)>=0) return true;
@@ -691,6 +728,8 @@ function resetFilters() {
   document.getElementById('filter-status').value='';
   document.getElementById('filter-year-from').value='';
   document.getElementById('filter-year-to').value='';
+  document.getElementById('filter-month-from').value='';
+  document.getElementById('filter-month-to').value='';
   filterPositions=[];
   document.querySelectorAll('.pos-chip').forEach(function(c){ c.classList.remove('active'); });
   applyFilters();
