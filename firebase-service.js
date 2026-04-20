@@ -1,316 +1,255 @@
-/**
- * Firebase Realtime Database Service for BaseAI
- *
- * HOW TO SET UP:
- * 1. Go to https://console.firebase.google.com/
- * 2. Create a project → Build → Realtime Database → Create database
- * 3. Start in test mode
- * 4. Project Settings → Your apps → </> → Register web app
- * 5. Copy the firebaseConfig here, replace the placeholder below
- *
- * After setup, all player/team/game data syncs in real-time across all devices.
- */
-
-const FIREBASE_CONFIG = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
-
 // ============================================================
-// Firebase init (lazy — only init once)
+//  Firebase Service - BaseAI 棒球管理系统
+//  接入 Firebase Realtime Database (compat SDK v10.7.1)
 // ============================================================
-let _fbApp = null;
-let _db = null;
 
-function getFirebaseDB() {
-  if (!_fbApp) {
-    // Check if firebase is loaded
-    if (typeof firebase === 'undefined') {
-      console.error('[Firebase] firebase SDK not loaded! Add the CDN script first.');
-      return null;
+(function(){
+  window.FirebaseService = {
+    db: null,
+    isConfigured: false,
+
+    init: function(callback) {
+      // Check if Firebase compat SDK is loaded (global firebase namespace)
+      if (typeof firebase === 'undefined' || typeof firebase.app === 'undefined') {
+        console.warn('[Firebase] SDK not loaded, falling back to localStorage');
+        if (callback) callback(false);
+        return;
+      }
+
+      var firebaseConfig = {
+        apiKey: "AIzaSyAFfnoOfKRgXltdJJfmybecw89WxYize1U",
+        authDomain: "baseai-hk.firebaseapp.com",
+        databaseURL: "https://baseai-hk-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "baseai-hk",
+        storageBucket: "baseai-hk.firebasestorage.app",
+        messagingSenderId: "409831152638",
+        appId: "1:409831152638:web:1da4d9da8b2f24505dfeaf"
+      };
+
+      try {
+        var app = firebase.initializeApp(firebaseConfig);
+        this.db = firebase.database(app);
+        this.isConfigured = true;
+        console.log('[Firebase] Connected! URL:', firebaseConfig.databaseURL);
+        if (callback) callback(true);
+      } catch(e) {
+        console.error('[Firebase] Init failed:', e);
+        if (callback) callback(false);
+      }
+    },
+
+    // ── Players ────────────────────────────────────────────
+
+    getPlayers: function(callback) {
+      var self = this;
+      if (!this.isConfigured) {
+        var data = JSON.parse(localStorage.getItem('baseai_players') || '[]');
+        setTimeout(function(){ callback({ data: data }); }, 0);
+        return;
+      }
+      this.db.ref('players').once('value').then(function(snapshot) {
+        var data = [];
+        snapshot.forEach(function(child) {
+          var item = child.val();
+          item.id = child.key;
+          data.push(item);
+        });
+        callback({ data: data });
+      }).catch(function(error) {
+        console.error('[Firebase] getPlayers error:', error);
+        callback({ data: [] });
+      });
+    },
+
+    getPlayer: function(id, callback) {
+      if (!this.isConfigured) {
+        var players = JSON.parse(localStorage.getItem('baseai_players') || '[]');
+        var found = players.find(function(p){ return p.id === id; });
+        setTimeout(function(){ callback({ data: found || null }); }, 0);
+        return;
+      }
+      this.db.ref('players/' + id).once('value').then(function(snapshot) {
+        var data = snapshot.val();
+        if (data) data.id = snapshot.key;
+        callback({ data: data });
+      }).catch(function(error) {
+        console.error('[Firebase] getPlayer error:', error);
+        callback({ data: null });
+      });
+    },
+
+    addPlayer: function(playerData, callback) {
+      if (!this.isConfigured) {
+        var players = JSON.parse(localStorage.getItem('baseai_players') || '[]');
+        var id = 'P' + Date.now();
+        playerData.id = id;
+        players.push(playerData);
+        localStorage.setItem('baseai_players', JSON.stringify(players));
+        setTimeout(function(){ if(callback) callback({ success: true, id: id }); }, 0);
+        return;
+      }
+      var self = this;
+      var newRef = this.db.ref('players').push();
+      newRef.set(playerData).then(function() {
+        if (callback) callback({ success: true, id: newRef.key });
+      }).catch(function(e) {
+        console.error('[Firebase] addPlayer error:', e);
+        if (callback) callback({ success: false, error: e });
+      });
+    },
+
+    updatePlayer: function(id, playerData, callback) {
+      if (!this.isConfigured) {
+        var players = JSON.parse(localStorage.getItem('baseai_players') || '[]');
+        var idx = players.findIndex(function(p){ return p.id === id; });
+        if (idx >= 0) {
+          players[idx] = Object.assign({}, players[idx], playerData);
+          localStorage.setItem('baseai_players', JSON.stringify(players));
+        }
+        setTimeout(function(){ if(callback) callback({ success: true }); }, 0);
+        return;
+      }
+      this.db.ref('players/' + id).update(playerData).then(function() {
+        if (callback) callback({ success: true });
+      }).catch(function(e) {
+        console.error('[Firebase] updatePlayer error:', e);
+        if (callback) callback({ success: false, error: e });
+      });
+    },
+
+    deletePlayer: function(id, callback) {
+      if (!this.isConfigured) {
+        var players = JSON.parse(localStorage.getItem('baseai_players') || '[]');
+        players = players.filter(function(p){ return p.id !== id; });
+        localStorage.setItem('baseai_players', JSON.stringify(players));
+        setTimeout(function(){ if(callback) callback({ success: true }); }, 0);
+        return;
+      }
+      this.db.ref('players/' + id).remove().then(function() {
+        if (callback) callback({ success: true });
+      }).catch(function(e) {
+        console.error('[Firebase] deletePlayer error:', e);
+        if (callback) callback({ success: false, error: e });
+      });
+    },
+
+    upsertPlayer: function(playerData, callback) {
+      if (playerData.id) {
+        this.updatePlayer(playerData.id, playerData, callback);
+      } else {
+        this.addPlayer(playerData, callback);
+      }
+    },
+
+    // ── Register new player (from register.html) ─────────────
+
+    submitRegistration: function(playerData, callback) {
+      var now = new Date().toISOString();
+      var data = Object.assign({
+        submittedAt: now,
+        status: 'pending',
+        source: 'register_form'
+      }, playerData);
+
+      if (!this.isConfigured) {
+        var pending = JSON.parse(localStorage.getItem('baseai_pending_players') || '[]');
+        var id = 'PEN' + Date.now();
+        data.id = id;
+        pending.push(data);
+        localStorage.setItem('baseai_pending_players', JSON.stringify(pending));
+        setTimeout(function(){ if(callback) callback({ success: true, id: id }); }, 0);
+        return;
+      }
+
+      var newRef = this.db.ref('pending_players').push();
+      newRef.set(data).then(function() {
+        console.log('[Firebase] Registration submitted:', newRef.key);
+        if (callback) callback({ success: true, id: newRef.key });
+      }).catch(function(e) {
+        console.error('[Firebase] submitRegistration error:', e);
+        if (callback) callback({ success: false, error: e });
+      });
+    },
+
+    getPendingRegistrations: function(callback) {
+      if (!this.isConfigured) {
+        var data = JSON.parse(localStorage.getItem('baseai_pending_players') || '[]');
+        setTimeout(function(){ callback({ data: data }); }, 0);
+        return;
+      }
+      this.db.ref('pending_players').once('value').then(function(snapshot) {
+        var data = [];
+        snapshot.forEach(function(child) {
+          var item = child.val();
+          item.id = child.key;
+          data.push(item);
+        });
+        callback({ data: data });
+      }).catch(function(error) {
+        console.error('[Firebase] getPendingRegistrations error:', error);
+        callback({ data: [] });
+      });
+    },
+
+    approveRegistration: function(pendingId, callback) {
+      var self = this;
+      this.getPendingRegistrations(function(result) {
+        var pending = result.data.find(function(p){ return p.id === pendingId; });
+        if (!pending) {
+          if (callback) callback({ success: false, error: 'Not found' });
+          return;
+        }
+        var playerData = Object.assign({}, pending);
+        delete playerData.id;
+        delete playerData.submittedAt;
+        delete playerData.status;
+        delete playerData.source;
+        playerData.status = 'pending';
+
+        self.addPlayer(playerData, function() {
+          self.db.ref('pending_players/' + pendingId).remove();
+          if (callback) callback({ success: true });
+        });
+      });
+    },
+
+    rejectRegistration: function(pendingId, callback) {
+      if (!this.isConfigured) {
+        var list = JSON.parse(localStorage.getItem('baseai_pending_players') || '[]');
+        list = list.filter(function(p){ return p.id !== pendingId; });
+        localStorage.setItem('baseai_pending_players', JSON.stringify(list));
+        setTimeout(function(){ if(callback) callback({ success: true }); }, 0);
+        return;
+      }
+      this.db.ref('pending_players/' + pendingId).remove().then(function() {
+        if (callback) callback({ success: true });
+      }).catch(function(e) {
+        console.error('[Firebase] rejectRegistration error:', e);
+        if (callback) callback({ success: false, error: e });
+      });
+    },
+
+    // ── Seed demo data ──────────────────────────────────────
+    seedDemoPlayers: function(callback) {
+      var demoPlayers = [
+        { name: '罗莀安', gender: '女', birth_year: 2015, school: '香港国际学校', grade: 'G4', positions: ['投手', '外野手'], contact_name: '罗哥', phone_main: '98765432', relationship: '父亲', status: 'active', club: '香港棒垒球总会 U12', hkab_id: 'HKBA-2024-0001', batting_hand: '右', throwing_hand: '右', height_cm: 138, weight_kg: 34, notes: '左手投手，有潜力', photo: null },
+        { name: '陈伟豪', gender: '男', birth_year: 2014, school: '拔萃男书院附属小学', grade: 'G5', positions: ['捕手', '一垒手'], contact_name: '陈太强', phone_main: '91234567', relationship: '父亲', status: 'active', club: '香港棒垒球总会 U12', hkab_id: 'HKBA-2024-0002', batting_hand: '右', throwing_hand: '右', height_cm: 145, weight_kg: 42, notes: '捕手位置稳定', photo: null },
+        { name: '张芷晴', gender: '女', birth_year: 2015, school: '协恩中学附属小学', grade: 'G4', positions: ['游击手', '三垒手'], contact_name: '张太', phone_main: '98761234', relationship: '母亲', status: 'active', club: '九龙青少棒', hkab_id: 'HKBA-2024-0003', batting_hand: '左', throwing_hand: '右', height_cm: 136, weight_kg: 32, notes: '防守意识好', photo: null },
+        { name: '林志杰', gender: '男', birth_year: 2013, school: '圣若瑟书院', grade: 'G6', positions: ['投手', '一垒手'], contact_name: '林先生', phone_main: '97876543', relationship: '父亲', status: 'active', club: '香港棒垒球总会 U14', hkab_id: 'HKBA-2024-0004', batting_hand: '右', throwing_hand: '右', height_cm: 158, weight_kg: 55, notes: '球速达75mph', photo: null },
+        { name: '王雨萱', gender: '女', birth_year: 2015, school: '香港真光中学附属小学', grade: 'G4', positions: ['外野手', '指定打击'], contact_name: '王太', phone_main: '96543210', relationship: '母亲', status: 'active', club: '九龙青少棒', hkab_id: 'HKBA-2024-0005', batting_hand: '右', throwing_hand: '左', height_cm: 133, weight_kg: 30, notes: '跑垒速度快', photo: null },
+        { name: '刘家豪', gender: '男', birth_year: 2014, school: '喇沙小学', grade: 'G5', positions: ['二垒手', '游击手'], contact_name: '刘太', phone_main: '93456789', relationship: '母亲', status: 'active', club: '香港棒垒球总会 U12', hkab_id: 'HKBA-2024-0006', batting_hand: '右', throwing_hand: '右', height_cm: 141, weight_kg: 38, notes: '击球力量大', photo: null },
+        { name: '赵晓婷', gender: '女', birth_year: 2015, school: '嘉诺撒圣心学校', grade: 'G4', positions: ['捕手', '三垒手'], contact_name: '赵先生', phone_main: '90123456', relationship: '父亲', status: 'active', club: '香港棒垒球总会 U12', hkab_id: 'HKBA-2024-0007', batting_hand: '左', throwing_hand: '右', height_cm: 135, weight_kg: 33, notes: '臂力强', photo: null },
+        { name: '周浩然', gender: '男', birth_year: 2014, school: '玛利诺修院学校', grade: 'G5', positions: ['投手', '外野手'], contact_name: '周太', phone_main: '92345678', relationship: '母亲', status: 'active', club: '九龙青少棒', hkab_id: 'HKBA-2024-0008', batting_hand: '右', throwing_hand: '右', height_cm: 148, weight_kg: 45, notes: '曲球质量高', photo: null }
+      ];
+
+      var self = this;
+      var count = 0;
+      demoPlayers.forEach(function(player) {
+        self.addPlayer(player, function(res) {
+          count++;
+          if (count === demoPlayers.length && callback) callback();
+        });
+      });
     }
-    try {
-      _fbApp = firebase.initializeApp(FIREBASE_CONFIG, 'baseai');
-      _db = firebase.database(_fbApp);
-      console.log('[Firebase] Connected to Realtime Database ✅');
-    } catch (e) {
-      console.error('[Firebase] Init failed:', e);
-      return null;
-    }
-  }
-  return _db;
-}
-
-// ============================================================
-// Data paths
-// ============================================================
-const PATHS = {
-  players: 'players',
-  teams: 'teams',
-  games: 'games',
-  analysis: 'analysis'
-};
-
-// ============================================================
-// PLAYERS
-// ============================================================
-const FBPlayers = {
-  // Get all players (real-time listener)
-  getAll(callback) {
-    const db = getFirebaseDB();
-    if (!db) return;
-    db.ref(PATHS.players).off(); // remove old listeners
-    db.ref(PATHS.players).on('value', function(snap) {
-      var data = [];
-      snap.forEach(function(child) {
-        var item = child.val();
-        item._key = child.key;
-        data.push(item);
-      });
-      callback({ data: data });
-    }, function(err) {
-      console.error('[Firebase] getAll players error:', err);
-      callback({ data: [] });
-    });
-  },
-
-  // Get single player by key
-  get(key, callback) {
-    const db = getFirebaseDB();
-    if (!db) return;
-    db.ref(PATHS.players + '/' + key).once('value').then(function(snap) {
-      var data = snap.val();
-      if (data) data._key = key;
-      callback(data);
-    });
-  },
-
-  // Add or update player (upsert)
-  upsert(playerData, callback) {
-    const db = getFirebaseDB();
-    if (!db) return;
-    if (playerData._key) {
-      // Update existing
-      db.ref(PATHS.players + '/' + playerData._key).update(cleanForFirebase(playerData)).then(function() {
-        console.log('[Firebase] Player updated:', playerData.name || playerData._key);
-        if (callback) callback({ success: true, key: playerData._key });
-      }).catch(function(err) {
-        console.error('[Firebase] Update error:', err);
-        if (callback) callback({ success: false, error: err });
-      });
-    } else {
-      // Add new — generate key based on name
-      var key = playerData.name
-        ? 'P' + Date.now() + '_' + playerData.name.replace(/\s+/g, '_')
-        : 'P' + Date.now();
-      var newRef = db.ref(PATHS.players).push();
-      newRef.set(cleanForFirebase(Object.assign({ created_at: Date.now() }, playerData))).then(function() {
-        console.log('[Firebase] Player added:', playerData.name, '->', newRef.key);
-        if (callback) callback({ success: true, key: newRef.key });
-      }).catch(function(err) {
-        console.error('[Firebase] Add error:', err);
-        if (callback) callback({ success: false, error: err });
-      });
-    }
-  },
-
-  // Delete player
-  delete(key, callback) {
-    const db = getFirebaseDB();
-    if (!db) return;
-    db.ref(PATHS.players + '/' + key).remove().then(function() {
-      console.log('[Firebase] Player deleted:', key);
-      if (callback) callback({ success: true });
-    }).catch(function(err) {
-      console.error('[Firebase] Delete error:', err);
-      if (callback) callback({ success: false, error: err });
-    });
-  },
-
-  // Update specific fields
-  updateField(key, fields, callback) {
-    const db = getFirebaseDB();
-    if (!db) return;
-    db.ref(PATHS.players + '/' + key).update(cleanForFirebase(fields)).then(function() {
-      if (callback) callback({ success: true });
-    }).catch(function(err) {
-      console.error('[Firebase] UpdateField error:', err);
-      if (callback) callback({ success: false, error: err });
-    });
-  }
-};
-
-// ============================================================
-// TEAMS
-// ============================================================
-const FBTeams = {
-  getAll(callback) {
-    const db = getFirebaseDB();
-    if (!db) return;
-    db.ref(PATHS.teams).off();
-    db.ref(PATHS.teams).on('value', function(snap) {
-      var data = [];
-      snap.forEach(function(child) {
-        var item = child.val();
-        item._key = child.key;
-        data.push(item);
-      });
-      callback({ data: data });
-    }, function(err) {
-      callback({ data: [] });
-    });
-  },
-
-  upsert(teamData, callback) {
-    const db = getFirebaseDB();
-    if (!db) return;
-    if (teamData._key) {
-      db.ref(PATHS.teams + '/' + teamData._key).update(cleanForFirebase(teamData)).then(function() {
-        if (callback) callback({ success: true, key: teamData._key });
-      }).catch(function(err) {
-        if (callback) callback({ success: false, error: err });
-      });
-    } else {
-      var newRef = db.ref(PATHS.teams).push();
-      newRef.set(cleanForFirebase(Object.assign({ created_at: Date.now() }, teamData))).then(function() {
-        if (callback) callback({ success: true, key: newRef.key });
-      }).catch(function(err) {
-        if (callback) callback({ success: false, error: err });
-      });
-    }
-  },
-
-  delete(key, callback) {
-    const db = getFirebaseDB();
-    if (!db) return;
-    db.ref(PATHS.teams + '/' + key).remove().then(function() {
-      if (callback) callback({ success: true });
-    }).catch(function(err) {
-      if (callback) callback({ success: false, error: err });
-    });
-  }
-};
-
-// ============================================================
-// GAMES
-// ============================================================
-const FBGames = {
-  getAll(callback) {
-    const db = getFirebaseDB();
-    if (!db) return;
-    db.ref(PATHS.games).off();
-    db.ref(PATHS.games).on('value', function(snap) {
-      var data = [];
-      snap.forEach(function(child) {
-        var item = child.val();
-        item._key = child.key;
-        data.push(item);
-      });
-      callback({ data: data });
-    }, function(err) {
-      callback({ data: [] });
-    });
-  },
-
-  upsert(gameData, callback) {
-    const db = getFirebaseDB();
-    if (!db) return;
-    if (gameData._key) {
-      db.ref(PATHS.games + '/' + gameData._key).update(cleanForFirebase(gameData)).then(function() {
-        if (callback) callback({ success: true, key: gameData._key });
-      }).catch(function(err) {
-        if (callback) callback({ success: false, error: err });
-      });
-    } else {
-      var newRef = db.ref(PATHS.games).push();
-      newRef.set(cleanForFirebase(Object.assign({ created_at: Date.now() }, gameData))).then(function() {
-        if (callback) callback({ success: true, key: newRef.key });
-      }).catch(function(err) {
-        if (callback) callback({ success: false, error: err });
-      });
-    }
-  },
-
-  delete(key, callback) {
-    const db = getFirebaseDB();
-    if (!db) return;
-    db.ref(PATHS.games + '/' + key).remove().then(function() {
-      if (callback) callback({ success: true });
-    }).catch(function(err) {
-      if (callback) callback({ success: false, error: err });
-    });
-  }
-};
-
-// ============================================================
-// ANALYSIS RECORDS (AI coach history)
-// ============================================================
-const FBAnalysis = {
-  add(record, callback) {
-    const db = getFirebaseDB();
-    if (!db) return;
-    var newRef = db.ref(PATHS.analysis).push();
-    newRef.set(Object.assign({ created_at: Date.now() }, record)).then(function() {
-      if (callback) callback({ success: true, key: newRef.key });
-    }).catch(function(err) {
-      if (callback) callback({ success: false, error: err });
-    });
-  },
-
-  getByPlayer(playerKey, callback) {
-    const db = getFirebaseDB();
-    if (!db) return;
-    db.ref(PATHS.analysis).orderByChild('player_key').equalTo(playerKey).once('value').then(function(snap) {
-      var data = [];
-      snap.forEach(function(child) {
-        var item = child.val();
-        item._key = child.key;
-        data.push(item);
-      });
-      if (callback) callback({ data: data });
-    }).catch(function(err) {
-      if (callback) callback({ data: [] });
-    });
-  }
-};
-
-// ============================================================
-// UTILITY
-// ============================================================
-
-// Remove non-serializable fields before saving to Firebase
-function cleanForFirebase(obj) {
-  if (!obj || typeof obj !== 'object') return obj;
-  var clean = {};
-  for (var key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      var val = obj[key];
-      // Skip functions, undefined, and internal keys
-      if (typeof val === 'function' || val === undefined) continue;
-      if (key === '_key' || key === '_tempId') continue;
-      clean[key] = val;
-    }
-  }
-  return clean;
-}
-
-// Test connection
-function testFirebaseConnection() {
-  const db = getFirebaseDB();
-  if (!db) return { success: false, error: 'Firebase not initialized' };
-  db.ref('.info/connected').once('value').then(function(snap) {
-    if (snap.val() === true) {
-      console.log('[Firebase] ✅ Connected to Firebase Realtime Database');
-      showToast('Firebase 已连接，数据将实时同步', 'success');
-    } else {
-      console.warn('[Firebase] ⚠️ Not connected yet');
-    }
-  }).catch(function(err) {
-    console.error('[Firebase] Connection test failed:', err);
-  });
-}
+  };
+})();
