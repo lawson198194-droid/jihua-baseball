@@ -329,6 +329,7 @@ var CONTACT_RELATIONS = ['父亲','母亲','监护人','其他'];
 // ============================================================
 // Track synced pending IDs to prevent duplicate imports
 var _syncedPendingIds = {};
+var _pendingListenerDetached = false;
 
 DB.init(function() {
   // DB is ready - load players and set up sync
@@ -341,13 +342,16 @@ DB.init(function() {
     if (pending.length > 0) {
       syncPendingList(pending);
     }
-  });
-
-  // Step 2: Real-time listener for new pending registrations
-  DB.onPendingRegistrations(function(newPending) {
-    console.log('[Players] Real-time: new pending registration detected:', newPending.length);
-    if (newPending && newPending.length > 0) {
-      syncPendingList(newPending);
+    // Step 2: After initial sync, set up real-time listener for NEW submissions ONLY
+    // (child_added fires for existing + new, so we attach AFTER initial sync to avoid duplicates)
+    if (!_pendingListenerDetached) {
+      _pendingListenerDetached = true;
+      DB.onPendingRegistrations(function(newPending) {
+        console.log('[Players] Real-time: new pending registration detected:', newPending.length);
+        if (newPending && newPending.length > 0) {
+          syncPendingList(newPending);
+        }
+      });
     }
   });
 });
@@ -533,10 +537,10 @@ function renderPlayers() {
     var initials=p.photo
       ? '<img src="'+escAttr(p.photo)+'" alt="'+escAttr(p.name)+'">'
       : '<div class="initial">'+(p.name||'?').charAt(0)+'</div>';
-    var isPending=(p.status==='pending');
+        var isPending=(p.status==='pending');
     var cardBorder=isPending?'border:2px solid var(--orange);':'';
     html+='<div class="player-card" style="'+cardBorder+'">'+
-      '<div class="player-card-header" onclick="viewPlayer(\''+escAttr(p.id)+'\')">'+
+      '<div class="player-card-header" onclick="'+(isPending?'openPendingReview(\''+escAttr(p.id)+'\')':'viewPlayer(\''+escAttr(p.id)+'\')')+'">'+
         '<div class="player-avatar-wrap '+photoClass+'">'+
           '<div class="player-avatar-lg" style="background:'+color+'">'+initials+'</div>'+
           '<div class="player-photo-badge">✓</div>'+
@@ -563,7 +567,7 @@ function renderPlayers() {
       '</div>'+
       '<div class="player-card-footer">'+
         (isPending
-          ?'<button class="btn btn-sm" style="background:var(--green);color:#fff;flex:1" onclick="event.stopPropagation();approvePlayer(\''+escAttr(p.id)+'\')">✅ 审核通过</button><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="event.stopPropagation();confirmDelete(\''+escAttr(p.id)+'\',\''+escAttr(p.name)+'\')">删除</button>'
+          ?'<button class="btn btn-sm" style="background:#f97316;color:#fff;flex:1" onclick="event.stopPropagation();openPendingReview(\''+escAttr(p.id)+'\')">🔍 查看详情</button>'
           :'<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editPlayer(\''+escAttr(p.id)+'\')">编辑</button><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="event.stopPropagation();confirmDelete(\''+escAttr(p.id)+'\',\''+escAttr(p.name)+'\')">删除</button>'
         )+
       '</div>'+
@@ -685,7 +689,39 @@ function getSelectedPositions(containerId) {
 // ============================================================
 //  ADD/EDIT MODAL
 // ============================================================
-function closeModal(id){ var m=document.getElementById(id); if(m) m.remove(); }
+function closeModal(id){
+  if(id){
+    var m=document.getElementById(id);
+    if(m) m.remove();
+  } else {
+    // Close all modals
+    document.querySelectorAll('.modal-overlay').forEach(function(m){ m.remove(); });
+  }
+  // Remove backdrop
+  var backdrop=document.querySelector('.modal-backdrop');
+  if(backdrop) backdrop.remove();
+}
+
+function showModal(title, content, modalId) {
+  modalId = modalId || 'generic-modal';
+  var existing = document.getElementById(modalId);
+  if (existing) existing.remove();
+
+  var backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.style = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px';
+  backdrop.innerHTML = '<div id="'+modalId+'" style="background:#fff;border-radius:12px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);position:relative">' +
+    '<div style="padding:20px 24px 0;font-size:18px;font-weight:bold;border-bottom:1px solid #eee;padding-bottom:16px;display:flex;align-items:center;justify-content:space-between">' +
+      '<span>'+title+'</span>' +
+      '<button onclick="closeModal(\''+modalId+'\')" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;padding:0;line-height:1">✕</button>' +
+    '</div>' +
+    '<div style="padding:0 24px 24px;margin-top:8px">'+content+'</div>' +
+  '</div>';
+  backdrop.onclick = function(e) {
+    if (e.target === backdrop) closeModal(modalId);
+  };
+  document.body.appendChild(backdrop);
+}
 
 function openAddModal(player) {
   player=player||{};
@@ -826,17 +862,69 @@ window.confirmDelete=function(id,name){
   DB.deletePlayer(id, function(){ showToast('球员已删除','success'); loadPlayers(); });
 };
 
-// Approve pending player → set status to active
-window.approvePlayer=function(id){
+// Open pending player review modal
+window.openPendingReview=function(id){
+  DB.getPlayer(id, function(result){
+    var p=result.data;
+    if(!p){ showToast('球员不存在','error'); return; }
+    var posTags2=(p.positions||[]).map(function(pos){
+      var color=POS_COLORS[pos]||'#64748b';
+      return '<span style="background:'+color+'22;color:'+color+';border:1px solid '+color+'44;padding:2px 8px;border-radius:12px;font-size:12px">'+pos+'</span>';
+    }).join(' ');
+    var submittedAt=p.submittedAt?new Date(p.submittedAt).toLocaleString('zh-CN'):'未知';
+    var dob=p.birth_date||(p.birth_year?p.birth_year+'年':'');
+    var html=
+      '<div style="background:#fff;border-radius:12px;padding:24px;max-width:480px;width:90vw;font-family:inherit">'+
+        '<div style="display:flex;align-items:center;margin-bottom:16px">'+
+          '<div style="width:56px;height:56px;border-radius:50%;background:#f97316;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:bold;margin-right:12px">'+escHtml(p.name).charAt(0)+'</div>'+
+          '<div><div style="font-size:20px;font-weight:bold">'+escHtml(p.name)+'</div><div style="color:#f97316;font-size:13px">⏳ 待审核</div></div>'+
+        '</div>'+
+        '<div style="background:#f8f8f8;border-radius:8px;padding:16px;margin-bottom:16px;font-size:14px;line-height:2">'+
+          '<div><span style="color:#888">性别：</span>'+(p.gender==='M'?'男':'女')+'</div>'+
+          '<div><span style="color:#888">年龄：</span>'+(dob?calcAge(p.birth_date)+'岁':'-')+'</div>'+
+          '<div><span style="color:#888">位置：</span>'+(posTags2||'-')+'</div>'+
+          (p.club?'<div><span style="color:#888">俱乐部：</span>'+escHtml(p.club)+'</div>':'')+
+          '<div><span style="color:#888">联系方式：</span>'+escHtml(p.contact_name||'')+' · '+escHtml(p.contact_phone||p.phone_main||'')+'</div>'+
+          (p.relationship?'<div><span style="color:#888">关系：</span>'+escHtml(p.relationship)+'</div>':'')+
+          '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #eee"><span style="color:#888">提交时间：</span>'+submittedAt+'</div>'+
+          (p.notes?'<div><span style="color:#888">备注：</span>'+escHtml(p.notes)+'</div>':'')+
+        '</div>'+
+        '<div style="display:flex;gap:12px">'+
+          '<button id="btn-approve-pending" style="flex:1;padding:12px;border:none;border-radius:8px;background:#10b981;color:#fff;font-size:16px;font-weight:bold;cursor:pointer" onclick="doApprovePlayer(\''+escAttr(id)+'\')">✅ 审核通过</button>'+
+          '<button id="btn-reject-pending" style="flex:1;padding:12px;border:1px solid #ef4444;border-radius:8px;background:#fff;color:#ef4444;font-size:16px;font-weight:bold;cursor:pointer" onclick="doRejectPlayer(\''+escAttr(id)+'\')">❌ 否决删除</button>'+
+          '<button style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#666;font-size:14px;cursor:pointer" onclick="closeModal()">取消</button>'+
+        '</div>'+
+      '</div>';
+    showModal('球员审核', html);
+  });
+};
+
+// Approve: set status to active
+window.doApprovePlayer=function(id){
+  document.getElementById('btn-approve-pending').disabled=true;
+  document.getElementById('btn-reject-pending').disabled=true;
   DB.getPlayer(id, function(result){
     var player=result.data;
-    if(!player) { showToast('球员不存在','error'); return; }
+    if(!player){ showToast('球员不存在','error'); closeModal(); return; }
     player.status='active';
     player.approved_at=new Date().toISOString();
     DB.updatePlayer(id, player, function(){
+      closeModal();
       showToast('审核通过！['+player.name+'] 已进入系统','success');
       loadPlayers();
     });
+  });
+};
+
+// Reject: delete the pending player
+window.doRejectPlayer=function(id){
+  if(!confirm('确定要否决并删除此申请吗？此操作不可撤销。')) return;
+  document.getElementById('btn-approve-pending').disabled=true;
+  document.getElementById('btn-reject-pending').disabled=true;
+  DB.deletePlayer(id, function(){
+    closeModal();
+    showToast('申请已否决并删除','success');
+    loadPlayers();
   });
 };
 
