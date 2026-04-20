@@ -901,6 +901,11 @@ function openAddModal(player) {
           // Row 3: Birth Date + Club
           '<div class="form-group"><label>出生日期</label><input type="date" id="f-birth" value="'+(player.birth_date||'')+'"></div>'+
           '<div class="form-group"><label>所属俱乐部</label><input id="f-club" value="'+escAttr(player.club||'')+'" placeholder="如：香港棒垒球总会 U12"></div>'+
+          // Row 3.5: Team selector
+          '<div class="form-group"><label>🏆 所属球队</label><select id="f-team">'+
+            '<option value="">— 未分配 —</option>'+
+            allTeams.map(function(t){ return '<option value="'+t.id+'"'+(player.team_id===t.id?' selected':'')+'>'+escHtml(t.name||t.id)+'</option>'; }).join('')+
+          '</select></div>'+
           // Row 4: HKBA ID + School
           '<div class="form-group"><label>🏅 棒总会员编号</label><input id="f-hkab" value="'+escAttr(player.hkab_id||'')+'" placeholder="如：HKBA-2024-0012"></div>'+
           '<div class="form-group"><label>就读学校</label><input id="f-school" value="'+escAttr(player.school||'')+'" placeholder="就读学校"></div>'+
@@ -970,6 +975,7 @@ function openAddModal(player) {
       throwing_hand:document.getElementById('f-throw').value,
       school:document.getElementById('f-school').value.trim(),
       club:document.getElementById('f-club').value.trim(),
+      team_id:document.getElementById('f-team').value || null,
       age_group:document.getElementById('f-agegroup').value,
       hkab_id:document.getElementById('f-hkab').value.trim(),
       contact_name:document.getElementById('f-contact-name').value.trim(),
