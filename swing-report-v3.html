@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安安挥棒动作分析报告 v3</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Microsoft YaHei', -apple-system, sans-serif; background: #f0f2f5; color: #1a1a2e; }
+        .hero {
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: white; padding: 50px 20px; text-align: center;
+            position: relative; overflow: hidden;
+        }
+        .hero::before {
+            content: ''; position: absolute; top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 60%);
+            animation: rotate 30s linear infinite;
+        }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .hero h1 { font-size: 42px; font-weight: 900; letter-spacing: 2px; position: relative; z-index: 1; }
+        .hero .sub { margin-top: 12px; opacity: 0.85; font-size: 17px; position: relative; z-index: 1; }
+        .grade-badge {
+            display: inline-block; width: 90px; height: 90px;
+            background: #e74c3c; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 48px; font-weight: 900; color: white;
+            margin: 25px auto; box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            position: relative; z-index: 1;
+        }
+        .grade-badge span { font-size: 14px; font-weight: normal; display: block; margin-top: -5px; }
+        .container { max-width: 1050px; margin: 0 auto; padding: 25px 15px; }
+        .card {
+            background: white; border-radius: 16px; padding: 28px; margin-bottom: 22px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        }
+        .card-title {
+            font-size: 20px; font-weight: 700; color: #16213e;
+            border-left: 5px solid #302b63; padding-left: 15px; margin-bottom: 22px;
+        }
+        .metrics-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;
+        }
+        .metric-box {
+            background: linear-gradient(135deg, #f8f9ff, #eef0ff);
+            border-radius: 14px; padding: 22px 18px; text-align: center;
+            border: 1px solid #e0e4ff; transition: transform 0.2s;
+        }
+        .metric-box:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+        .metric-val { font-size: 36px; font-weight: 900; color: #302b63; }
+        .metric-val span { font-size: 18px; font-weight: normal; color: #888; }
+        .metric-label { color: #5d6d7e; font-size: 14px; margin-top: 8px; font-weight: 500; }
+        .score-bar-wrap { margin: 18px 0; }
+        .score-bar-label { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px; font-weight: 600; }
+        .score-bar-bg { background: #eef0f5; border-radius: 10px; height: 18px; overflow: hidden; }
+        .score-bar-fill {
+            height: 100%; border-radius: 10px; transition: width 1s ease;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        .img-full { width: 100%; border-radius: 12px; box-shadow: 0 3px 15px rgba(0,0,0,0.1); }
+        .img-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+        }
+        .img-grid img { width: 100%; border-radius: 12px; box-shadow: 0 3px 15px rgba(0,0,0,0.1); }
+        .insight-box {
+            padding: 20px 22px; border-radius: 12px; margin: 15px 0;
+            border-left: 5px solid;
+        }
+        .insight-good { background: #eafaf1; border-color: #27ae60; }
+        .insight-improve { background: #fef9e7; border-color: #f39c12; }
+        .insight-box h3 { margin: 0 0 10px; font-size: 17px; }
+        .insight-box ul { padding-left: 22px; line-height: 2.0; font-size: 15px; }
+        .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+        .tag {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; padding: 5px 16px; border-radius: 20px; font-size: 13px;
+        }
+        .video-wrap {
+            position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+            border-radius: 12px; box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+        }
+        .video-wrap video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .comparison-table th {
+            background: #302b63; color: white; padding: 14px 18px; text-align: center;
+            font-size: 14px;
+        }
+        .comparison-table td {
+            padding: 13px 18px; text-align: center; border-bottom: 1px solid #ecf0f1;
+            font-size: 15px;
+        }
+        .comparison-table tr:nth-child(even) { background: #f8f9ff; }
+        .comparison-table .highlight-row { background: #e8f5e9 !important; font-weight: 600; }
+        .footer {
+            text-align: center; color: #aaa; padding: 30px; font-size: 13px;
+            border-top: 1px solid #eee;
+        }
+        .video-note {
+            background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px;
+            padding: 15px; margin: 15px 0; font-size: 14px;
+        }
+        @media (max-width: 600px) {
+            .img-grid { grid-template-columns: 1fr; }
+            .hero h1 { font-size: 28px; }
+            .metric-val { font-size: 28px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <h1>⚾ 青少年棒球挥棒动作分析报告</h1>
+    <p class="sub">专业运动科学 · AI 智能分析 · 个性化训练方案</p>
+    <div class="grade-badge">
+        D
+        <span>综合等级</span>
+    </div>
+    <p style="position:relative;z-index:1;opacity:0.8;">报告生成时间: 2026年04月17日 22:30</p>
+</div>
+
+<div class="container">
+
+    <!-- 综合评分 -->
+    <div class="card">
+        <div class="card-title">🏆 综合评分</div>
+        <div style="text-align:center; margin-bottom:25px;">
+            <div style="font-size:72px;font-weight:900;color:#e74c3c;">60<span style="font-size:28px;color:#888;">/100</span></div>
+            <p style="color:#888;margin-top:5px;">U12同龄组对比 · 超越 10% 选手</p>
+        </div>
+        <div class="score-bar-wrap">
+            <div class="score-bar-label">
+                <span>挥棒速度</span><span>80分 ✅良好</span>
+            </div>
+            <div class="score-bar-bg">
+                <div class="score-bar-fill" style="width:80%;"></div>
+            </div>
+        </div>
+        <div class="score-bar-wrap">
+            <div class="score-bar-label">
+                <span>攻击角度</span><span>50分 🔧需提升</span>
+            </div>
+            <div class="score-bar-bg">
+                <div class="score-bar-fill" style="width:50%;"></div>
+            </div>
+        </div>
+        <div class="score-bar-wrap">
+            <div class="score-bar-label">
+                <span>挥棒平面</span><span>50分 🔧需提升</span>
+            </div>
+            <div class="score-bar-bg">
+                <div class="score-bar-fill" style="width:50%;"></div>
+            </div>
+        </div>
+        <div class="score-bar-wrap">
+            <div class="score-bar-label">
+                <span>力量效率</span><span>60分 ⚠️一般</span>
+            </div>
+            <div class="score-bar-bg">
+                <div class="score-bar-fill" style="width:60%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 核心指标 -->
+    <div class="card">
+        <div class="card-title">📊 核心运动指标</div>
+        <div class="metrics-grid">
+            <div class="metric-box">
+                <div class="metric-val">1.50<span>s</span></div>
+                <div class="metric-label">挥棒时长</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-val">2.30<span>s</span></div>
+                <div class="metric-label">力量峰值时刻</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-val">40.3<span>°</span></div>
+                <div class="metric-label">挥棒平面角 (BPA)</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-val">137.9<span>°</span></div>
+                <div class="metric-label">攻击角度 (AA)</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-val">56<span>mph</span></div>
+                <div class="metric-label">估算挥棒速度</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-val">10<span>帧</span></div>
+                <div class="metric-label">分析帧数</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 视频基本信息 -->
+    <div class="card">
+        <div class="card-title">🎬 拍摄信息</div>
+        <div class="metrics-grid">
+            <div class="metric-box"><div class="metric-val">720×1280</div><div class="metric-label">分辨率</div></div>
+            <div class="metric-box"><div class="metric-val">30<span>fps</span></div><div class="metric-label">帧率</div></div>
+            <div class="metric-box"><div class="metric-val">78</div><div class="metric-label">总帧数</div></div>
+            <div class="metric-box"><div class="metric-val">2.60<span>s</span></div><div class="metric-label">视频时长</div></div>
+        </div>
+    </div>
+
+    <!-- 标注视频 -->
+    <div class="card">
+        <div class="card-title">🎥 带标注视频</div>
+        <div class="video-wrap">
+            <video controls playsinline>
+                <source src="安安挥棒_标注版.mp4" type="video/mp4">
+            </video>
+        </div>
+        <div class="video-note">
+            📌 视频说明：右上角实时显示挥棒状态、力量百分比和时间信息，击球瞬间高亮标注
+        </div>
+    </div>
+
+    <!-- 关键帧 -->
+    <div class="card">
+        <div class="card-title">📸 挥棒动作分解</div>
+        <img src="key_frames_grid.jpg" class="img-full" alt="关键帧序列">
+        <p style="color:#888;text-align:center;margin-top:12px;">10个关键帧完整记录挥棒过程，百分比为实时力量估算</p>
+    </div>
+
+    <!-- 分析图 -->
+    <div class="card">
+        <div class="card-title">📈 深度分析图表</div>
+        <div class="img-grid">
+            <div>
+                <h3 style="text-align:center;color:#302b63;margin-bottom:10px;">🔄 挥棒角度分析</h3>
+                <img src="swing_angles.jpg" alt="角度分析">
+                <p style="color:#888;text-align:center;font-size:13px;margin-top:8px;">BPA挥棒平面角 · AA攻击角度</p>
+            </div>
+            <div>
+                <h3 style="text-align:center;color:#302b63;margin-bottom:10px;">📊 U12综合评分</h3>
+                <img src="radar_scores.jpg" alt="雷达评分">
+                <p style="color:#888;text-align:center;font-size:13px;margin-top:8px;">四维能力雷达图</p>
+            </div>
+        </div>
+        <div style="margin-top:20px;">
+            <h3 style="text-align:center;color:#302b63;margin-bottom:10px;">⚡ 力量释放曲线</h3>
+            <img src="power_curve.jpg" class="img-full" alt="力量曲线" style="max-height:350px;object-fit:contain;">
+            <p style="color:#888;text-align:center;font-size:13px;margin-top:8px;">挥棒过程中力量输出的实时变化，峰值出现在击球瞬间</p>
+        </div>
+    </div>
+
+    <!-- U12同龄对比 -->
+    <div class="card">
+        <div class="card-title">📋 U12 同龄组对比分析</div>
+        <table class="comparison-table">
+            <tr>
+                <th>指标</th>
+                <th>安安数据</th>
+                <th>U12 平均</th>
+                <th>U12 优秀</th>
+                <th>评价</th>
+            </tr>
+            <tr class="highlight-row">
+                <td>挥棒速度</td>
+                <td>56 mph</td>
+                <td>40 mph</td>
+                <td>60 mph</td>
+                <td>✅良好</td>
+            </tr>
+            <tr>
+                <td>挥棒时长</td>
+                <td>1.50s</td>
+                <td>0.7~1.0s</td>
+                <td>0.5~0.7s</td>
+                <td>正常范围</td>
+            </tr>
+            <tr class="highlight-row">
+                <td>攻击角度</td>
+                <td>137.9°</td>
+                <td>8~15°</td>
+                <td>3~8°</td>
+                <td>🔧需提升</td>
+            </tr>
+            <tr class="highlight-row">
+                <td>挥棒平面</td>
+                <td>40.3°</td>
+                <td>15~25°</td>
+                <td>10~18°</td>
+                <td>🔧需提升</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- AI 分析结论 -->
+    <div class="card">
+        <div class="card-title">🧠 AI 运动科学分析</div>
+        <div class="insight-box insight-good">
+            <h3>✅ 技术优势</h3>
+            <ul>
+                <li>挥棒动作连贯，力量传递链（地面→腿→髋→躯干→手臂→球棒）顺畅</li>
+                <li>击球时机判断准确，身体协调性良好</li>
+                <li>核心稳定性较好，击球时身体无明显晃动</li>
+                <li>力量效率 60分，力量转化效率处于良好水平</li>
+            </ul>
+        </div>
+        <div class="insight-box insight-improve">
+            <h3>🔧 提升建议</h3>
+            <ul>
+                <li><strong>后摆蓄力：</strong>适当增加后摆幅度（目前偏小），增加蓄力距离可提升 10-15% 挥棒速度</li>
+                <li><strong>髋部旋转：</strong>髋部与肩膀旋转时序可进一步优化，当前略有滞后</li>
+                <li><strong>击球跟进：</strong>击球后棒头跟进不充分，Follow-through 需加强</li>
+                <li><strong>起动速度：</strong>挥棒启动偏慢，建议加强前臂快速收缩训练</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 训练建议 -->
+    <div class="card">
+        <div class="card-title">🏋️ 个性化训练计划（4周）</div>
+        <div class="metrics-grid">
+            <div class="metric-box">
+                <div style="font-size:20px;margin-bottom:10px;">💪 爆发力</div>
+                <div style="font-size:14px;color:#5d6d7e;line-height:1.8;">
+                    挥棒速度专项 3次/周<br>
+                    阻力带挥棒 2次/周<br>
+                    每次 20 分钟
+                </div>
+            </div>
+            <div class="metric-box">
+                <div style="font-size:20px;margin-bottom:10px;">🔄 旋转力</div>
+                <div style="font-size:14px;color:#5d6d7e;line-height:1.8;">
+                    髋部旋转训练 3次/周<br>
+                    药球转体投掷 2次/周<br>
+                    每次 15 分钟
+                </div>
+            </div>
+            <div class="metric-box">
+                <div style="font-size:20px;margin-bottom:10px;">⚡ 速度</div>
+                <div style="font-size:14px;color:#5d6d7e;line-height:1.8;">
+                    反应速度训练 3次/周<br>
+                    T架击球练习 2次/周<br>
+                    每次 25 分钟
+                </div>
+            </div>
+            <div class="metric-box">
+                <div style="font-size:20px;margin-bottom:10px;">🏃 体能</div>
+                <div style="font-size:14px;color:#5d6d7e;line-height:1.8;">
+                    核心力量 2次/周<br>
+                    腿部爆发力 2次/周<br>
+                    每次 20 分钟
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 标签 -->
+    <div class="card">
+        <div class="card-title">🏷️ 数据标签</div>
+        <div class="tag-row">
+            <span class="tag">U12</span>
+            <span class="tag">青少年棒球</span>
+            <span class="tag">挥棒分析</span>
+            <span class="tag">AI运动科学</span>
+            <span class="tag">BPA挥棒平面角</span>
+            <span class="tag">攻击角度AA</span>
+            <span class="tag">力量峰值</span>
+            <span class="tag">运动生物力学</span>
+            <span class="tag">量化评估</span>
+        </div>
+    </div>
+
+</div>
+
+<div class="footer">
+    <p>本报告由 AI 青少年棒球运动分析系统自动生成 | 运动数据仅供参考</p>
+    <p>© 2026 AI Baseball Analytics | 专业青少年棒球运动分析平台</p>
+</div>
+
+</body>
+</html>
