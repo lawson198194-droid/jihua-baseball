@@ -481,13 +481,17 @@ var searchText='';
 //  TOPBAR STATS
 // ============================================================
 function updateTopbarStats() {
-  var s={ total:allPlayers.length, active:allPlayers.filter(function(p){return p.status==='active';}).length, male:allPlayers.filter(function(p){return p.gender==='M';}).length, female:allPlayers.filter(function(p){return p.gender==='F';}).length, withPhoto:allPlayers.filter(function(p){return !!p.photo;}).length };
+  var approved=allPlayers.filter(function(p){return p.status==='active';}).length;
+  var pending=allPlayers.filter(function(p){return p.status==='pending';}).length;
+  var male=allPlayers.filter(function(p){return p.gender==='M' && p.status==='active';}).length;
+  var female=allPlayers.filter(function(p){return p.gender==='F' && p.status==='active';}).length;
+  var withPhoto=allPlayers.filter(function(p){return !!p.photo && p.status==='active';}).length;
   document.getElementById('topbar-stats').innerHTML=
-    '<div class="topbar-stat"><div class="num">'+s.total+'</div><div class="label">注册球员</div></div>'+
-    '<div class="topbar-stat"><div class="num" style="color:#10b981">'+s.active+'</div><div class="label">活跃</div></div>'+
-    '<div class="topbar-stat"><div class="num">'+s.male+'</div><div class="label">男</div></div>'+
-    '<div class="topbar-stat"><div class="num" style="color:#ec4899">'+s.female+'</div><div class="label">女</div></div>'+
-    '<div class="topbar-stat"><div class="num" style="color:#8b5cf6">'+s.withPhoto+'</div><div class="label">有照片</div></div>';
+    '<div class="topbar-stat"><div class="num">'+approved+'</div><div class="label">注册球员</div></div>'+
+    (pending>0?'<div class="topbar-stat"><div class="num" style="color:#f97316">'+pending+'</div><div class="label">待审核</div></div>':'')+
+    '<div class="topbar-stat"><div class="num">'+male+'</div><div class="label">男</div></div>'+
+    '<div class="topbar-stat"><div class="num" style="color:#ec4899">'+female+'</div><div class="label">女</div></div>'+
+    '<div class="topbar-stat"><div class="num" style="color:#8b5cf6">'+withPhoto+'</div><div class="label">有照片</div></div>';
 }
 
 // ============================================================
@@ -931,62 +935,107 @@ window.doRejectPlayer=function(id){
 // ============================================================
 //  VIEW PLAYER DETAIL
 // ============================================================
+function makeFieldRow(label, value, color) {
+  if (!value && value !== 0) return '';
+  color = color || 'var(--text-primary)';
+  return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0">' +
+    '<span style="color:#888;font-size:13px">'+label+'</span>' +
+    '<span style="color:'+color+';font-size:14px;font-weight:500;max-width:65%;text-align:right">'+escHtml(value)+'</span>' +
+  '</div>';
+}
+
+function makeSection(title, rows) {
+  if (!rows) return '';
+  return '<div style="margin-bottom:16px">' +
+    '<div style="font-size:12px;font-weight:700;color:#888;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:6px">'+title+'</div>' +
+    rows +
+  '</div>';
+}
+
 window.viewPlayer=function(id){
   var p=allPlayers.find(function(x){return x.id===id;});
   if(!p) return;
-  var color=getAvatarColor(p.name);
-  var positions=getPositionsArray(p);
-  var posTags=positions.map(function(pos){
-    var c=getPosColor(pos);
-    return '<span class="badge" style="background:'+c+'22;color:'+c+';border:1px solid '+c+'44">'+escHtml(pos)+'</span>';
-  }).join('');
-  if(positions.length===0) posTags='<span class="badge badge-neutral">未设定</span>';
-  var initials=p.photo
-    ? '<img src="'+escAttr(p.photo)+'" alt="'+escAttr(p.name)+'" style="width:100%;height:100%;object-fit:cover;border-radius:18px;">'
-    : '<div style="line-height:80px;text-align:center;font-size:36px;font-weight:800;">'+(p.name||'?').charAt(0)+'</div>';
 
-  var contactHtml='';
-  if(p.contact_name||p.contact_phone||p.contact_relation){
-    contactHtml='<div class="view-section"><div class="view-section-title">联系方式</div><div class="view-grid">'+
-      (p.contact_name?'<div class="view-item"><div class="v-label">联系人</div><div class="v-value">'+escHtml(p.contact_name)+'</div></div>':'')+
-      (p.contact_relation?'<div class="view-item"><div class="v-label">关系</div><div class="v-value">'+escHtml(p.contact_relation)+'</div></div>':'')+
-      (p.contact_phone?'<div class="view-item"><div class="v-label">📞 电话</div><div class="v-value" style="color:var(--accent)">'+escHtml(p.contact_phone)+'</div></div>':'')+
-      '</div></div>';
+  var isPending=(p.status==='pending');
+  var color=getAvatarColor(p.name);
+  var initials=p.name?(p.name.charAt(0)):'?';
+  var photoHtml='';
+  if(p.photo){
+    photoHtml='<div style="width:72px;height:72px;border-radius:14px;overflow:hidden;background:#1a1f35;flex-shrink:0"><img src="'+escAttr(p.photo)+'" style="width:100%;height:100%;object-fit:cover"></div>';
+  } else {
+    photoHtml='<div style="width:72px;height:72px;border-radius:14px;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;flex-shrink:0">'+initials+'</div>';
   }
 
-  var html='<div class="view-overlay" id="view-modal">'+
-    '<div class="view-card">'+
-      '<button class="close-btn" onclick="closeModal(\'view-modal\')">✕</button>'+
-      '<div class="view-header">'+
-        '<div class="view-avatar" style="background:'+color+'">'+initials+'</div>'+
-        '<div style="flex:1;">'+
-          '<div class="view-name">'+escHtml(p.name)+'</div>'+
-          '<div class="view-sub">'+(p.player_id||'')+' · '+calcAge(p.birth_date)+'岁 · '+GENDER_MAP[p.gender]+'</div>'+
-          '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">'+posTags+' <span class="badge '+(p.status==="active"?"badge-success":"badge-neutral")+'">'+(p.status==="active"?"活跃":"非活跃")+'</span></div>'+
-        '</div>'+
-      '</div>'+
-      '<div class="view-body">'+
-        '<div class="view-section"><div class="view-section-title">基本信息</div><div class="view-grid">'+
-          '<div class="view-item"><div class="v-label">出生日期</div><div class="v-value">'+(p.birth_date||'-')+'</div></div>'+
-          '<div class="view-item"><div class="v-label">年龄</div><div class="v-value">'+(calcAge(p.birth_date)==="-"?"-":calcAge(p.birth_date)+"岁")+'</div></div>'+
-          '<div class="view-item"><div class="v-label">身高</div><div class="v-value">'+(p.height_cm?p.height_cm+" cm":"-")+'</div></div>'+
-          '<div class="view-item"><div class="v-label">体重</div><div class="v-value">'+(p.weight_kg?p.weight_kg+" kg":"-")+'</div></div>'+
-          '<div class="view-item"><div class="v-label">打击</div><div class="v-value">'+formatHand(p.batting_hand)+'</div></div>'+
-          '<div class="view-item"><div class="v-label">投球</div><div class="v-value">'+formatHand(p.throwing_hand)+'</div></div>'+
-          '<div class="view-item"><div class="v-label">就读学校</div><div class="v-value">'+(p.school||'-')+'</div></div>'+
-          '<div class="view-item"><div class="v-label">所属俱乐部</div><div class="v-value" style="color:var(--accent)">'+(p.club||'-')+'</div></div>'+
-          (p.hkab_id?'<div class="view-item full"><div class="v-label">🏅 棒总会员编号</div><div class="v-value" style="color:var(--purple)">'+escHtml(p.hkab_id)+'</div></div>':'')+
-          (p.notes?'<div class="view-item full"><div class="v-label">备注</div><div class="v-value" style="color:var(--text-secondary);font-weight:400">'+escHtml(p.notes)+'</div></div>':'')+
-        '</div></div>'+
-        contactHtml+
-      '</div>'+
-      '<div class="view-footer">'+
-        '<button class="btn btn-ghost" onclick="closeModal(\'view-modal\')">关闭</button>'+
-        '<button class="btn btn-primary" onclick="closeModal(\'view-modal\');editPlayer(\''+escAttr(p.id)+'\')">编辑</button>'+
-      '</div>'+
+  // --- Registration Info (all fields from the registration form) ---
+  var positions=getPositionsArray(p);
+  var posStr=positions.length>0 ? positions.join(' / ') : '-';
+
+  var regInfo=
+    makeSection('球员基本信息',
+      makeFieldRow('姓名', p.name) +
+      makeFieldRow('性别', GENDER_MAP[p.gender] || '-') +
+      makeFieldRow('出生日期', p.birth_date || '-') +
+      makeFieldRow('年龄', p.birth_date ? calcAge(p.birth_date)+'岁' : '-') +
+      makeFieldRow('身高', p.height_cm ? p.height_cm+' cm' : '-') +
+      makeFieldRow('体重', p.weight_kg ? p.weight_kg+' kg' : '-') +
+      makeFieldRow('擅长位置', posStr) +
+      makeFieldRow('打击', formatHand(p.batting_hand)) +
+      makeFieldRow('投球', formatHand(p.throwing_hand)) +
+      makeFieldRow('就读学校', p.school || '-') +
+      makeFieldRow('所属俱乐部', p.club || '-') +
+      makeFieldRow('🏅 棒总会员编号', p.hkab_id || '-') +
+      makeFieldRow('球员编号', p.player_id || '-')
+    ) +
+    makeSection('联系方式',
+      makeFieldRow('家长/监护人', p.contact_name || '-') +
+      makeFieldRow('与球员关系', p.contact_relation || '-') +
+      makeFieldRow('📞 联系电话', p.contact_phone || '-', 'var(--accent)') +
+      makeFieldRow('备用电话', p.contact_phone2 || '-')
+    ) +
+    (p.notes ? makeSection('补充说明',
+      '<div style="background:#f9f9f9;border-radius:8px;padding:10px 12px;font-size:13px;color:#555;line-height:1.6">'+escHtml(p.notes)+'</div>'
+    ) : '') +
+    makeSection('注册信息',
+      makeFieldRow('提交时间', p.submitted_at ? new Date(p.submitted_at).toLocaleString('zh-CN') : '-') +
+      makeFieldRow('审核状态', isPending ? '⏳ 待审核' : '✅ 已审核', isPending ? '#f97316' : '#10b981')
+    );
+
+  // Action buttons
+  var actions='';
+  if(isPending){
+    actions=
+      '<button onclick="closeModal(\'detail-modal\');approvePlayer(\''+escAttr(p.id)+'\')" style="flex:1;padding:12px;border:none;border-radius:10px;background:#10b981;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-right:8px">✅ 审核通过</button>'+
+      '<button onclick="closeModal(\'detail-modal\');rejectPlayer(\''+escAttr(p.id)+'\',\''+escAttr(p.name)+'\')" style="flex:1;padding:12px;border:none;border-radius:10px;background:#fee2e2;color:#dc2626;font-size:15px;font-weight:600;cursor:pointer">❌ 否决删除</button>';
+  } else {
+    actions=
+      '<button onclick="closeModal(\'detail-modal\')" style="flex:1;padding:12px;border:1px solid #ddd;border-radius:10px;background:#fff;color:#666;font-size:15px;cursor:pointer;margin-right:8px">关闭</button>'+
+      '<button onclick="closeModal(\'detail-modal\');editPlayer(\''+escAttr(p.id)+'\')" style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer">编辑球员</button>';
+  }
+
+  var titleHtml='<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">'+
+    photoHtml+
+    '<div>'+
+      '<div style="font-size:20px;font-weight:700;color:#1a1a2e">'+escHtml(p.name)+'</div>'+
+      '<div style="font-size:13px;color:#888;margin-top:2px">'+(p.player_id||'新球员')+' · '+calcAge(p.birth_date)+'岁 · '+(GENDER_MAP[p.gender]||'')+'</div>'+
+      (isPending ? '<span style="display:inline-block;margin-top:6px;padding:2px 10px;border-radius:20px;background:#fef3c7;color:#d97706;font-size:12px;font-weight:600">⏳ 待审核</span>' : '<span style="display:inline-block;margin-top:6px;padding:2px 10px;border-radius:20px;background:#d1fae5;color:#059669;font-size:12px;font-weight:600">✅ 已审核</span>')+
     '</div>'+
   '</div>';
-  document.body.insertAdjacentHTML('beforeend', html);
+
+  var content='<div style="max-height:60vh;overflow-y:auto;padding-right:2px">'+
+    titleHtml+regInfo+
+  '</div>'+
+  '<div style="display:flex;margin-top:20px;padding-top:16px;border-top:1px solid #eee">'+actions+'</div>';
+
+  showModal('球员详情', content, 'detail-modal');
+};
+
+// Reject & delete pending player
+window.rejectPlayer=function(id, name){
+  if(!confirm('确定要否决 ['+name+'] 的注册申请吗？该记录将被删除。')) return;
+  DB.deletePlayer(id, function(){
+    showToast('已否决并删除 ['+name+']','success');
+    loadPlayers();
+  });
 };
 
 // ============================================================
