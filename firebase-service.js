@@ -162,6 +162,7 @@
       var now = new Date().toISOString();
       var data = Object.assign({
         submittedAt: now,
+        createdAt: now,
         status: 'pending',
         source: 'register_form'
       }, playerData);
@@ -203,10 +204,10 @@
       });
     },
 
-    // Real-time listener: watch pending_players for new submissions
+    // Real-time listener: watch pending_players for NEW submissions only
+    // Uses a cutoff timestamp to avoid firing for existing children on initial attach
     onPendingRegistrations: function(callback) {
       if (!this.isConfigured) {
-        // Fallback: poll localStorage every 3s
         var lastCount = 0;
         var timer = setInterval(function() {
           var data = JSON.parse(localStorage.getItem('baseai_pending_players') || '[]');
@@ -216,17 +217,23 @@
             callback(newItems);
           }
         }, 3000);
-        // Return a detach function
         return { detach: function() { clearInterval(timer); } };
       }
-      // Firebase real-time listener
+      // Capture cutoff time NOW — any pending items created before this moment are skipped
+      var self = this;
+      var cutoffTime = new Date().toISOString();
       this.db.ref('pending_players').on('child_added', function(snapshot) {
         var item = snapshot.val();
+        var createdAt = item.createdAt || item.submittedAt || '';
+        // Skip items that existed before the listener was attached (avoid double-processing)
+        if (createdAt && createdAt < cutoffTime) {
+          console.log('[Firebase] Skipping pre-existing child_added:', snapshot.key, createdAt, '<', cutoffTime);
+          return;
+        }
         item.id = snapshot.key;
         callback([item]);
       });
-      // Return detach function
-      return { detach: function() { FBService.db.ref('pending_players').off('child_added'); } };
+      return { detach: function() { self.db.ref('pending_players').off('child_added'); } };
     },
 
     removePendingRegistration: function(pendingId, callback) {
