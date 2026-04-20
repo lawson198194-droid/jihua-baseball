@@ -532,28 +532,29 @@ function submitRegistration(){
     status:'pending'
   };
 
-  // Save to localStorage pending list (fallback if no Firebase)
+  _submitData=data;
+
+  // Always save to localStorage first
   var pending=JSON.parse(localStorage.getItem('baseai_pending_players')||'[]');
   data._local_id='P'+(pending.length+1).toString().padStart(3,'0');
   pending.push(data);
   localStorage.setItem('baseai_pending_players',JSON.stringify(pending));
+  console.log('[Register] Saved to localStorage, DB available:', typeof DB !== 'undefined');
 
-  // Save to Firebase via DB service (real-time sync)
-  try {
-    if (typeof DB !== 'undefined' && DB.submitRegistration) {
-      console.log('[Register] Submitting to Firebase...');
-      showToast('正在提交...','info');
-      DB.submitRegistration(data, function(result) {
-        console.log('[Register] Submit result:', result);
-        showSuccess();
-      });
-    } else {
-      console.warn('[Register] DB not available, saving to localStorage only');
+  // Show processing state
+  showToast('正在提交...','info');
+
+  // Try Firebase submit (async, non-blocking)
+  if (typeof DB !== 'undefined' && typeof DB.submitRegistration === 'function') {
+    console.log('[Register] Calling DB.submitRegistration...');
+    DB.submitRegistration(data, function(result) {
+      console.log('[Register] Firebase submit callback, result:', result);
       showSuccess();
-    }
-  } catch(e) {
-    console.error('[Register] Submit error:', e);
-    showToast('提交失败，已本地保存','error');
+    });
+  } else {
+    console.warn('[Register] DB not available - localStorage fallback only');
+    // Still show success after a short delay to let the toast appear
+    setTimeout(function(){ showSuccess(); }, 100);
   }
 }
 
@@ -651,6 +652,13 @@ function checkUrlPrefill(){
 //  INIT
 // ============================================================
 (function(){
+  // Initialize DB + Firebase connection
+  if (typeof DB !== 'undefined') {
+    DB.init(function() {
+      console.log('[Register] DB ready, Firebase:', typeof FirebaseService !== 'undefined' && FirebaseService.isConfigured ? 'ONLINE' : 'OFFLINE');
+    });
+  }
+
   buildPosSelector();
   checkUrlPrefill();
   document.getElementById('f-name').addEventListener('input',function(){ updatePhotoInitial(this.value); });
