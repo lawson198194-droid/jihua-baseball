@@ -327,6 +327,9 @@ var CONTACT_RELATIONS = ['父亲','母亲','监护人','其他'];
 // ============================================================
 //  DB INIT (Firebase if configured, else localStorage fallback)
 // ============================================================
+// Track synced pending IDs to prevent duplicate imports
+var _syncedPendingIds = {};
+
 DB.init(function() {
   // DB is ready - load players and set up sync
   loadPlayers();
@@ -351,11 +354,25 @@ DB.init(function() {
 
 // Sync pending registrations → players list
 function syncPendingList(pending) {
-  var total = pending.length;
+  // Deduplicate: skip any pending IDs already processed in this session
+  var toSync = pending.filter(function(reg) {
+    var pid = reg.id || reg._local_id;
+    if (!pid || _syncedPendingIds[pid]) {
+      console.log('[Players] Skipping duplicate pending:', pid);
+      return false;
+    }
+    _syncedPendingIds[pid] = true;
+    return true;
+  });
+
+  if (toSync.length === 0) return;
+
+  var total = toSync.length;
   var done = 0;
-  pending.forEach(function(reg) {
+  toSync.forEach(function(reg) {
     var player = normalizeRegData(reg);
     var pendingId = reg.id || reg._local_id;
+    console.log('[Players] Syncing pending:', pendingId, '→', player.name, '| status:', player.status);
     DB.upsertPlayer(player, function(result) {
       done++;
       console.log('[Players] Imported:', player.name, result);
@@ -366,7 +383,7 @@ function syncPendingList(pending) {
       if (done === total) {
         setTimeout(function() {
           loadPlayers();
-          showToast('检测到 ' + total + ' 条新注册申请，已导入！', 'success');
+          showToast('检测到 ' + total + ' 条新注册申请，已导入待审核！', 'success');
         }, 300);
       }
     });
