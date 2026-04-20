@@ -493,7 +493,7 @@ function renderPlayers() {
         '<div class="player-tags">'+posTags+'</div>'+
         '<div class="player-extras">'+
           (p.hkab_id?'<span class="badge badge-purple">🏅 '+escHtml(p.hkab_id)+'</span>':'')+
-          '<span class="badge '+(p.status===\'active\'?'badge-success\':\'badge-neutral\')+'">'+(p.status===\'active\'?'活跃':'非活跃')+'</span>'+
+          '<span class="badge '+(p.status==="active"?"badge-success":"badge-neutral")+'">'+(p.status==="active"?"活跃":"非活跃")+'</span>'+
           (p.contact_phone?'<span class="badge badge-accent">📞</span>':'')+
         '</div>'+
       '</div>'+
@@ -794,7 +794,7 @@ window.viewPlayer=function(id){
         '<div style="flex:1;">'+
           '<div class="view-name">'+escHtml(p.name)+'</div>'+
           '<div class="view-sub">'+(p.player_id||'')+' · '+calcAge(p.birth_date)+'岁 · '+GENDER_MAP[p.gender]+'</div>'+
-          '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">'+posTags+' <span class="badge '+(p.status===\'active\'?'badge-success\':\'badge-neutral\')+'">'+(p.status===\'active\'?'活跃':'非活跃')+'</span></div>'+
+          '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">'+posTags+' <span class="badge '+(p.status==="active"?"badge-success":"badge-neutral")+'">'+(p.status==="active"?"活跃":"非活跃")+'</span></div>'+
         '</div>'+
       '</div>'+
       '<div class="view-body">'+
@@ -814,7 +814,7 @@ window.viewPlayer=function(id){
       '</div>'+
       '<div class="view-footer">'+
         '<button class="btn btn-ghost" onclick="closeModal(\'view-modal\')">关闭</button>'+
-        '<button class="btn btn-primary" onclick="closeModal(\'view-modal\');editPlayer(\''+escAttr(p.id)+\'\')">编辑</button>'+
+        '<button class="btn btn-primary" onclick="closeModal(\'view-modal\');editPlayer(\''+escAttr(p.id)+'\')">编辑</button>'+
       '</div>'+
     '</div>'+
   '</div>';
