@@ -382,6 +382,17 @@ var POS_COLORS={'投手':'#8b5cf6','捕手':'#f97316','一垒手':'#f59e0b','二
 var _selectedPositions=[];
 var _photoBase64=null;
 var _submitData=null;
+var _dbReady=false;
+
+// Init DB on page load (async, don't wait)
+(function initDB(){
+  if(typeof DB!=='undefined'){
+    DB.init(function(){
+      _dbReady=true;
+      console.log('[Register] DB ready, Firebase:', FirebaseService.isConfigured ? 'ON' : 'OFF');
+    });
+  }
+})();
 
 // ============================================================
 //  TOAST
@@ -494,6 +505,7 @@ function showErrors(errors){
 //  SUBMIT
 // ============================================================
 function submitRegistration(){
+  console.log('[DEBUG] submitRegistration called');
   var errors=validate();
   if(errors.length>0){ showErrors(errors); showToast('请填写必填项','error'); return; }
 
@@ -527,18 +539,21 @@ function submitRegistration(){
   localStorage.setItem('baseai_pending_players',JSON.stringify(pending));
 
   // Save to Firebase via DB service (real-time sync)
-  if (typeof DB !== 'undefined') {
-    DB.submitRegistration(data, function(result) {
-      if (result && result.success) {
-        console.log('[Firebase] Registration submitted:', result.id);
+  try {
+    if (typeof DB !== 'undefined' && DB.submitRegistration) {
+      console.log('[Register] Submitting to Firebase...');
+      showToast('正在提交...','info');
+      DB.submitRegistration(data, function(result) {
+        console.log('[Register] Submit result:', result);
         showSuccess();
-      } else {
-        // Firebase failed but localStorage saved - still show success
-        showSuccess();
-      }
-    });
-  } else {
-    showSuccess();
+      });
+    } else {
+      console.warn('[Register] DB not available, saving to localStorage only');
+      showSuccess();
+    }
+  } catch(e) {
+    console.error('[Register] Submit error:', e);
+    showToast('提交失败，已本地保存','error');
   }
   _submitData=data;
 }
