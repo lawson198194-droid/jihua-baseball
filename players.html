@@ -805,10 +805,10 @@ window.viewPlayer=function(id){
           '<div class="view-item"><div class="v-label">体重</div><div class="v-value">'+(p.weight_kg?p.weight_kg+" kg":"-")+'</div></div>'+
           '<div class="view-item"><div class="v-label">打击</div><div class="v-value">'+formatHand(p.batting_hand)+'</div></div>'+
           '<div class="view-item"><div class="v-label">投球</div><div class="v-value">'+formatHand(p.throwing_hand)+'</div></div>'+
-          '<div class="view-item"><div class="v-label">就读学校</div><div class="v-value">'+(p.school||\'-\')+'</div></div>'+
-          '<div class="view-item"><div class="v-label">所属俱乐部</div><div class="v-value" style="color:var(--accent)">'+(p.club||\'-\')+'</div></div>'+
-          (p.hkab_id?'<div class="view-item full"><div class="v-label">🏅 棒总会员编号</div><div class="v-value" style="color:var(--purple)">'+escHtml(p.hkab_id)+'</div></div>':\'\')+
-          (p.notes?'<div class="view-item full"><div class="v-label">备注</div><div class="v-value" style="color:var(--text-secondary);font-weight:400">'+escHtml(p.notes)+'</div></div>':\'\')+
+          '<div class="view-item"><div class="v-label">就读学校</div><div class="v-value">'+(p.school||'-')+'</div></div>'+
+          '<div class="view-item"><div class="v-label">所属俱乐部</div><div class="v-value" style="color:var(--accent)">'+(p.club||'-')+'</div></div>'+
+          (p.hkab_id?'<div class="view-item full"><div class="v-label">🏅 棒总会员编号</div><div class="v-value" style="color:var(--purple)">'+escHtml(p.hkab_id)+'</div></div>':'')+
+          (p.notes?'<div class="view-item full"><div class="v-label">备注</div><div class="v-value" style="color:var(--text-secondary);font-weight:400">'+escHtml(p.notes)+'</div></div>':'')+
         '</div></div>'+
         contactHtml+
       '</div>'+
