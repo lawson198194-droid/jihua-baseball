@@ -9,9 +9,12 @@
     isConfigured: false,
 
     init: function(callback) {
+      var self = this;
       // Check if Firebase compat SDK is loaded (global firebase namespace)
       if (typeof firebase === 'undefined' || typeof firebase.app === 'undefined') {
         console.warn('[Firebase] SDK not loaded, falling back to localStorage');
+        this.isConfigured = false;
+        this.db = null;
         if (callback) callback(false);
         return;
       }
@@ -34,6 +37,8 @@
         if (callback) callback(true);
       } catch(e) {
         console.error('[Firebase] Init failed:', e);
+        this.isConfigured = false;
+        this.db = null;
         if (callback) callback(false);
       }
     },
