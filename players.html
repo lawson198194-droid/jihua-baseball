@@ -306,6 +306,11 @@ input,select,textarea { font-family: inherit; }
   </div>
 </div>
 
+<!-- Firebase SDK + BaseAI Data Layer -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="firebase-service.js"></script>
+<script src="db.js"></script>
 <script>
 // ============================================================
 //  CONSTANTS
@@ -320,47 +325,11 @@ var GENDER_MAP = { 'M':'男','F':'女' };
 var CONTACT_RELATIONS = ['父亲','母亲','监护人','其他'];
 
 // ============================================================
-//  IN-MEMORY DB WITH NEW FIELDS
+//  DB INIT (Firebase if configured, else localStorage fallback)
 // ============================================================
-var _inMemoryDB = { players: [], teams: [], games: [] };
-
-(function seedDemoData() {
-  _inMemoryDB.players = [
-    { id:'P001', player_id:'P001', name:'罗莀安', gender:'F', birth_date:'2014-03-15', positions:['投手'], batting_hand:'R', throwing_hand:'R', height_cm:148, weight_kg:42, school:'香港国际学校', club:'香港棒垒球总会 U12 精英队', hkab_id:'HKBA-2024-0012', contact_name:'罗先生', contact_phone:'+852 6123 4567', contact_relation:'父亲', photo:null, status:'active', notes:'左撇子潜力投手' },
-    { id:'P002', player_id:'P002', name:'陈伟豪', gender:'M', birth_date:'2013-07-22', positions:['捕手','一垒手'], batting_hand:'R', throwing_hand:'R', height_cm:155, weight_kg:48, school:'圣保罗小学', club:'香港棒垒球总会 U12', hkab_id:'HKBA-2024-0023', contact_name:'陈太', contact_phone:'+852 9876 5432', contact_relation:'母亲', photo:null, status:'active', notes:'主力捕手' },
-    { id:'P003', player_id:'P003', name:'张芷晴', gender:'F', birth_date:'2014-01-08', positions:['中外野','左外野'], batting_hand:'L', throwing_hand:'R', height_cm:145, weight_kg:40, school:'拔萃女小学', club:'拔萃女书院附小', hkab_id:'HKBA-2024-0008', contact_name:'张太', contact_phone:'+852 5555 1234', contact_relation:'母亲', photo:null, status:'active', notes:'外野核心' },
-    { id:'P004', player_id:'P004', name:'李浩然', gender:'M', birth_date:'2013-11-30', positions:['游击手','二垒手'], batting_hand:'R', throwing_hand:'R', height_cm:152, weight_kg:45, school:'喇沙小学', club:'香港棒垒球总会 U12', hkab_id:'HKBA-2024-0019', contact_name:'李先生', contact_phone:'+852 2222 8888', contact_relation:'父亲', photo:null, status:'active', notes:'内野防守中枢' },
-    { id:'P005', player_id:'P005', name:'王晓琳', gender:'F', birth_date:'2014-05-18', positions:['一垒手','指定打击'], batting_hand:'S', throwing_hand:'L', height_cm:143, weight_kg:38, school:'协恩中学附属小学', club:'协恩附小棒球队', hkab_id:'HKBA-2024-0015', contact_name:'王太太', contact_phone:'+852 3333 4444', contact_relation:'母亲', photo:null, status:'active', notes:'强打型一垒' },
-    { id:'P006', player_id:'P006', name:'刘健文', gender:'M', birth_date:'2013-09-12', positions:['三垒手'], batting_hand:'R', throwing_hand:'R', height_cm:158, weight_kg:50, school:'英华小学', club:'香港棒垒球总会 U12', hkab_id:'HKBA-2024-0021', contact_name:'刘太', contact_phone:'+852 7777 6666', contact_relation:'母亲', photo:null, status:'active', notes:'力量型三垒' },
-    { id:'P007', player_id:'P007', name:'何美琪', gender:'F', birth_date:'2014-02-28', positions:['左外野','中外野'], batting_hand:'L', throwing_hand:'L', height_cm:146, weight_kg:41, school:'玛利诺小学', club:'玛利诺棒球队', hkab_id:'HKBA-2024-0011', contact_name:'何先生', contact_phone:'+852 4444 5555', contact_relation:'父亲', photo:null, status:'active', notes:'速度型外野' },
-    { id:'P008', player_id:'P008', name:'周俊杰', gender:'M', birth_date:'2013-06-05', positions:['二垒手','游击手'], batting_hand:'R', throwing_hand:'R', height_cm:150, weight_kg:44, school:'圣公会小学', club:'香港棒垒球总会 U12', hkab_id:'HKBA-2024-0025', contact_name:'周太', contact_phone:'+852 6666 7777', contact_relation:'母亲', photo:null, status:'active', notes:'内野万金油' }
-  ];
-})();
-
-var DB = {
-  isReady: function() { return true; },
-  getMode: function() { return 'in-memory'; },
-  getPlayers: function(filters) {
-    var data = _inMemoryDB.players;
-    return Promise.resolve({ data: data || [], error: null });
-  },
-  upsertPlayer: function(p) {
-    var idx = _inMemoryDB.players.findIndex(function(x){ return x.id === p.id || x.player_id === p.player_id; });
-    if (idx >= 0) { _inMemoryDB.players[idx] = Object.assign({}, _inMemoryDB.players[idx], p); }
-    else {
-      p.id = p.id || ('P' + String(_inMemoryDB.players.length + 1).padStart(3,'0'));
-      p.player_id = p.player_id || p.id;
-      p.positions = p.positions || [];
-      p.status = p.status || 'active';
-      _inMemoryDB.players.push(p);
-    }
-    return Promise.resolve({ data: [p], error: null });
-  },
-  deletePlayer: function(id) {
-    _inMemoryDB.players = _inMemoryDB.players.filter(function(p){ return p.id !== id && p.player_id !== id; });
-    return Promise.resolve({ data: null, error: null });
-  }
-};
+DB.init(function() {
+  testFirebaseConnection();
+});
 
 // ============================================================
 //  HELPERS
@@ -846,93 +815,6 @@ document.getElementById('btn-copy-link').addEventListener('click',function(){
 });
 
 // ============================================================
-//  AUTO-IMPORT FROM REGISTER PAGE
-// ============================================================
-
-// Convert register.html field names → player field names
-function normalizeRegData(data){
-  var pos=[];
-  if(data.position_1) pos.push(data.position_1);
-  if(data.position_2) pos.push(data.position_2);
-  if(data.position_3) pos.push(data.position_3);
-  return {
-    name: data.name||'',
-    gender: data.gender||'',
-    birth_year: data.birth_date ? parseInt(data.birth_date.split('-')[0]) : null,
-    school: data.school||'',
-    grade: data.grade||'',
-    positions: pos,
-    contact_name: data.contact_name||'',
-    phone_main: data.phone_main||'',
-    phone_backup: data.phone_backup||'',
-    relationship: data.relationship||'',
-    club: data.club||'',
-    hkab_id: data.hkab_id||'',
-    notes: data.notes||'',
-    status: 'pending',
-    batting_hand: '',
-    throwing_hand: '',
-    height_cm: null,
-    weight_kg: null,
-    photo: null
-  };
-}
-
-function doImportPlayer(data, onDone){
-  var normalized=normalizeRegData(data);
-  DB.upsertPlayer(normalized).then(function(){
-    if(onDone) onDone();
-  }).catch(function(e){
-    console.warn('Import failed:', e);
-    if(onDone) onDone();
-  });
-}
-
-function checkAutoImport() {
-  var pendingCount=0;
-  var totalImported=0;
-  var names=[];
-
-  // 1) From URL ?prefill=... (direct invite link, prefill is light data)
-  var params=new URLSearchParams(window.location.search);
-  var prefill=params.get('prefill');
-  if(prefill){
-    try{
-      var data=JSON.parse(decodeURIComponent(escape(atob(prefill))));
-      if(data.name){
-        doImportPlayer(data, function(){
-          names.push(data.name);
-          totalImported++;
-          window.history.replaceState({},'',window.location.pathname);
-        });
-      }
-    }catch(e){ console.warn('Auto-import from URL failed:',e); }
-  }
-
-  // 2) From localStorage pending list (register.html saves here)
-  try{
-    var pending=JSON.parse(localStorage.getItem('baseai_pending_players')||'[]');
-    pendingCount=pending.length;
-    if(pending.length>0){
-      pending.forEach(function(data){
-        doImportPlayer(data, function(){
-          names.push(data.name);
-          totalImported++;
-          pendingCount--;
-          if(pendingCount===0){
-            localStorage.removeItem('baseai_pending_players');
-            loadPlayers();
-            if(totalImported>0){
-              showToast('检测到 '+totalImported+' 条新注册申请，已导入待审核！','success');
-            }
-          }
-        });
-      });
-    }
-  }catch(e){ console.warn('Auto-import from localStorage failed:',e); }
-}
-
-// ============================================================
 //  LOAD PLAYERS
 // ============================================================
 function loadPlayers() {
@@ -946,7 +828,7 @@ function loadPlayers() {
     console.log('[DEBUG] renderPlayers done');
     buildPosFilter();
     showToast('已加载 '+allPlayers.length+' 名球员','success');
-    checkAutoImport();
+    // checkAutoImport removed — Firebase handles real-time sync automatically
   });
 }
 
