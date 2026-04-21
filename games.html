@@ -97,19 +97,21 @@ input, select, textarea { font-family: inherit; }
 .scoreboard-card:hover { border-color: rgba(249,115,22,0.4); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
 .score-header { display: flex; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border-light); justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .score-date { font-size: 12px; color: var(--text-muted); }
-.score-teams { display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; padding: 16px 20px; }
-.score-team { text-align: center; min-width: 120px; }
-.score-team-name { font-size: 14px; font-weight: 700; }
-.score-team-scr { font-size: 36px; font-weight: 900; font-family: 'JetBrains Mono', monospace; }
+.score-teams { display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; padding: 20px; background: var(--bg-primary); }
+.score-team { text-align: center; min-width: 140px; }
+.score-team-name { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; }
+.score-team-scr { font-size: 42px; font-weight: 900; font-family: 'JetBrains Mono', monospace; line-height: 1; }
 .score-vs { font-size: 20px; font-weight: 700; color: var(--text-muted); }
 .score-center { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .score-info { font-size: 11px; color: var(--text-muted); text-align: center; }
-.inning-bar { padding: 8px 20px; display: flex; gap: 4px; align-items: center; overflow-x: auto; }
-.inning-cell { min-width: 36px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: var(--bg-secondary); color: var(--text-secondary); }
+.inning-bar { padding: 10px 20px; display: flex; gap: 4px; align-items: center; overflow-x: auto; background: var(--bg-card); flex-wrap: wrap; }
+.inning-group { display: flex; align-items: center; gap: 4px; }
+.inning-label { font-size: 10px; color: var(--text-muted); min-width: 20px; }
+.inning-cell { min-width: 32px; height: 26px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: var(--bg-secondary); color: var(--text-secondary); }
 .inning-cell.home { background: rgba(99,102,241,0.15); color: #818cf8; }
 .inning-cell.away { background: rgba(245,158,11,0.15); color: #fbbf24; }
 .inning-cell.total { background: var(--border-light); font-size: 12px; font-weight: 800; }
-.score-footer { padding: 10px 20px; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; }
+.score-footer { padding: 12px 20px; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
 .game-status-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
 .status-completed { background: var(--success-bg); color: var(--success); }
 .status-in-progress { background: var(--warning-bg); color: var(--warning); }
@@ -896,11 +898,34 @@ document.querySelectorAll('.game-tab').forEach(function(btn){
 initNav();
 DB.init(function(){
   _dbInited = true;
+  // Load games and players in parallel, then render
+  var loaded = 0, playersDone = false, gamesDone = false;
+  function check() {
+    loaded++;
+    if (loaded >= 2) {
+      // Sync game roster player data with latest players
+      allPlayers.forEach(function(p) {
+        allGames.forEach(function(g) {
+          (g.roster||[]).forEach(function(r) {
+            if (r.player_id === p.id || r.player_id === p.player_id) {
+              r.name = p.name;
+              r.number = p.number || p.jersey_number || '';
+            }
+          });
+        });
+      });
+      renderGames();
+      _pendingLoads.forEach(function(fn){ fn(); });
+    }
+  }
   DB.getPlayers(function(r){
-    allPlayers = (r&&r.data)||[];
-    allPlayers = allPlayers.filter(function(p){ return p.status==='active'; });
-    loadGames();
-    _pendingLoads.forEach(function(fn){ fn(); });
+    allPlayers = ((r&&r.data)||[]).filter(function(p){ return p.status==='active'; });
+    playersDone = true;
+    check();
   });
-  _pendingLoads.forEach(function(fn){ fn(); });
+  DB.getGames(function(r){
+    allGames = (r&&r.data)||[];
+    gamesDone = true;
+    check();
+  });
 });
