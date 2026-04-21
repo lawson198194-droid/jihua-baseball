@@ -464,22 +464,23 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   function getYearRangeByCategory(cat) {
-    var y = new Date().getFullYear();
     var ranges = {
-      u8:  { from: y - 8,  to: y },
-      u10: { from: y - 10, to: y },
-      u12: { from: y - 12, to: y },
-      u15: { from: y - 15, to: y },
-      u18: { from: y - 18, to: y },
-      uw18:{ from: y - 18, to: y }
+      u8:   { from: null, to: 2018 },   // 2018年及以前
+      u10:  { from: 2016, to: 2017 },   // 2016-2017年
+      u12:  { from: 2014, to: 2015 },   // 2014-2015年
+      u15:  { from: 2011, to: 2013 },   // 2011-2013年
+      u18:  { from: null, to: 2010 },   // 2010年及以前
+      uw18: { from: null, to: 2010 }
     };
-    return ranges[cat] || { from: y - 18, to: y };
+    return ranges[cat] || { from: null, to: 2010 };
   }
 
   function isInAgeGroup(birthYear, cat) {
     if (!birthYear) return false;
     var yr = getYearRangeByCategory(cat);
-    return birthYear >= yr.from && birthYear <= yr.to;
+    if (yr.from !== null && birthYear < yr.from) return false;
+    if (yr.to !== null && birthYear > yr.to) return false;
+    return true;
   }
 
   function getPlayerBirthYear(p) {
