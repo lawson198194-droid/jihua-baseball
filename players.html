@@ -901,6 +901,7 @@ function openAddModal(player) {
           // Row 3: Birth Date + Club
           '<div class="form-group"><label>出生日期</label><input type="date" id="f-birth" value="'+(player.birth_date||'')+'"></div>'+
           '<div class="form-group"><label>所属俱乐部</label><input id="f-club" value="'+escAttr(player.club||'')+'" placeholder="如：香港棒垒球总会 U12"></div>'+
+          '<div class="form-group"><label>📧 家长邮件</label><input id="f-email" type="email" value="'+escAttr(player.parent_email||'')+'" placeholder="parent@example.com"></div>'+
           // Row 3.5: Team selector
           '<div class="form-group"><label>🏆 所属球队</label><select id="f-team">'+
             '<option value="">— 未分配 —</option>'+
@@ -976,6 +977,7 @@ function openAddModal(player) {
       school:document.getElementById('f-school').value.trim(),
       club:document.getElementById('f-club').value.trim(),
       team_id:document.getElementById('f-team').value || null,
+      parent_email:document.getElementById('f-email').value.trim(),
       age_group:document.getElementById('f-agegroup').value,
       hkab_id:document.getElementById('f-hkab').value.trim(),
       contact_name:document.getElementById('f-contact-name').value.trim(),
@@ -1073,6 +1075,7 @@ window.viewPlayer=function(id){
       makeFieldRow('打击', formatHand(p.batting_hand)) +
       makeFieldRow('投球', formatHand(p.throwing_hand)) +
       makeFieldRow('就读学校', p.school) +
+      makeFieldRow('📧 家长邮件', p.parent_email || '—', p.parent_email ? 'var(--primary)' : '') +
       makeFieldRow('所属俱乐部', p.club, 'var(--accent)') +
       makeFieldRow('🏆 梯队组别', p.age_group ? '<span style="color:'+getAgeGroupColor(p.age_group)+';font-weight:600">'+getAgeGroupLabel(p.age_group)+'</span>' : '— 未分配 —', p.age_group ? getAgeGroupColor(p.age_group) : '') +
       makeFieldRow('所属球队', p.team_id ? escHtml(getTeamName(p.team_id)) : '— 未分配 —', p.team_id ? 'var(--accent)' : '') +
