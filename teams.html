@@ -469,8 +469,8 @@ document.addEventListener('DOMContentLoaded', function() {
       u10:  { from: 2016, to: 2017 },    // 2016–2017
       u12:  { from: 2014, to: 2015 },    // 2014–2015
       u15:  { from: 2011, to: 2013 },    // 2011–2013
-      u18:  { from: 2008, to: 2010 },    // 2008–2010
-      uw18: { from: 2008, to: 2010 }
+      u18:  { from: 2008, to: 2010 },    // 2008–2010 男生
+      uw18: { from: 2008, to: 2013 },     // 2008–2013 女生（UW18）
     };
     return ranges[cat] || { from: 2008, to: 2010 };
   }
@@ -505,6 +505,11 @@ document.addEventListener('DOMContentLoaded', function() {
     var availablePlayers = allPlayers.filter(function(p){
       if (teamPlayerIds[p.id]) return false;
       if (p.status !== 'active') return false;
+      // UW18 只允许女生（F/female/女）
+      if (t.category === 'uw18') {
+        var g = (p.gender || '').toUpperCase();
+        if (g !== 'F' && g !== '女') return false;
+      }
       var by = getPlayerBirthYear(p);
       return isInAgeGroup(by, t.category);
     });
