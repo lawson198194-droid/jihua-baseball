@@ -1258,8 +1258,11 @@ document.getElementById('btn-add').addEventListener('click',function(){ openAddM
 //  INIT
 // ============================================================
 initNav({ title:'球员资料库', subtitle:'Module 01 · Player Registry v3.0' });
-console.log('[DEBUG] nav inited');
-// NOTE: loadPlayers() is called inside DB.init() callback after DB is ready
+
+DB.init(function() {
+  console.log('[DEBUG] DB inited, calling loadPlayers');
+  loadPlayers();
+});
 
 // Listen for team assignment changes from team management module (跨页面同步)
 window.addEventListener('storage', function(e) {
