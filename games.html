@@ -652,15 +652,14 @@ function saveGameBasic(game, isEdit) {
     closeModal('game-modal');
     showToast(isEdit?'赛事已更新':'赛事已保存，现在选择参赛阵容','success');
     var newId = res.id;
-    _onDBReady(function(){
-      loadGames(function(){
-        if (!isEdit) openRosterModal(newId);
-      });
+    // Open roster modal first, then refresh game list
+    openRosterModal(newId, function() {
+      loadGames();
     });
   });
 }
 
-function openRosterModal(gameId) {
+function openRosterModal(gameId, cb) {
   DB.getGame(gameId, function(res){
     var game = res.data || {};
     _rosterIds = new Set((game.roster||[]).map(function(p){ return p.player_id||p.id; }));
@@ -673,6 +672,7 @@ function openRosterModal(gameId) {
     } else {
       renderRosterModal(game);
     }
+    if (cb) cb();
   });
 }
 
@@ -932,11 +932,12 @@ function saveRosterAndBind(gameId) {
   }); // end DB.getGame
 }
 
-function viewRoster(gameId) {
+function viewRoster(gameId, cb) {
   DB.getGame(gameId, function(res) {
     var game = res.data||{};
     _rosterIds = new Set((game.roster||[]).map(function(p){ return p.player_id||p.id; }));
     renderRosterModal(game);
+    if (cb) cb();
   });
 }
 
