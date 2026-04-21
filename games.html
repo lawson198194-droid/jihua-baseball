@@ -642,6 +642,8 @@ function saveGameBasic(game, isEdit) {
     hk_team_key: gc&&gc.success ? gc.hk_team_key : null,
     hk_batting: gc&&gc.success ? gc.hk_batting : [],
     hk_pitching: gc&&gc.success ? gc.hk_pitching : [],
+    hk_runs_by_inning: gc&&gc.success ? (gc.hk_runs_by_inning||[]) : [],
+    hk_pdf_players: gc&&gc.success ? gc.hk_batting.concat(gc.hk_pitching).filter(function(v,i,a){return a.findIndex(function(t){return t.name===v.name;})===i;}).map(function(v){return v.name;}) : [],
     roster: game.roster || []
   };
   if (isEdit) data.id = game.id;
@@ -662,8 +664,35 @@ function openRosterModal(gameId) {
   DB.getGame(gameId, function(res){
     var game = res.data || {};
     _rosterIds = new Set((game.roster||[]).map(function(p){ return p.player_id||p.id; }));
-    renderRosterModal(game);
+    // Auto-pre-select players matching PDF batting/pitching names
+    if ((game.hk_batting||[]).length > 0 || (game.hk_pitching||[]).length > 0) {
+      autoMatchPlayers(game, function(matchedIds){
+        matchedIds.forEach(function(id){ _rosterIds.add(id); });
+        renderRosterModal(game);
+      });
+    } else {
+      renderRosterModal(game);
+    }
   });
+}
+
+// Auto-match PDF player names to library players
+function autoMatchPlayers(game, callback) {
+  var pdfPlayers = (game.hk_batting||[]).concat(game.hk_pitching||[]);
+  if (!pdfPlayers.length) { callback([]); return; }
+  var matched = [];
+  allPlayers.forEach(function(p){
+    var pn = (p.name||'').toLowerCase();
+    for (var i=0; i<pdfPlayers.length; i++) {
+      var bn = (pdfPlayers[i].name||'').toLowerCase();
+      if (pn===bn || pn.includes(bn) || bn.includes(pn) || pn.split(' ')[0]===bn.split(' ')[0]) {
+        var pid = p.id||p.player_id;
+        if (!matched.includes(pid)) matched.push(pid);
+        break;
+      }
+    }
+  });
+  callback(matched);
 }
 
 function renderRosterModal(game) {
@@ -740,7 +769,9 @@ function toggleRosterPlayer(pid) {
   }
   var game = window._currentGame;
   DB.getGame(game&&game.id, function(res) {
-    renderRosterModal(res.data||{});
+    var g = res.data||{};
+    renderRosterModal(g);
+    window._currentGame = g;
   });
 }
 
@@ -758,28 +789,39 @@ function renderStatsBind(game) {
   if (!area) return;
   var batting = game.hk_batting||[];
   var pitching = game.hk_pitching||[];
-  var roster = game.roster||[];
-  var rosterNames = {};
-  roster.forEach(function(p){ rosterNames[p.name||''] = p; });
+  // Get currently selected player IDs
+  var selectedIds = Array.from(_rosterIds);
+  // Build lookup from player ID → player record
+  var playerById = {};
+  allPlayers.forEach(function(p){ playerById[p.id||p.player_id]=p; });
 
-  var h = '<div class="roster-section"><div class="roster-section-title">📊 数据绑定（PDF 数据 → 球员）</div>';
+  var h = '<div class="roster-section"><div class="roster-section-title">📊 数据绑定预览（PDF 球员 → 资料库球员）</div>';
+  h += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">点击卡片右侧筛选，自动匹配 '+(batting.length+pitching.length)+' 个球员</div>';
+
+  var matched=0, unmatched=0;
 
   if (batting.length) {
-    h += '<div class="gc-section-label">⚾ 打击数据（PDF 中的球员）</div>';
+    h += '<div class="gc-section-label">⚾ 打击数据</div>';
     batting.forEach(function(b) {
-      var matched = roster.find(function(p){
+      var matchedPlayer = null;
+      selectedIds.forEach(function(pid){
+        var p = playerById[pid];
+        if (!p) return;
         var pn = (p.name||'').toLowerCase();
         var bn = (b.name||'').toLowerCase();
-        return pn===bn || pn.includes(bn) || bn.includes(pn);
+        if (pn===bn||pn.includes(bn)||bn.includes(pn)||pn.split(' ')[0]===bn.split(' ')[0]) {
+          matchedPlayer = p;
+        }
       });
+      var status = matchedPlayer
+        ? '<span style="color:#22c55e;font-weight:700">✓ 已绑定 → '+escHtml(matchedPlayer.name||'')+' #'+(matchedPlayer.number||matchedPlayer.jersey_number||'')+'</span>'
+        : '<span class="stat-bind-none">待匹配...</span>';
+      if (matchedPlayer) matched++; else unmatched++;
       h += '<div class="stat-bind-row">'+
-        '<div class="stat-bind-name">'+escHtml(b.name||'')+'</div>'+
+        '<div class="stat-bind-name">'+escHtml(b.name||'')+' #'+escHtml(b.number||'')+'</div>'+
         '<div class="stat-bind-val">AB:'+b.ab+' H:'+b.h+' R:'+b.r+' BB:'+b.bb+' SO:'+b.so+' RBI:'+b.rbi+'</div>'+
         '<div class="stat-bind-arrow">→</div>'+
-        '<div class="stat-bind-target">'+
-          (matched ? '<span style="color:var(--success)">✓ 已绑定: '+escHtml(matched.name||'')+'</span>' :
-                     '<span class="stat-bind-none">未找到匹配球员</span>')+
-        '</div>'+
+        '<div class="stat-bind-target">'+status+'</div>'+
       '</div>';
     });
   }
@@ -787,22 +829,33 @@ function renderStatsBind(game) {
   if (pitching.length) {
     h += '<div class="gc-section-label">🎯 投球数据</div>';
     pitching.forEach(function(b) {
-      var matched = roster.find(function(p){
+      var matchedPlayer = null;
+      selectedIds.forEach(function(pid){
+        var p = playerById[pid];
+        if (!p) return;
         var pn = (p.name||'').toLowerCase();
         var bn = (b.name||'').toLowerCase();
-        return pn===bn || pn.includes(bn) || bn.includes(pn);
+        if (pn===bn||pn.includes(bn)||bn.includes(pn)||pn.split(' ')[0]===bn.split(' ')[0]) {
+          matchedPlayer = p;
+        }
       });
+      var status = matchedPlayer
+        ? '<span style="color:#22c55e;font-weight:700">✓ 已绑定 → '+escHtml(matchedPlayer.name||'')+' #'+(matchedPlayer.number||matchedPlayer.jersey_number||'')+'</span>'
+        : '<span class="stat-bind-none">待匹配...</span>';
+      if (matchedPlayer) matched++; else unmatched++;
       h += '<div class="stat-bind-row">'+
-        '<div class="stat-bind-name">'+escHtml(b.name||'')+'</div>'+
+        '<div class="stat-bind-name">'+escHtml(b.name||'')+' #'+escHtml(b.number||'')+'</div>'+
         '<div class="stat-bind-val">IP:'+fmtIP(b.ip)+' H:'+b.h+' R:'+b.r+' ER:'+b.er+' BB:'+b.bb+' SO:'+b.so+'</div>'+
         '<div class="stat-bind-arrow">→</div>'+
-        '<div class="stat-bind-target">'+
-          (matched ? '<span style="color:var(--success)">✓ 已绑定: '+escHtml(matched.name||'')+'</span>' :
-                     '<span class="stat-bind-none">未找到匹配球员</span>')+
-        '</div>'+
+        '<div class="stat-bind-target">'+status+'</div>'+
       '</div>';
     });
   }
+
+  h += '<div style="margin-top:8px;font-size:12px;text-align:right;">'+
+    '<span style="color:#22c55e">✓ 已匹配: '+matched+'</span> · '+
+    '<span style="color:#ef4444">待匹配: '+unmatched+'</span>'+
+  '</div>';
 
   h += '</div>';
   area.innerHTML = h;
@@ -810,70 +863,73 @@ function renderStatsBind(game) {
 
 function saveRosterAndBind(gameId) {
   var selectedPlayers = allPlayers.filter(function(p){ return _rosterIds.has(p.id||p.player_id); });
-  // Build roster with stats
-  var gc = _gcResult;
-  var roster = selectedPlayers.map(function(p) {
-    var pn = (p.name||'').toLowerCase();
-    var bs = null, ps = null;
-    if (gc && gc.success) {
-      (gc.hk_batting||[]).forEach(function(b){
+  // Fetch game to get PDF batting/pitching data saved from step 1
+  DB.getGame(gameId, function(res){
+    var game = res.data||{};
+    var batting = game.hk_batting||[];
+    var pitching = game.hk_pitching||[];
+
+    var roster = selectedPlayers.map(function(p) {
+      var pn = (p.name||'').toLowerCase();
+      var bs = null, ps = null;
+      batting.forEach(function(b){
         var bn = (b.name||'').toLowerCase();
-        if (pn===bn||pn.includes(bn)||bn.includes(pn)) bs = b;
+        if (pn===bn||pn.includes(bn)||bn.includes(pn)||pn.split(' ')[0]===bn.split(' ')[0]) bs=b;
       });
-      (gc.hk_pitching||[]).forEach(function(b){
+      pitching.forEach(function(b){
         var bn = (b.name||'').toLowerCase();
-        if (pn===bn||pn.includes(bn)||bn.includes(pn)) ps = b;
+        if (pn===bn||pn.includes(bn)||bn.includes(pn)||pn.split(' ')[0]===bn.split(' ')[0]) ps=b;
       });
-    }
-    return {
-      player_id: p.id||p.player_id,
-      name: p.name,
-      number: p.number||p.jersey_number||'',
-      batting: bs ? { ab:bs.ab||0, r:bs.r||0, h:bs.h||0, rbi:bs.rbi||0, bb:bs.bb||0, so:bs.so||0 } : null,
-      pitching: ps ? { ip:parseFloat(ps.ip)||0, h:ps.h||0, r:ps.r||0, er:ps.er||0, bb:ps.bb||0, so:ps.so||0, hr:ps.hr||0 } : null
-    };
-  });
+      return {
+        player_id: p.id||p.player_id,
+        name: p.name,
+        number: p.number||p.jersey_number||'',
+        batting: bs ? { ab:bs.ab||0, r:bs.r||0, h:bs.h||0, rbi:bs.rbi||0, bb:bs.bb||0, so:bs.so||0 } : null,
+        pitching: ps ? { ip:parseFloat(ps.ip)||0, h:ps.h||0, r:ps.r||0, er:ps.er||0, bb:ps.bb||0, so:ps.so||0, hr:ps.hr||0 } : null
+      };
+    });
 
   // Save roster
-  DB.setGameRoster(gameId, roster, function() {
-    // Update player lifetime stats
-    var done = 0, total = 0;
-    roster.forEach(function(r) {
-      if (r.batting) total++;
-      if (r.pitching) total++;
-    });
+    DB.setGameRoster(gameId, roster, function() {
+      // Update player lifetime stats
+      var done = 0, total = 0;
+      roster.forEach(function(r) {
+        if (r.batting) total++;
+        if (r.pitching) total++;
+      });
 
-    function checkDone() {
-      done++;
-      if (done >= total) {
+      function checkDone() {
+        done++;
+        if (done >= total) {
+          closeModal('roster-modal');
+          showToast('阵容已保存，球员生涯数据已更新！', 'success');
+          loadGames();
+        }
+      }
+
+      if (total === 0) {
         closeModal('roster-modal');
-        showToast('阵容已保存，球员生涯数据已更新！', 'success');
+        showToast('阵容已保存', 'success');
         loadGames();
+        return;
       }
-    }
 
-    if (total === 0) {
-      closeModal('roster-modal');
-      showToast('阵容已保存', 'success');
-      loadGames();
-      return;
-    }
-
-    roster.forEach(function(r) {
-      if (r.batting) {
-        DB.updatePlayerGameStats(r.player_id, {
-          ab: r.batting.ab, r: r.batting.r, h: r.batting.h,
-          rbi: r.batting.rbi, bb: r.batting.bb, so: r.batting.so
-        }, function(){ checkDone(); });
-      }
-      if (r.pitching) {
-        DB.updatePlayerGameStats(r.player_id, {
-          ip: r.pitching.ip, ph: r.pitching.h, pr: r.pitching.r,
-          per: r.pitching.er, pbb: r.pitching.bb, pso: r.pitching.so, phr: r.pitching.hr
-        }, function(){ checkDone(); });
-      }
-    });
-  });
+      roster.forEach(function(r) {
+        if (r.batting) {
+          DB.updatePlayerGameStats(r.player_id, {
+            ab: r.batting.ab, r: r.batting.r, h: r.batting.h,
+            rbi: r.batting.rbi, bb: r.batting.bb, so: r.batting.so
+          }, function(){ checkDone(); });
+        }
+        if (r.pitching) {
+          DB.updatePlayerGameStats(r.player_id, {
+            ip: r.pitching.ip, ph: r.pitching.h, pr: r.pitching.r,
+            per: r.pitching.er, pbb: r.pitching.bb, pso: r.pitching.so, phr: r.pitching.hr
+          }, function(){ checkDone(); });
+        }
+      });
+    }); // end DB.setGameRoster
+  }); // end DB.getGame
 }
 
 function viewRoster(gameId) {
