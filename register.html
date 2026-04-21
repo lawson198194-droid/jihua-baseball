@@ -212,6 +212,10 @@ input,select,textarea { font-family: inherit; }
           <input type="text" id="f-club" placeholder="如：香港棒垒球总会 U12" maxlength="50">
         </div>
         <div class="form-group">
+          <label>📧 家长电邮地址</label>
+          <input type="email" id="f-email" placeholder="用于接收训练通知" maxlength="80">
+        </div>
+        <div class="form-group">
           <label>🏆 梯队组别</label>
           <select id="f-agegroup">
             <option value="">未选择</option>
@@ -539,6 +543,7 @@ function submitRegistration(){
     contact_phone:document.getElementById('f-contact-phone').value.trim(),
     contact_relation:document.getElementById('f-contact-rel').value,
     contact_phone2:document.getElementById('f-contact-phone2').value.trim(),
+    parent_email:document.getElementById('f-email').value.trim(),
     notes:document.getElementById('f-notes').value.trim(),
     photo:_photoBase64,
     submitted_at:new Date().toISOString(),
