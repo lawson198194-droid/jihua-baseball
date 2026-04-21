@@ -70,7 +70,7 @@
 <body>
 <script src="assets/nav.js?v=3"></script>
 <script>
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', function() {
   initNav({ title:'球队与梯队', subtitle:'Module 02 · Team Management' });
 
   var allTeams = [];
@@ -291,23 +291,26 @@ document.addEventListener('DOMContentLoaded', async function() {
     window._csvRows = rows;
   }
 
-  window.confirmCSVImport = async function() {
+  window.confirmCSVImport = function() {
     var rows = window._csvRows;
     if (!rows || !rows.length) return;
-    try {
-      var genId = genPlayerId();
-      var imported = 0;
-      for (var i = 0; i < rows.length; i++) {
-        rows[i].player_id = genId + i;
-        await DB.upsertPlayer(rows[i]);
-        imported++;
+    var genId = genPlayerId();
+    var total = rows.length;
+    var done = 0;
+    function next(i) {
+      if (i >= total) {
+        document.getElementById('csv-preview').innerHTML = '';
+        showToast('成功导入 ' + done + ' 条球员记录', 'success');
+        loadAll();
+        return;
       }
-      document.getElementById('csv-preview').innerHTML = '';
-      showToast('成功导入 ' + imported + ' 条球员记录', 'success');
-      loadAll();
-    } catch (e) {
-      showToast('导入失败: ' + e.message, 'error');
+      rows[i].player_id = genId + i;
+      DB.upsertPlayer(rows[i], function(r) {
+        done++;
+        next(i + 1);
+      });
     }
+    next(0);
   };
 
   // Modal
@@ -350,7 +353,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (t) openTeamModal(t);
   };
 
-  window.saveTeam = async function(existingId) {
+  window.saveTeam = function(existingId) {
     var name = document.getElementById('t-name').value.trim();
     if (!name) { showToast('请输入球队名称', 'warning'); return; }
     var data = {
@@ -371,21 +374,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     } else {
       data.team_id = genTeamId();
     }
-    try {
-      await DB.upsertTeam(data);
-      closeTeamModal();
-      showToast(existingId ? '球队已更新' : '球队已添加', 'success');
-      loadAll();
-    } catch(e) { showToast('保存失败: '+e.message, 'error'); }
+    DB.upsertTeam(data, function(r) {
+      if (r && r.error) {
+        showToast('保存失败: ' + r.error, 'error');
+      } else {
+        closeTeamModal();
+        showToast(existingId ? '球队已更新' : '球队已添加', 'success');
+        loadAll();
+      }
+    });
   };
 
   window.deleteTeam = function(id, name) {
-    confirmAction('确定删除球队「' + name + '」？', async function() {
-      try {
-        await DB.deleteTeam(id);
-        showToast('球队已删除', 'success');
-        loadAll();
-      } catch(e) { showToast('删除失败', 'error'); }
+    confirmAction('确定删除球队「' + name + '」？', function() {
+      DB.deleteTeam(id, function(r) {
+        if (r && r.error) {
+          showToast('删除失败: ' + r.error, 'error');
+        } else {
+          showToast('球队已删除', 'success');
+          loadAll();
+        }
+      });
     });
   };
 
@@ -562,14 +571,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
   };
 
-  async function loadAll() {
-    try {
-      var tres = await DB.getTeams();
-      var pres = await DB.getPlayers();
-      allTeams = tres.data || [];
-      allPlayers = pres.data || [];
-      renderTeams(allTeams);
-    } catch(e) { showToast('加载失败: '+e.message, 'error'); }
+  function loadAll() {
+    DB.getTeams(function(tres) {
+      allTeams = (tres && tres.data) ? tres.data : [];
+      DB.getPlayers(function(pres) {
+        allPlayers = (pres && pres.data) ? pres.data : [];
+        renderTeams(allTeams);
+      });
+    });
   }
 
   DB.init(function() {
