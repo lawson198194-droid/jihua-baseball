@@ -463,6 +463,31 @@ document.addEventListener('DOMContentLoaded', function() {
     overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
   };
 
+  function getYearRangeByCategory(cat) {
+    var y = new Date().getFullYear();
+    var ranges = {
+      u8:  { from: y - 8,  to: y },
+      u10: { from: y - 10, to: y },
+      u12: { from: y - 12, to: y },
+      u15: { from: y - 15, to: y },
+      u18: { from: y - 18, to: y },
+      uw18:{ from: y - 18, to: y }
+    };
+    return ranges[cat] || { from: y - 18, to: y };
+  }
+
+  function isInAgeGroup(birthYear, cat) {
+    if (!birthYear) return false;
+    var yr = getYearRangeByCategory(cat);
+    return birthYear >= yr.from && birthYear <= yr.to;
+  }
+
+  function getPlayerBirthYear(p) {
+    if (!p || !p.birth_date) return 0;
+    var parts = p.birth_date.split('-');
+    return parseInt(parts[0]) || 0;
+  }
+
   // ── Player Assignment Modal ────────────────────────────────
   window.openManagePlayersModal = function(teamId) {
     var t = allTeams.find(function(x){ return (x.id||x.team_id)===teamId; });
@@ -471,6 +496,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var teamPlayerIds = {};
     teamPlayers.forEach(function(p){ teamPlayerIds[p.id] = true; });
 
+    var yr = getYearRangeByCategory(t.category);
+    var yearLabel = yr.from + '–' + yr.to + ' 年出生';
+
     var overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.id = 'manage-players-modal';
@@ -478,13 +506,14 @@ document.addEventListener('DOMContentLoaded', function() {
     var availablePlayers = allPlayers.filter(function(p){
       if (teamPlayerIds[p.id]) return false;
       if (p.status !== 'active') return false;
-      return true;
+      var by = getPlayerBirthYear(p);
+      return isInAgeGroup(by, t.category);
     });
 
     overlay.innerHTML = `
       <div class="modal" style="max-width:600px;">
         <div class="modal-header">
-          <div class="modal-title">👥 管理球员 — ${escHtml(t.name)} <span style="font-size:12px;font-weight:400;color:var(--text-muted)">（${getCatLabel(t.category)}）</span></div>
+          <div class="modal-title">👥 管理球员 — ${escHtml(t.name)} <span style="font-size:12px;font-weight:400;color:var(--text-muted)">（${getCatLabel(t.category)} · ${yearLabel}）</span></div>
           <button class="modal-close" onclick="closeManagePlayersModal()">✕</button>
         </div>
         <div class="modal-body">
@@ -508,10 +537,11 @@ document.addEventListener('DOMContentLoaded', function() {
             ${availablePlayers.length > 0
               ? '<div style="display:flex;flex-wrap:wrap;gap:6px;max-height:200px;overflow-y:auto;">' +
                   availablePlayers.map(function(p){
+                    var by = getPlayerBirthYear(p);
                     return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg-secondary);border-radius:20px;border:1px solid var(--border);">
                       <div style="width:24px;height:24px;border-radius:50%;background:#3b82f6;color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">${(p.name||'?').charAt(0)}</div>
                       <span style="font-size:12px;font-weight:600;">${escHtml(p.name)}</span>
-                      <span style="font-size:11px;color:var(--text-muted)">${p.age_group||''}</span>
+                      <span style="font-size:11px;color:var(--text-muted)">${by > 0 ? by + '年' : p.age_group||''}</span>
                       <button class="btn btn-ghost btn-sm" style="padding:1px 6px;font-size:11px;color:#10b981;border-color:#10b981" onclick="addPlayerToTeam('${p.id}','${teamId}')">+ 添加</button>
                     </div>`;
                   }).join('') + '</div>'
@@ -537,13 +567,13 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!result.data) { showToast('球员不存在', 'error'); return; }
       var player = result.data;
       player.team_id = teamId;
-      player.age_group = team ? team.category : '';
+      player.age_group = team ? team.category : player.age_group;
       DB.updatePlayer(playerId, player, function() {
         showToast('已添加 ' + player.name + ' 到球队', 'success');
         // Refresh player in allPlayers
         var idx = allPlayers.findIndex(function(p){ return p.id === playerId; });
         if (idx >= 0) allPlayers[idx] = player;
-        // Update player in players.html via localStorage event
+        // Notify players.html and refresh this modal
         localStorage.setItem('baseai_team_updated', teamId + ':' + Date.now());
         closeManagePlayersModal();
         openManagePlayersModal(teamId);
