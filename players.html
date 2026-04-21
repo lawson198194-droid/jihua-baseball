@@ -1269,7 +1269,11 @@ window.addEventListener('storage', function(e) {
   if (e.key === 'baseai_team_updated') {
     DB.getTeams(function(tres) {
       allTeams = tres.data || [];
-      renderPlayers();
+      // Re-fetch players from Firebase to reflect the latest team_id change
+      DB.getPlayers(function(pres) {
+        allPlayers = (pres && pres.data) ? pres.data : [];
+        renderPlayers();
+      });
     });
   }
 });
