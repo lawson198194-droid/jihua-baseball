@@ -912,38 +912,37 @@ document.querySelectorAll('.game-tab').forEach(function(btn){
   initNav();
   DB.init(function(){
     clearTimeout(_initTimer);
-  _dbInited = true;
-  // Load games and players in parallel, then render
-  var loaded = 0, playersDone = false, gamesDone = false;
-  function check() {
-    loaded++;
-    if (loaded >= 2) {
-      // Sync game roster player data with latest players
-      allPlayers.forEach(function(p) {
-        allGames.forEach(function(g) {
-          (g.roster||[]).forEach(function(r) {
-            if (r.player_id === p.id || r.player_id === p.player_id) {
-              r.name = p.name;
-              r.number = p.number || p.jersey_number || '';
-            }
+    _dbInited = true;
+    var loaded = 0, playersDone = false, gamesDone = false;
+    function check() {
+      loaded++;
+      if (loaded >= 2) {
+        // Sync roster player data with latest players
+        allPlayers.forEach(function(p) {
+          allGames.forEach(function(g) {
+            (g.roster||[]).forEach(function(r) {
+              if (r.player_id === p.id || r.player_id === p.player_id) {
+                r.name = p.name;
+                r.number = p.number || p.jersey_number || '';
+              }
+            });
           });
         });
-      });
-      renderGames();
-      _pendingLoads.forEach(function(fn){ fn(); });
+        renderGames();
+        _pendingLoads.forEach(function(fn){ fn(); });
+      }
     }
-  }
-  DB.getPlayers(function(r){
-    allPlayers = ((r&&r.data)||[]).filter(function(p){ return p.status==='active'; });
-    playersDone = true;
-    check();
-  });
-  DB.getGames(function(r){
-    allGames = (r&&r.data)||[];
-    gamesDone = true;
-    check();
-  });
-}); // close DB.init
+    DB.getPlayers(function(r){
+      allPlayers = ((r&&r.data)||[]).filter(function(p){ return p.status==='active'; });
+      playersDone = true;
+      check();
+    });
+    DB.getGames(function(r){
+      allGames = (r&&r.data)||[];
+      gamesDone = true;
+      check();
+    });
+  }); // close DB.init
 
 // 初始化导航
 initNav({ title: '赛事管理与记分', subtitle: 'Module 03 · Game Management v3.0' });
