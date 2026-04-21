@@ -106,5 +106,35 @@ var DB = {
 
   deleteTeam: function(id, callback) {
     FirebaseService.deleteTeam(id, callback);
+  },
+
+  // ── Games ──────────────────────────────────────────────
+
+  getGames: function(callback) {
+    FirebaseService.getGames(callback);
+  },
+
+  getGame: function(id, callback) {
+    FirebaseService.getGame(id, callback);
+  },
+
+  upsertGame: function(data, callback) {
+    FirebaseService.upsertGame(data, callback);
+  },
+
+  deleteGame: function(id, callback) {
+    FirebaseService.deleteGame(id, callback);
+  },
+
+  getGameRoster: function(gameId, callback) {
+    FirebaseService.getGameRoster(gameId, callback);
+  },
+
+  setGameRoster: function(gameId, roster, callback) {
+    FirebaseService.setGameRoster(gameId, roster, callback);
+  },
+
+  updatePlayerGameStats: function(playerId, gameStats, callback) {
+    FirebaseService.updatePlayerGameStats(playerId, gameStats, callback);
   }
 };
