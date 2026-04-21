@@ -909,11 +909,21 @@ document.querySelectorAll('.game-tab').forEach(function(btn){
     }
   }, 4000);
 
-  initNav();
+  // Init nav first (works even if DB fails)
+  initNav({ title: '赛事管理与记分', subtitle: 'Module 03 · Game Management v3.0' });
+
+  // DB init
+  var _initTimer = setTimeout(function() {
+    var gameList = document.getElementById('game-list');
+    if (gameList && !gameList.children.length) {
+      gameList.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><h3>连接中...</h3><p>如长时间无响应，请按 Ctrl+Shift+R 强制刷新</p></div>';
+    }
+  }, 4000);
+
   DB.init(function(){
     clearTimeout(_initTimer);
     _dbInited = true;
-    var loaded = 0, playersDone = false, gamesDone = false;
+    var loaded = 0;
     function check() {
       loaded++;
       if (loaded >= 2) {
@@ -934,19 +944,16 @@ document.querySelectorAll('.game-tab').forEach(function(btn){
     }
     DB.getPlayers(function(r){
       allPlayers = ((r&&r.data)||[]).filter(function(p){ return p.status==='active'; });
-      playersDone = true;
       check();
     });
     DB.getGames(function(r){
       allGames = (r&&r.data)||[];
-      gamesDone = true;
       check();
     });
-  }); // close DB.init
+  });
 
-// 初始化导航
-initNav({ title: '赛事管理与记分', subtitle: 'Module 03 · Game Management v3.0' });
-})(); // close IIFE
+</script>
+
 
 
 
