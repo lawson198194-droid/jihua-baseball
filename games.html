@@ -250,7 +250,32 @@ input, select, textarea { font-family: inherit; }
 <div id="toast-container"></div>
 
 <div class="app">
-  <aside class="sidebar" id="app-sidebar"></aside>
+  <aside class="sidebar" id="app-sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">⚾</div>
+      <h1>BaseAI</h1>
+      <div class="subtitle">BASEBALL SYSTEM</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">核心模块</div>
+      <a href="players.html" class="nav-item"><div class="nav-icon">👥</div><span>球员资料库</span></a>
+      <a href="teams.html" class="nav-item"><div class="nav-icon">🏆</div><span>球队梯队</span></a>
+      <a href="games.html" class="nav-item active"><div class="nav-icon">📊</div><span>赛事记分</span></a>
+      <a href="profiles.html" class="nav-item"><div class="nav-icon">📈</div><span>技术档案</span></a>
+      <a href="admin.html" class="nav-item"><div class="nav-icon">⚙️</div><span>权限后台</span></a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">智能模块</div>
+      <a href="ai-coach-v2.html" class="nav-item"><div class="nav-icon">🤖</div><span>AI 专属教练</span><span class="nav-badge">AI</span></a>
+    </div>
+    <div class="sidebar-section" style="margin-top:auto;">
+      <a href="index.html" class="nav-item" style="border-top:1px solid var(--border);"><div class="nav-icon">🏠</div><span>返回首页</span></a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="db-indicator"><span>⚡ Firebase</span></div>
+      <div style="margin-top:4px;font-size:10px;">v3.0 · 2026-04-21</div>
+    </div>
+  </aside>
   <div class="main">
     <div class="topbar">
       <div class="topbar-left">
@@ -910,9 +935,6 @@ document.querySelectorAll('.game-tab').forEach(function(btn){
       gameList.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><h3>连接中...</h3><p>如长时间无响应，请按 Ctrl+Shift+R 强制刷新</p></div>';
     }
   }, 4000);
-
-  // Init nav first (works even if DB fails)
-  initNav({ title: '赛事管理与记分', subtitle: 'Module 03 · Game Management v3.0' });
 
   // DB init
   var _initTimer = setTimeout(function() {
