@@ -897,8 +897,21 @@ document.querySelectorAll('.game-tab').forEach(function(btn){
 });
 
 /* ── Init ──────────────────────────────────────────────────── */
-initNav();
-DB.init(function(){
+(function() {
+  var _initTimer = setTimeout(function() {
+    var sidebar = document.getElementById('app-sidebar');
+    var gameList = document.getElementById('game-list');
+    if (sidebar && !sidebar.innerHTML.trim()) {
+      sidebar.innerHTML = '<div style="padding:20px 16px;"><div style="color:#ef4444;font-size:12px;font-weight:700;margin-bottom:8px;">⚠️ 初始化超时</div><a href="diag.html" style="color:#f97316;font-size:12px;">→ 诊断页面</a></div>';
+    }
+    if (gameList && !gameList.innerHTML.trim()) {
+      gameList.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><h3>连接中...</h3><p>如长时间无响应，请按 Ctrl+Shift+R 强制刷新</p></div>';
+    }
+  }, 4000);
+
+  initNav();
+  DB.init(function(){
+    clearTimeout(_initTimer);
   _dbInited = true;
   // Load games and players in parallel, then render
   var loaded = 0, playersDone = false, gamesDone = false;
@@ -930,4 +943,6 @@ DB.init(function(){
     gamesDone = true;
     check();
   });
-});
+  }); // close DB.init
+})(); // close IIFE
+
