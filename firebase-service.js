@@ -397,6 +397,165 @@
         console.error('[Firebase] deleteTeam error:', e);
         if (callback) callback({ success: false, error: e });
       });
+    },
+
+    // ── Games ──────────────────────────────────────────────────
+    getGames: function(callback) {
+      var self = this;
+      if (!this.isConfigured) {
+        var data = JSON.parse(localStorage.getItem('baseai_games') || '[]');
+        setTimeout(function(){ callback({ data: data }); }, 0);
+        return;
+      }
+      this.db.ref('games').orderByChild('date').once('value').then(function(snapshot) {
+        var data = [];
+        snapshot.forEach(function(child) {
+          var item = child.val();
+          item.id = child.key;
+          data.unshift(item);
+        });
+        callback({ data: data });
+      }).catch(function(e) {
+        console.error('[Firebase] getGames error:', e);
+        callback({ data: [] });
+      });
+    },
+
+    getGame: function(id, callback) {
+      var self = this;
+      if (!this.isConfigured) {
+        var games = JSON.parse(localStorage.getItem('baseai_games') || '[]');
+        var found = games.find(function(g){ return g.id === id; });
+        setTimeout(function(){ callback({ data: found || null }); }, 0);
+        return;
+      }
+      this.db.ref('games/' + id).once('value').then(function(snapshot) {
+        var data = snapshot.val();
+        if (data) data.id = snapshot.key;
+        callback({ data: data });
+      }).catch(function(e) {
+        console.error('[Firebase] getGame error:', e);
+        callback({ data: null });
+      });
+    },
+
+    upsertGame: function(gameData, callback) {
+      var self = this;
+      var data = Object.assign({}, gameData);
+      var id = data.id;
+      delete data.id;
+      if (!this.isConfigured) {
+        var games = JSON.parse(localStorage.getItem('baseai_games') || '[]');
+        if (id) {
+          var idx = games.findIndex(function(g){ return g.id === id; });
+          if (idx >= 0) games[idx] = data;
+        } else {
+          id = 'G' + Date.now();
+          data.id = id;
+          games.push(data);
+        }
+        localStorage.setItem('baseai_games', JSON.stringify(games));
+        setTimeout(function(){ if(callback) callback({ success: true, id: id }); }, 0);
+        return;
+      }
+      var ref = id ? this.db.ref('games/' + id) : this.db.ref('games').push();
+      var finalId = id || ref.key;
+      delete data.id;
+      ref.set(data).then(function() {
+        if (callback) callback({ success: true, id: finalId });
+      }).catch(function(e) {
+        console.error('[Firebase] upsertGame error:', e);
+        if (callback) callback({ success: false, error: e });
+      });
+    },
+
+    deleteGame: function(id, callback) {
+      var self = this;
+      if (!this.isConfigured) {
+        var games = JSON.parse(localStorage.getItem('baseai_games') || '[]');
+        games = games.filter(function(g){ return g.id !== id; });
+        localStorage.setItem('baseai_games', JSON.stringify(games));
+        setTimeout(function(){ if(callback) callback({ success: true }); }, 0);
+        return;
+      }
+      this.db.ref('games/' + id).remove().then(function() {
+        self.db.ref('game_rosters/' + id).remove().then(function() {
+          if (callback) callback({ success: true });
+        });
+      }).catch(function(e) {
+        console.error('[Firebase] deleteGame error:', e);
+        if (callback) callback({ success: false, error: e });
+      });
+    },
+
+    // ── Game Roster (per-game lineup) ────────────────────────
+    getGameRoster: function(gameId, callback) {
+      var self = this;
+      if (!this.isConfigured) {
+        var data = JSON.parse(localStorage.getItem('baseai_roster_' + gameId) || '{}');
+        var list = Object.keys(data).map(function(k){ var p = data[k]; p.id = k; return p; });
+        setTimeout(function(){ callback({ data: list }); }, 0);
+        return;
+      }
+      this.db.ref('game_rosters/' + gameId).once('value').then(function(snapshot) {
+        var data = [];
+        snapshot.forEach(function(child) {
+          var item = child.val();
+          item.id = child.key;
+          data.push(item);
+        });
+        callback({ data: data });
+      }).catch(function(e) {
+        console.error('[Firebase] getGameRoster error:', e);
+        callback({ data: [] });
+      });
+    },
+
+    setGameRoster: function(gameId, roster, callback) {
+      var updates = {};
+      updates['game_rosters/' + gameId] = null;
+      roster.forEach(function(p) {
+        updates['game_rosters/' + gameId + '/' + p.id] = p;
+      });
+      if (!this.isConfigured) {
+        var obj = {};
+        roster.forEach(function(p){ obj[p.id] = p; });
+        localStorage.setItem('baseai_roster_' + gameId, JSON.stringify(obj));
+        setTimeout(function(){ if(callback) callback({ success: true }); }, 0);
+        return;
+      }
+      this.db.ref().update(updates).then(function() {
+        if (callback) callback({ success: true });
+      }).catch(function(e) {
+        console.error('[Firebase] setGameRoster error:', e);
+        if (callback) callback({ success: false, error: e });
+      });
+    },
+
+    // ── Player lifetime stats (accumulates per-game stats) ───
+    updatePlayerGameStats: function(playerId, gameStats, callback) {
+      var self = this;
+      this.getPlayer(playerId, function(result) {
+        var p = result.data || {};
+        var s = p.stats || {};
+        var ns = {
+          games:    (s.games||0) + 1,
+          ab:       (s.ab||0)    + (gameStats.ab||0),
+          r:        (s.r||0)     + (gameStats.r||0),
+          h:        (s.h||0)     + (gameStats.h||0),
+          rbi:      (s.rbi||0)   + (gameStats.rbi||0),
+          bb:       (s.bb||0)    + (gameStats.bb||0),
+          so:       (s.so||0)    + (gameStats.so||0),
+          ip:       (s.ip||0)    + (gameStats.ip||0),
+          ph:       (s.ph||0)    + (gameStats.ph||0),
+          pr:       (s.pr||0)    + (gameStats.pr||0),
+          per:      (s.per||0)   + (gameStats.er||0),
+          pbb:      (s.pbb||0)   + (gameStats.pbb||0),
+          pso:      (s.pso||0)   + (gameStats.pso||0),
+          phr:      (s.phr||0)   + (gameStats.phr||0)
+        };
+        self.updatePlayer(playerId, { stats: ns }, callback);
+      });
     }
   };
 })();
