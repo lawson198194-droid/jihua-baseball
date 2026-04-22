@@ -745,6 +745,16 @@ function renderRosterModal(game) {
   document.getElementById('btn-save-roster').onclick = function() {
     saveRosterAndBind(game.id);
   };
+
+  // Event delegation: handle ALL clicks inside the modal
+  var overlay = document.getElementById('roster-modal');
+  overlay.addEventListener('click', function(e) {
+    var card = e.target.closest('.roster-player-card');
+    if (card) {
+      var pid = card.getAttribute('data-id');
+      if (pid) toggleRosterPlayer(pid);
+    }
+  });
 }
 
 function renderRosterGrid(players, container, isSelected) {
@@ -756,7 +766,7 @@ function renderRosterGrid(players, container, isSelected) {
   players.forEach(function(p) {
     var pid = String(p.id||p.player_id||'');
     var sel = isSelected || _rosterIds.has(pid);
-    html += '<div class="roster-player-card'+(sel?' selected':'')+'" data-id="'+escHtml(pid)+'" onclick="toggleRosterPlayer(\''+escHtml(pid)+'\')">'+
+    html += '<div class="roster-player-card'+(sel?' selected':'')+'" data-id="'+escHtml(pid)+'">'+
       '<div class="rpc-check">✓</div>'+
       '<div class="rpc-name">'+escHtml(p.name||'')+'</div>'+
       '<div class="rpc-num">#'+(p.number||p.jersey_number||'')+'</div>'+
