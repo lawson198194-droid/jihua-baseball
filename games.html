@@ -574,10 +574,19 @@ var _wizardGame = {};  // current game object being built
 
 function renderAddModal() {
   var isEdit = !!_wizardGame.id;
-  var step = _wizardStep;
   var existing = document.getElementById('game-modal');
-  if (existing) { existing.remove(); }
-
+  if (existing) {
+    // In-place update: just refresh the content area, never rebuild the modal
+    var content = existing.querySelector('#modal-body-content');
+    if (content) {
+      content.innerHTML = renderWizardSteps() + renderWizardContent();
+      bindWizardFooter(isEdit);
+      rebindPDFHandlers();
+      ensurePlayersThenMatch();
+      return;
+    }
+    existing.remove(); // fallback: rebuild if content area not found
+  }
   var html = '<div class="modal-overlay" id="game-modal">'+
     '<div class="modal" id="modal-inner" style="max-width:780px;">'+
       '<div class="modal-header"><div class="modal-title">'+(isEdit?'✏️ 编辑赛事':'📊 新建赛事')+'</div><button class="modal-close" onclick="closeModal(\'game-modal\')">✕</button></div>'+
@@ -585,28 +594,53 @@ function renderAddModal() {
     '</div>'+
   '</div>';
   document.body.insertAdjacentHTML('beforeend', html);
-
-  var body = document.getElementById('modal-body-content');
-  body.innerHTML = renderWizardSteps() + renderWizardContent();
+  document.getElementById('modal-body-content').innerHTML = renderWizardSteps() + renderWizardContent();
   bindWizardFooter(isEdit);
-  updateGCBanner();
+  rebindPDFHandlers();
+  ensurePlayersThenMatch();
+}
 
-  // Ensure allPlayers is loaded before rendering Step3
+function rebindPDFHandlers() {
+  var dropZone = document.getElementById('pdf-drop');
+  if (!dropZone || dropZone._bound) return;
+  dropZone._bound = true;
+  dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag-over'); });
+  dropZone.addEventListener('drop', function(e){
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    var f = e.dataTransfer.files[0];
+    if (f) uploadGCFile(f);
+  });
+  // Click on drop zone opens file picker
+  dropZone.addEventListener('click', function() {
+    var inp = document.getElementById('_gc-pdf-input');
+    if (!inp) {
+      inp = document.createElement('input');
+      inp.type = 'file'; inp.id = '_gc-pdf-input'; inp.accept = '.pdf'; inp.style.display = 'none';
+      document.body.appendChild(inp);
+      inp.addEventListener('change', function() { if (this.files[0]) uploadGCFile(this.files[0]); this.value = ''; });
+    }
+    inp.click();
+  });
+}
+
+function ensurePlayersThenMatch() {
   if (!allPlayers || allPlayers.length === 0) {
     DB.getPlayers(function(players) {
       allPlayers = players || [];
-      console.log('[Init] allPlayers loaded:', allPlayers.length);
-      if (_wizardStep === 3) {
+      console.log('[Match] allPlayers loaded:', allPlayers.length);
+      if (_wizardStep === 3 && _gcResult && _gcResult.success) {
         autoMatchAllGCPlayers();
-        document.getElementById('modal-body-content').innerHTML = renderWizardSteps() + renderWizardContent();
-        bindWizardFooter(isEdit);
+        var content = document.getElementById('modal-body-content');
+        if (content) content.innerHTML = renderWizardSteps() + renderWizardContent();
+        bindWizardFooter(!!_wizardGame.id);
       }
     });
-  } else if (_wizardStep === 3) {
-    // Step3: auto-run matching if already loaded
+  } else if (_wizardStep === 3 && _gcResult && _gcResult.success) {
     autoMatchAllGCPlayers();
-    document.getElementById('modal-body-content').innerHTML = renderWizardSteps() + renderWizardContent();
-    bindWizardFooter(isEdit);
+    var content = document.getElementById('modal-body-content');
+    if (content) content.innerHTML = renderWizardSteps() + renderWizardContent();
+    bindWizardFooter(!!_wizardGame.id);
   }
 }
 
@@ -1281,10 +1315,12 @@ function uploadGCFile(file) {
         if (!_wizardGame.date)  _wizardGame.date  = data.date || '';
         if (!_wizardGame.venue) _wizardGame.venue = data.location || '';
       }
-      // Re-render current step (no full modal rebuild)
+      // Update current step content in-place
       var body = document.getElementById('modal-body-content');
-      if (body) body.innerHTML = renderWizardContent();
-      // rebind footer (wizard step unchanged)
+      if (body) {
+        body.innerHTML = renderWizardContent();
+        rebindPDFHandlers();
+      }
       bindWizardFooter(!!_wizardGame.id);
     })
     .catch(function(e){
