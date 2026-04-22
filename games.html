@@ -1092,38 +1092,60 @@ document.querySelectorAll('.game-tab').forEach(function(btn){
         _pendingLoads.forEach(function(fn){ fn(); });
       }
     }
-    // Load players from local static JSON first (bypasses Firebase CORS), fallback to DB.getPlayers
-    (function loadPlayersFromStatic(cb) {
+    // Strategy: localStorage cache → players.json → DB.getPlayers
+    (function check() {
+      // Step 1: localStorage cache (instant, from players.html)
+      try {
+        var cached = JSON.parse(localStorage.getItem('baseai_players') || '[]');
+        if (cached && cached.length > 0) {
+          var active = cached.filter(function(p){ return p.status==='active'; });
+          var source = active.length > 0 ? active : cached;
+          allPlayers = source;
+          console.log('[Init] allPlayers from localStorage cache:', allPlayers.length);
+          _finishInit(source);
+          return;
+        }
+      } catch(e) {}
+
+      // Step 2: players.json static file
       var xhr = new XMLHttpRequest();
       xhr.open('GET', 'players.json?t=' + Date.now(), true);
-      xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4 && xhr.status === 200) {
+      xhr.onload = function() {
+        if (xhr.status === 200) {
           try {
             var data = JSON.parse(xhr.responseText);
-            console.log('[Init] Loaded', data.length, 'players from local players.json');
-            cb(data);
-          } catch(e) {
-            console.warn('[Init] players.json parse error, try DB:', e);
-            DB.getPlayers(function(r){ cb((r&&r.data)||[]); });
-          }
+            console.log('[Init] allPlayers from players.json:', data.length);
+            // Cache to localStorage for next time
+            try { localStorage.setItem('baseai_players', xhr.responseText); } catch(e){}
+            var active = data.filter(function(p){ return p.status==='active'; });
+            var source = active.length > 0 ? active : data;
+            allPlayers = source;
+            _finishInit(source);
+            return;
+          } catch(e) {}
         }
+        _dbFallback();
       };
-      xhr.onerror = function() {
-        console.warn('[Init] players.json not available, using DB');
-        DB.getPlayers(function(r){ cb((r&&r.data)||[]); });
-      };
+      xhr.onerror = function() { _dbFallback(); };
       xhr.send();
-    })(function(raw) {
-      var active = raw.filter(function(p){ return p.status==='active'; });
-      if (active.length === 0 && raw.length > 0) {
-        console.warn('[Init] No players with status=active, showing all', raw.length, 'players');
-        allPlayers = raw;
-      } else {
-        allPlayers = active;
+
+      function _dbFallback() {
+        console.warn('[Init] Falling back to DB.getPlayers...');
+        DB.getPlayers(function(r) {
+          var raw = (r&&r.data)||[];
+          var active = raw.filter(function(p){ return p.status==='active'; });
+          var source = active.length > 0 ? active : (raw.length > 0 ? raw : []);
+          allPlayers = source;
+          console.log('[Init] allPlayers from DB:', allPlayers.length);
+          _finishInit(source);
+        });
       }
-      console.log('[Init] allPlayers loaded:', allPlayers.length, '(raw:', raw.length, ')');
-      check();
-    });
+
+      function _finishInit(raw) {
+        console.log('[Init] allPlayers loaded:', allPlayers.length, '(raw:', raw.length, ')');
+        check(); // call original check()
+      }
+    })();
     DB.getGames(function(r){
       allGames = (r&&r.data)||[];
       check();
