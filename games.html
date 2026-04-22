@@ -674,8 +674,24 @@ function saveGameBasic(game, isEdit) {
 }
 
 function openRosterModal(gameId, cb) {
-  DB.getGame(gameId, function(res){
-    var game = res.data || {};
+  cb = cb || function(){};
+
+  function proceed(game) {
+    // Ensure allPlayers is loaded (fallback reload if empty)
+    if (!allPlayers || !allPlayers.length) {
+      console.warn('[Roster] allPlayers empty — reloading from Firebase...');
+      DB.getPlayers(function(r) {
+        allPlayers = ((r&&r.data)||[]).filter(function(p){ return p.status==='active'; });
+        console.log('[Roster] Reloaded. allPlayers count:', allPlayers.length);
+        finishModal(game);
+      });
+    } else {
+      console.log('[Roster] Using cached allPlayers. count:', allPlayers.length);
+      finishModal(game);
+    }
+  }
+
+  function finishModal(game) {
     // Normalize IDs to string to avoid int/string mismatch
     _rosterIds = new Set((game.roster||[]).map(function(p){ return String(p.player_id||p.id||''); }).filter(Boolean));
     // Auto-pre-select players matching PDF batting/pitching names
@@ -683,13 +699,21 @@ function openRosterModal(gameId, cb) {
       autoMatchPlayers(game, function(matchedIds){
         matchedIds.forEach(function(id){ _rosterIds.add(String(id)); });
         renderRosterModal(game);
-        if (cb) cb();
+        cb();
       });
     } else {
       renderRosterModal(game);
-      if (cb) cb();
+      cb();
     }
-  });
+  }
+
+  if (gameId) {
+    DB.getGame(gameId, function(res){
+      proceed(res.data || {});
+    });
+  } else {
+    proceed({});
+  }
 }
 
 // Auto-match PDF player names to library players
