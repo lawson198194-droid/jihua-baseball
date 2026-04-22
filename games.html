@@ -447,6 +447,27 @@ function switchTab(tab) {
 /* ── Modals ────────────────────────────────────────────────── */
 function closeModal(id){ var m=document.getElementById(id); if(m) m.remove(); }
 
+// Persistent hidden file input (always in DOM, survives modal rebuilds)
+(function(){
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.id = '_gc-pdf-input';
+  inp.accept = '.pdf';
+  inp.style.display = 'none';
+  inp.addEventListener('change', function(){
+    if (this.files && this.files[0]) uploadGCFile(this.files[0]);
+  });
+  document.body.appendChild(inp);
+})();
+
+// Global event delegation: click drop zone → trigger hidden file input
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.pdf-drop-zone')) {
+    var inp = document.getElementById('_gc-pdf-input');
+    if (inp) inp.click();
+  }
+});
+
 function openAddModal(game) {
   game = game || {};
   _gcResult = null;
@@ -529,22 +550,14 @@ function renderAddModal(game, isEdit) {
 
   document.getElementById('modal-body-content').innerHTML = body;
 
-  // Bind PDF handlers
+  // Bind PDF handlers (drag/drop stays direct; click uses global delegation)
   var dropZone = document.getElementById('pdf-drop');
-  var pdfInput = document.getElementById('pdf-input');
   if (dropZone) {
-    dropZone.addEventListener('click', function(){ pdfInput.click(); });
     dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag-over'); });
     dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag-over'); });
     dropZone.addEventListener('drop', function(e){
       e.preventDefault(); dropZone.classList.remove('drag-over');
       var f = e.dataTransfer.files[0];
-      if (f) uploadGCFile(f);
-    });
-  }
-  if (pdfInput) {
-    pdfInput.addEventListener('change', function(){
-      var f = this.files[0];
       if (f) uploadGCFile(f);
     });
   }
