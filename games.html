@@ -1450,8 +1450,17 @@ function saveGameBasic(game, isEdit) {
     if (!res.success) { showToast('保存失败: '+res.error, 'error'); return; }
     closeModal('game-modal');
     showToast(isEdit?'赛事已更新':'赛事已保存！','success');
-    loadGames();
-    _wizardGame = {}; // reset wizard
+    // Directly update allGames instead of loadGames() to avoid Firebase fetch issues
+    var savedGame = JSON.parse(JSON.stringify(data));
+    savedGame.id = res.id;
+    if (isEdit) {
+      var idx = allGames.findIndex(function(g){ return g.id === res.id; });
+      if (idx >= 0) allGames[idx] = savedGame; else allGames.unshift(savedGame);
+    } else {
+      allGames.unshift(savedGame);
+    }
+    renderGames();
+    _wizardGame = {};
   });
 }
 
