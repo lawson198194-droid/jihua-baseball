@@ -456,6 +456,17 @@ function renderNameList(){
     return true;
   });
   console.log('[Profiles] Render:', {total:allPlayers.length, filtered:filtered.length, age:age, gender:gender, q:q});
+  // Debug: check what age_group values exist
+  if(q===''&&!age&&!gender){
+    var groups={};
+    allPlayers.forEach(function(p){
+      var g=p.age_group||'(undefined)';
+      groups[g]=(groups[g]||0)+1;
+    });
+    console.log('[Profiles] Age groups in DB:', groups);
+    // Also check first few player objects
+    console.log('[Profiles] Sample players:', allPlayers.slice(0,3));
+  }
   if(filtered.length===0){
     list.innerHTML='<div class="name-empty">没有匹配的球员<br><span style="font-size:11px;margin-top:4px;display:block;">试试调整筛选条件</span></div>';
     return;
