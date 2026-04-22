@@ -482,7 +482,7 @@ function viewGameData(gameId) {
 function renderGameDataModal(game) {
   closeModal('gamedata-modal');
   var homeR = game.hk_runs_by_inning||[];
-  var awayR = game.away_runs_by_inning||[];
+  var awayR = game.away_runs_by_inning||game.home_runs_by_inning||[];
 
   var h = '<div class="modal-overlay" id="gamedata-modal">'+
     '<div class="modal" style="max-width:900px;">'+
