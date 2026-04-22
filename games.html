@@ -1090,8 +1090,18 @@ document.querySelectorAll('.game-tab').forEach(function(btn){
       }
     }
 
-    // Load players: fetch from players.json (hosted on same GitHub Pages, no CORS)
-    // This file was pre-downloaded from Firebase and uploaded to the repo
+    // Step 1: localStorage cache (instant, set by players.html after it loads players from Firebase SDK)
+    var cached = null;
+    try { cached = JSON.parse(localStorage.getItem('baseai_players') || '[]'); } catch(e){}
+    if (cached && cached.length > 0) {
+      console.log('[Init] allPlayers from localStorage cache:', cached.length);
+      var active = cached.filter(function(p){ return p.status==='active'; });
+      allPlayers = active.length > 0 ? active : cached;
+      check();
+      return;
+    }
+
+    // Step 2: fetch from players.json (pre-downloaded from Firebase, hosted on GitHub Pages)
     fetch('players.json')
       .then(function(resp) {
         console.log('[Init] players.json fetch status:', resp.status);
@@ -1100,14 +1110,15 @@ document.querySelectorAll('.game-tab').forEach(function(btn){
       })
       .then(function(data) {
         console.log('[Init] players.json loaded:', data.length, 'players');
+        // Cache to localStorage for next time
+        try { localStorage.setItem('baseai_players', JSON.stringify(data)); } catch(e){}
         var active = data.filter(function(p){ return p.status==='active'; });
         allPlayers = active.length > 0 ? active : data;
-        // Cache to localStorage
-        try { localStorage.setItem('baseai_players', JSON.stringify(data)); } catch(e){}
         check();
       })
       .catch(function(e) {
-        console.error('[Init] players.json fetch failed:', e.message, '- trying DB.getPlayers');
+        console.error('[Init] players.json fetch failed:', e.message);
+        // Step 3: DB.getPlayers as last resort
         DB.getPlayers(function(r) {
           var raw = (r&&r.data)||[];
           var active = raw.filter(function(p){ return p.status==='active'; });
