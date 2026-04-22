@@ -545,6 +545,11 @@ function renderGameDataModal(game) {
          '<div class="ginn-inn">'+(game.away_errors!==null&&game.away_errors!==undefined?game.away_errors:'—')+'</div></div>';
 
     h += '</div></div>';
+  } else {
+    h += '<div class="gamedata-section">'+
+      '<div class="gamedata-section-title">📊 逐局比分</div>'+
+      '<div style="text-align:center;color:var(--text-muted);padding:20px 0;font-size:13px;">'+
+        '暂无数据，请通过 GC PDF 导入或手动编辑添加</div></div>';
   }
 
   // ── Section 3: 打击数据 ──
@@ -654,8 +659,8 @@ function renderGames() {
         '<div class="score-team"><div class="score-team-name">'+escHtml(g.away||'')+'</div><div class="score-team-scr">'+(g.away_score||0)+'</div></div>'+
       '</div>'+
       '<div class="score-footer">'+
-        '<span style="font-size:12px;color:var(--text-muted);">'+(winner?'🏆 '+winner:'&nbsp;')+'</span>'+
-        '<div style="display:flex;gap:6px;">'+
+        '<span style="font-size:11px;color:var(--text-muted);">'+(g.date?'📅 '+escHtml(g.date):'')+'</span>'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'+
           '<button class="btn btn-ghost btn-sm" onclick="viewGameData(\''+escHtml(g.id)+'\')">📋 数据</button>'+
           (g.roster&&g.roster.length?'<button class="btn btn-ghost btn-sm" onclick="viewRoster(\''+escHtml(g.id)+'\')">👥 阵容</button>':'')+
           '<button class="btn btn-ghost btn-sm" onclick="editGame(\''+escHtml(g.id||'')+'\')">✏️ 编辑</button>'+
