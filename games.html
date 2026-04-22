@@ -573,9 +573,10 @@ var _wizardStep = 1;
 var _wizardGame = {};  // current game object being built
 
 function renderAddModal() {
-  closeModal('game-modal');
   var isEdit = !!_wizardGame.id;
   var step = _wizardStep;
+  var existing = document.getElementById('game-modal');
+  if (existing) { existing.remove(); }
 
   var html = '<div class="modal-overlay" id="game-modal">'+
     '<div class="modal" id="modal-inner" style="max-width:780px;">'+
@@ -588,6 +589,7 @@ function renderAddModal() {
   var body = document.getElementById('modal-body-content');
   body.innerHTML = renderWizardSteps() + renderWizardContent();
   bindWizardFooter(isEdit);
+  updateGCBanner();
 }
 
 function renderWizardSteps() {
@@ -891,7 +893,7 @@ function autoMatchAllGCPlayers() {
 
   allGC.forEach(function(gcp) {
     if (existingIds.has(String(gcp.lib_id||''))) return; // already bound
-    var match = findBestMatch(gcp.name||'');
+    var match = findBestMatch(gcp.name||'', gcp.number||'');
     if (match) {
       _wizardGame.roster.push({
         player_id: match.id,
@@ -912,8 +914,9 @@ function autoMatchAllGCPlayers() {
   });
 }
 
-function findBestMatch(name) {
-  if (!name || !allPlayers || allPlayers.length === 0) return null;
+function findBestMatch(name, gcNumber) {
+  if (!name) return null;
+  if (!allPlayers || allPlayers.length === 0) return null;
   var n = name.toLowerCase().trim();
   var tokens = n.split(/\s+/);
   var best = null, bestScore = 0;
@@ -921,6 +924,7 @@ function findBestMatch(name) {
   for (var i = 0; i < allPlayers.length; i++) {
     var p = allPlayers[i];
     var pn = (p.name||'').toLowerCase().trim();
+    var pnum = String(p.number||p.jersey_number||'');
     var score = 0;
 
     if (pn === n) score = 100;
@@ -937,6 +941,8 @@ function findBestMatch(name) {
         if (pInit && plInit && pInit === plInit && last && plLast && (last === plLast || plLast.includes(last) || last.includes(plLast))) score = 30;
       }
     }
+    // Bonus: jersey number match (highest priority after exact name)
+    if (gcNumber && pnum && pnum === String(gcNumber)) score = Math.max(score, 95);
     if (score > bestScore) { bestScore = score; best = p; }
   }
   return bestScore >= 30 ? best : null;
