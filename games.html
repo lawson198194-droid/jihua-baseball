@@ -1090,19 +1090,32 @@ document.querySelectorAll('.game-tab').forEach(function(btn){
       }
     }
 
-    // Load players: DB.getPlayers uses SDK which works (proven by players.html)
-    DB.getPlayers(function(r) {
-      console.log('[Init] DB.getPlayers returned', (r&&r.data||[]).length, 'players');
-      var raw = (r&&r.data)||[];
-      var active = raw.filter(function(p){ return p.status==='active'; });
-      allPlayers = active.length > 0 ? active : raw;
-      console.log('[Init] allPlayers =', allPlayers.length, '(raw:', raw.length, ')');
-      // Cache to localStorage for other pages
-      if (allPlayers.length > 0) {
-        try { localStorage.setItem('baseai_players', JSON.stringify(raw)); } catch(e){}
-      }
-      check();
-    });
+    // Load players: fetch from players.json (hosted on same GitHub Pages, no CORS)
+    // This file was pre-downloaded from Firebase and uploaded to the repo
+    fetch('players.json')
+      .then(function(resp) {
+        console.log('[Init] players.json fetch status:', resp.status);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return resp.json();
+      })
+      .then(function(data) {
+        console.log('[Init] players.json loaded:', data.length, 'players');
+        var active = data.filter(function(p){ return p.status==='active'; });
+        allPlayers = active.length > 0 ? active : data;
+        // Cache to localStorage
+        try { localStorage.setItem('baseai_players', JSON.stringify(data)); } catch(e){}
+        check();
+      })
+      .catch(function(e) {
+        console.error('[Init] players.json fetch failed:', e.message, '- trying DB.getPlayers');
+        DB.getPlayers(function(r) {
+          var raw = (r&&r.data)||[];
+          var active = raw.filter(function(p){ return p.status==='active'; });
+          allPlayers = active.length > 0 ? active : raw;
+          console.log('[Init] allPlayers from DB:', allPlayers.length);
+          check();
+        });
+      });
 
     // Load games
     DB.getGames(function(r){
