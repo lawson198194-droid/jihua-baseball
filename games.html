@@ -839,17 +839,11 @@ function wizardBack() {
 
 function wizardNext(isEdit) {
   if (_wizardStep === 1) {
-    // Save Step 1 data
-    _wizardGame.year = parseInt(document.getElementById('gf-year').value) || new Date().getFullYear();
-    _wizardGame.tournament = document.getElementById('gf-tournament').value;
-    _wizardGame.category = document.getElementById('gf-cat').value;
-    _wizardGame.date = document.getElementById('gf-date').value;
-    _wizardGame.home = document.getElementById('gf-home').value;
-    _wizardGame.away = document.getElementById('gf-away').value;
-    _wizardGame.home_score = parseInt(document.getElementById('gf-hs').value) || 0;
-    _wizardGame.away_score = parseInt(document.getElementById('gf-as').value) || 0;
-    _wizardGame.venue = document.getElementById('gf-venue').value;
-    _wizardGame.status = document.getElementById('gf-status').value;
+    // Only read fields that exist in simplified Step1
+    _wizardGame.year = parseInt(document.getElementById('gf-year') && document.getElementById('gf-year').value) || new Date().getFullYear();
+    _wizardGame.tournament = (document.getElementById('gf-tournament') && document.getElementById('gf-tournament').value) || '';
+    _wizardGame.category = (document.getElementById('gf-cat') && document.getElementById('gf-cat').value) || '';
+    // home/away/date/score/venue/status → already auto-filled from GC, or keep existing
     _wizardStep = 2;
     renderAddModal();
   } else if (_wizardStep === 2) {
