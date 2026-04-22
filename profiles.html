@@ -4,9 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>技术档案 — BaseAI</title>
-<link rel="stylesheet" href="assets/design-system.css">
 <style>
-/* ── Theme Variables (aligned with games.html) ─────────────── */
+/* ── Design System ──────────────────────────────────────────── */
 :root {
   --bg-primary: #0a0e1a;
   --bg-secondary: #111827;
@@ -17,377 +16,179 @@
   --primary-light: #fb923c;
   --accent: #3b82f6;
   --success: #10b981;
-  --success-bg: rgba(16, 185, 129, 0.12);
   --warning: #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.12);
   --danger: #ef4444;
-  --danger-bg: rgba(239, 68, 68, 0.12);
   --info: #06b6d4;
-  --info-bg: rgba(6, 182, 212, 0.12);
   --purple: #8b5cf6;
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-light: rgba(255, 255, 255, 0.04);
+  --border: rgba(255,255,255,0.08);
+  --border-light: rgba(255,255,255,0.04);
   --radius: 8px;
   --radius-lg: 12px;
-  --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
+  --shadow: 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.5);
 }
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: #0f1629; }
-body {
-  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  line-height: 1.5;
-}
-a { color: inherit; text-decoration: none; }
-button { font-family: inherit; cursor: pointer; }
-input, select, textarea { font-family: inherit; }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Space Grotesk','Noto Sans SC',system-ui,sans-serif;background:var(--bg-primary);color:var(--text-primary);line-height:1.5}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
-/* ── App Shell ─────────────────────────────────────────────── */
-.app { display: flex; height: 100vh; overflow: hidden; }
-.sidebar { width: 220px; flex-shrink: 0; background: #0f1629; border-right: 2px solid #1a2538; display: flex; flex-direction: column; position: relative; z-index: 10; }
-.sidebar-logo { padding: 20px 16px 16px; border-bottom: 2px solid rgba(249,115,22,0.2); background: rgba(249,115,22,0.04); }
-.logo-mark { font-size: 28px; margin-bottom: 6px; }
-.sidebar-logo h1 { font-size: 16px; font-weight: 800; color: #f1f5f9; }
-.sidebar-logo .subtitle { font-size: 9px; color: #f97316; letter-spacing: 2px; margin-top: 2px; font-weight: 700; }
-.sidebar-section { padding: 10px 8px 0; }
-.sidebar-section-label { font-size: 10px; font-weight: 700; color: rgba(249,115,22,0.7); letter-spacing: 1px; text-transform: uppercase; padding: 0 6px; margin-bottom: 4px; }
-.nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius); font-size: 12px; font-weight: 500; color: #cbd5e1; transition: all 0.15s; margin-bottom: 2px; cursor: pointer; text-decoration: none; }
-.nav-item:hover { background: rgba(249,115,22,0.1); color: #f97316; }
-.nav-item.active { background: rgba(249,115,22,0.15); color: #f97316; font-weight: 700; border-left: 3px solid #f97316; }
-.nav-icon { font-size: 15px; min-width: 18px; text-align: center; }
-.nav-badge { margin-left: auto; font-size: 9px; background: var(--purple); color: white; padding: 1px 5px; border-radius: 10px; font-weight: 700; }
-.sidebar-footer { margin-top: auto; padding: 12px; border-top: 2px solid rgba(249,115,22,0.15); background: rgba(0,0,0,0.2); }
-.db-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #10b981; font-weight: 600; }
+/* ── App Shell (same as games.html) ──────────────────────── */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;flex-shrink:0;background:#0f1629;border-right:2px solid rgba(249,115,22,0.3);display:flex;flex-direction:column;position:relative;z-index:10}
+.sidebar-logo{padding:24px 16px 20px;border-bottom:2px solid rgba(249,115,22,0.2);background:rgba(249,115,22,0.04)}
+.logo-mark{font-size:32px;margin-bottom:8px}
+.sidebar-logo h1{font-size:18px;font-weight:800;color:#f1f5f9;letter-spacing:-0.5px}
+.sidebar-logo .subtitle{font-size:9px;color:#f97316;letter-spacing:2px;margin-top:2px;font-weight:700}
+.sidebar-section{padding:14px 8px 0}
+.sidebar-section-label{font-size:10px;font-weight:700;color:rgba(249,115,22,0.7);letter-spacing:1px;text-transform:uppercase;padding:0 6px;margin-bottom:6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;color:#cbd5e1;transition:all .15s;margin-bottom:2px;cursor:pointer;text-decoration:none}
+.nav-item:hover{background:rgba(249,115,22,0.1);color:#f97316}
+.nav-item.active{background:rgba(249,115,22,0.15);color:#f97316;font-weight:700;border-left:3px solid #f97316}
+.nav-icon{font-size:16px;min-width:20px;text-align:center}
+.nav-badge{margin-left:auto;font-size:9px;background:var(--purple);color:#fff;padding:1px 6px;border-radius:10px;font-weight:700}
+.sidebar-footer{margin-top:auto;padding:16px;border-top:2px solid rgba(249,115,22,0.15);background:rgba(0,0,0,0.2)}
+.db-indicator{display:flex;align-items:center;gap:6px;font-size:11px;color:#10b981;font-weight:600}
 
-/* ── Main Content (unified panel) ─────────────────────────── */
-.main { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-width: 0; background: #0f1629; }
-.main-split { flex: 1; display: flex; overflow: hidden; background: #0f1629; gap: 0; }
+/* ── Main Area ─────────────────────────────────────────────── */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.topbar{height:60px;border-bottom:1px solid var(--border);background:var(--bg-card);display:flex;align-items:center;padding:0 24px;flex-shrink:0;justify-content:space-between}
+.topbar-title{font-size:15px;font-weight:700}
+.topbar-subtitle{font-size:11px;color:var(--text-muted)}
+.topbar-stats{display:flex;gap:0}
+.topbar-stat{padding:0 16px;border-right:1px solid var(--border);text-align:center}
+.topbar-stat:last-child{border-right:none}
+.topbar-stat .num{font-size:18px;font-weight:800;line-height:1.2}
+.topbar-stat .label{font-size:10px;color:var(--text-muted);letter-spacing:.5px}
+.content{padding:24px;flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:600;border:none;transition:all .15s;cursor:pointer;white-space:nowrap}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-light)}
+.btn-ghost{background:transparent;color:var(--text-secondary)}
+.btn-ghost:hover{background:var(--bg-card-hover);color:var(--text-primary)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-desc{font-size:13px;color:var(--text-muted);margin-top:2px}
+.page-actions{display:flex;gap:8px;flex-wrap:wrap}
 
-/* Left: Search + Player List */
-.search-panel {
-  width: 260px; flex-shrink: 0;
-  background: #0f1629;
-  border-right: 2px solid rgba(249,115,22,0.15);
-  display: flex; flex-direction: column; overflow: hidden;
-}
-.search-panel-header { padding: 14px 14px 8px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.search-panel-header h4 { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-.search-box { position: relative; }
-.search-box input {
-  width: 100%; padding: 7px 28px 7px 10px;
-  background: var(--bg-input); border: 1px solid var(--border);
-  border-radius: var(--radius); font-size: 12px; color: var(--text-primary);
-  outline: none; transition: border-color 0.2s;
-}
-.search-box input:focus { border-color: var(--primary); }
-.search-box input::placeholder { color: var(--text-muted); }
-.search-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--text-muted); pointer-events: none; }
-.filter-row { display: flex; gap: 5px; padding: 8px 14px; flex-shrink: 0; }
-.filter-row select {
-  flex: 1; padding: 5px 6px;
-  background: var(--bg-input); border: 1px solid var(--border);
-  border-radius: 6px; font-size: 11px; color: var(--text-secondary);
-  cursor: pointer; outline: none;
-}
-.filter-row select:focus { border-color: var(--primary); }
-.filter-row select option { background: var(--bg-secondary); }
-.player-list { flex: 1; overflow-y: auto; padding: 6px; }
-.player-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 10px; border-radius: var(--radius);
-  cursor: pointer; transition: all 0.15s;
-  border: 1px solid transparent; margin-bottom: 3px;
-}
-.player-item:hover { background: var(--bg-card-hover); border-color: var(--border); }
-.player-item.active { background: rgba(249, 115, 22, 0.1); border-color: rgba(249, 115, 22, 0.4); }
-.player-avatar {
-  width: 34px; height: 34px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 800; color: white; flex-shrink: 0; overflow: hidden;
-}
-.player-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.player-info { flex: 1; min-width: 0; }
-.player-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.player-meta { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
-.player-badge { font-size: 9px; padding: 2px 6px; border-radius: 20px; background: var(--primary); color: white; font-weight: 700; flex-shrink: 0; }
-.list-foot { padding: 10px; border-top: 1px solid var(--border); flex-shrink: 0; }
-.list-foot .btn { font-size: 12px; padding: 6px 12px; }
+/* ── Filter Bar ─────────────────────────────────────────────── */
+.filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-bar input,.filter-bar select{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text-primary);font-size:13px;outline:none;transition:border-color .2s}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--primary)}
+.filter-bar input{width:200px}
+.filter-bar select{cursor:pointer}
 
-/* Profile View */
-.profile-panel { flex: 1; overflow-y: auto; padding: 20px 24px; min-width: 0; background: var(--bg-secondary); }
+/* ── Player Grid ─────────────────────────────────────────── */
+.player-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.player-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:all .2s;text-align:center}
+.player-card:hover{border-color:rgba(249,115,22,0.4);background:var(--bg-card-hover);box-shadow:0 4px 16px rgba(0,0,0,0.3)}
+.player-card.selected{border-color:var(--primary);background:rgba(249,115,22,0.08)}
+.player-avatar{width:48px;height:48px;border-radius:50%;margin:0 auto 8px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--primary);overflow:hidden;border:2px solid var(--border)}
+.player-avatar img{width:100%;height:100%;object-fit:cover}
+.player-name{font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-meta{font-size:11px;color:var(--text-muted)}
 
-/* Topbar */
-.topbar {
-  height: 56px; border-bottom: 1px solid var(--border);
-  background: var(--bg-card); display: flex; align-items: center;
-  padding: 0 20px; flex-shrink: 0; justify-content: space-between;
-}
-.topbar-left { display: flex; align-items: center; gap: 10px; }
-.topbar-title { font-size: 14px; font-weight: 700; }
-.topbar-subtitle { font-size: 10px; color: var(--text-muted); }
-.topbar-stats { display: flex; }
-.topbar-stat { padding: 0 14px; border-right: 1px solid var(--border); text-align: center; }
-.topbar-stat:last-child { border-right: none; }
-.topbar-stat .num { font-size: 16px; font-weight: 800; line-height: 1.2; }
-.topbar-stat .label { font-size: 9px; color: var(--text-muted); letter-spacing: 0.5px; }
+/* ── Profile Detail ────────────────────────────────────────── */
+.profile-detail{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:16px}
+.profile-header{display:flex;align-items:center;gap:16px;padding:20px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:var(--bg-secondary);border:3px solid var(--primary);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:var(--primary);overflow:hidden;flex-shrink:0}
+.profile-info{flex:1;min-width:0}
+.profile-name{font-size:22px;font-weight:800;color:var(--text-primary);margin-bottom:2px}
+.profile-tags{display:flex;gap:6px;flex-wrap:wrap}
+.profile-tag{font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(249,115,22,0.12);color:var(--primary);font-weight:600}
+.profile-body{padding:20px}
 
-.content { padding: 24px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
-.page-title-wrap h2 { font-size: 22px; font-weight: 800; }
-.page-title-wrap p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
-.page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+/* ── Tabs ─────────────────────────────────────────────────── */
+.profile-tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border)}
+.profile-tab{padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.profile-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.profile-tab:hover:not(.active){color:var(--text-primary)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
 
-/* ── Buttons ─────────────────────────────────────────────── */
-.btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 16px; border-radius: var(--radius);
-  font-size: 13px; font-weight: 600; border: none;
-  transition: all 0.15s; cursor: pointer; white-space: nowrap;
-}
-.btn-primary { background: var(--primary); color: white; }
-.btn-primary:hover { background: var(--primary-light); }
-.btn-ghost { background: transparent; color: var(--text-secondary); }
-.btn-ghost:hover { background: var(--bg-card-hover); color: var(--text-primary); }
-.btn-sm { padding: 5px 12px; font-size: 12px; }
-.btn-danger { background: var(--danger-bg); color: var(--danger); }
-.btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+/* ── Stats Grid ────────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-bottom:16px}
+.stat-card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center}
+.stat-val{font-size:22px;font-weight:800;color:var(--primary);line-height:1.2}
+.stat-lbl{font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
 
-/* ── Profile Header ─────────────────────────────────────── */
-.profile-header {
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 20px 24px;
-  box-shadow: var(--shadow); margin-bottom: 16px;
-  display: flex; align-items: center; gap: 20px;
-  transition: border-color 0.2s;
-}
-.profile-header:hover { border-color: rgba(249, 115, 22, 0.3); }
-.profile-avatar-wrap { flex-shrink: 0; }
-.profile-avatar {
-  width: 72px; height: 72px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 26px; font-weight: 800; color: white; overflow: hidden;
-}
-.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.profile-info { flex: 1; min-width: 0; }
-.profile-name { font-size: 20px; font-weight: 800; }
-.profile-team { font-size: 13px; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.profile-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-.tag { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 700; }
-.tag-age { background: var(--warning-bg); color: var(--warning); }
-.tag-gender { background: var(--info-bg); color: var(--info); }
-.tag-team { background: var(--success-bg); color: var(--success); }
-.profile-actions { display: flex; gap: 8px; flex-shrink: 0; }
+/* ── Radar ─────────────────────────────────────────────────── */
+.radar-card{text-align:center;margin-bottom:16px}
+.radar-title{font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.radar-wrap{display:flex;justify-content:center;align-items:center;min-height:260px;background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:8px}
+.radar-legend{display:flex;justify-content:center;gap:20px;font-size:11px;color:var(--text-secondary)}
+.legend-item{display:flex;align-items:center;gap:5px}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 
-/* ── Grid Layout ──────────────────────────────────────── */
-.profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-.card {
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 18px 20px;
-  box-shadow: var(--shadow); transition: border-color 0.2s;
-}
-.card:hover { border-color: rgba(249, 115, 22, 0.2); }
-.card-title {
-  font-size: 13px; font-weight: 700; color: var(--text-secondary);
-  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px;
-  display: flex; align-items: center; gap: 6px;
-}
-.card-title .icon { font-size: 16px; }
+/* ── Chart ─────────────────────────────────────────────────── */
+.chart-wrap{height:200px;background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--border);padding:16px;margin-bottom:16px}
 
-/* ── Radar ─────────────────────────────────────────────── */
-.radar-card { grid-column: 1; grid-row: 1 / 3; }
-.radar-wrap {
-  display: flex; justify-content: center; align-items: center;
-  min-height: 320px; background: var(--bg-card);
-  border-radius: var(--radius); border: 1px solid var(--border-light);
-  margin-bottom: 12px;
-}
-#radarCanvas { max-width: 100%; }
-.radar-legend { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; font-size: 12px; }
-.legend-item { display: flex; align-items: center; gap: 6px; }
-.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
-.legend-line {
-  display: inline-block; width: 18px; height: 3px; border-radius: 2px;
-}
+/* ── Table ─────────────────────────────────────────────────── */
+.table-wrap{overflow-x:auto}
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{text-align:left;padding:8px 12px;background:var(--bg-secondary);color:var(--text-muted);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.data-table td{padding:8px 12px;border-bottom:1px solid var(--border-light);color:var(--text-secondary)}
+.data-table tr:hover td{background:var(--bg-card-hover)}
+.data-table td:first-child{font-weight:600;color:var(--text-primary)}
 
-/* ── Stat Summary ──────────────────────────────────────── */
-.stat-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 9px 0; border-bottom: 1px solid var(--border-light);
-  font-size: 13px;
-}
-.stat-row:last-child { border-bottom: none; }
-.stat-label { color: var(--text-secondary); }
-.stat-value { font-weight: 700; color: var(--text-primary); }
-.stat-value.highlight { color: var(--primary); font-size: 17px; }
-.stat-category {
-  font-size: 11px; font-weight: 700; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 0.5px;
-  margin: 12px 0 6px; padding-top: 10px; border-top: 1px solid var(--border-light);
-}
-.stat-category:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+/* ── Modal ─────────────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:16px;font-weight:700}
+.modal-close{width:32px;height:32px;border-radius:50%;background:var(--bg-card-hover);border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary)}
+.modal-close:hover{background:var(--danger-bg);color:var(--danger)}
+.modal-body{padding:24px}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid var(--border)}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.form-input{width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);font-size:14px;color:var(--text-primary);outline:none;transition:border-color .2s}
+.form-input:focus{border-color:var(--primary)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid .full{grid-column:span 2}
 
-/* ── Measurement Table ────────────────────────────────── */
-.meas-table-wrap { overflow-x: auto; }
-.meas-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.meas-table th {
-  padding: 7px 10px; background: var(--bg-primary);
-  color: var(--text-muted); font-weight: 700; text-align: center;
-  border-bottom: 1px solid var(--border); white-space: nowrap;
-  font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
-}
-.meas-table th:first-child { text-align: left; border-radius: 6px 0 0 0; }
-.meas-table th:last-child { border-radius: 0 6px 0 0; }
-.meas-table td {
-  padding: 9px 10px; border-bottom: 1px solid var(--border-light);
-  text-align: center; color: var(--text-secondary);
-}
-.meas-table td:first-child { text-align: left; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
-.meas-table tbody tr:hover { background: var(--bg-card-hover); }
-.meas-table .trend-up { color: var(--success); font-weight: 700; }
-.meas-table .trend-down { color: var(--danger); font-weight: 700; }
-.meas-table .no-data { text-align: left; color: var(--text-muted); padding: 24px 0; }
+/* ── CSV Drop Zone ─────────────────────────────────────────── */
+.csv-drop-zone{border:2px dashed var(--border);border-radius:var(--radius-lg);padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:16px;background:var(--bg-card)}
+.csv-drop-zone:hover,.csv-drop-zone.dragover{border-color:var(--primary);background:rgba(249,115,22,0.06)}
+.csv-drop-zone .icon{font-size:40px;margin-bottom:10px}
+.csv-drop-zone .text{font-size:14px;font-weight:600;color:var(--text-secondary)}
+.csv-drop-zone .hint{font-size:11px;color:var(--text-muted);margin-top:4px}
+.csv-preview{background:var(--bg-primary);border-radius:var(--radius);padding:12px;margin-bottom:14px;max-height:200px;overflow-y:auto;font-size:12px;border:1px solid var(--border-light)}
+.csv-preview table{width:100%;border-collapse:collapse}
+.csv-preview th{padding:5px 8px;background:var(--bg-secondary);font-weight:700;text-align:center;position:sticky;top:0;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.csv-preview td{padding:5px 8px;border-bottom:1px solid var(--border-light);text-align:center;color:var(--text-secondary)}
+.csv-preview td:first-child{text-align:left;font-weight:600;color:var(--text-primary)}
+.csv-result{border-radius:var(--radius);padding:12px 16px;margin-top:12px;font-size:13px;font-weight:600}
+.csv-result.success{background:var(--success-bg);color:var(--success);border:1px solid rgba(16,185,129,0.3)}
+.csv-result.error{background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,0.3)}
 
-/* ── Chart ─────────────────────────────────────────────── */
-.chart-wrap {
-  height: 200px; position: relative;
-  background: var(--bg-card); border-radius: var(--radius);
-  border: 1px solid var(--border-light); padding: 16px;
-}
+/* ── Empty State ───────────────────────────────────────────── */
+.empty-state{text-align:center;padding:80px 20px;color:var(--text-muted)}
+.empty-state .empty-icon{font-size:64px;margin-bottom:16px;opacity:.3}
+.empty-state h3{font-size:18px;color:var(--text-secondary);margin-bottom:8px}
 
-/* ── Tabs ──────────────────────────────────────────────── */
-.tabs { display: flex; gap: 4px; margin-bottom: 16px; }
-.tab {
-  padding: 8px 18px; border-radius: var(--radius);
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  border: 1px solid var(--border); background: transparent;
-  color: var(--text-secondary); transition: all 0.15s;
-}
-.tab:hover:not(.active) { color: var(--text-primary); border-color: var(--primary); }
-.tab.active { background: var(--primary); color: white; border-color: var(--primary); }
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-
-/* ── Stat Pills ────────────────────────────────────────── */
-.stat-pills { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
-.stat-pill {
-  background: var(--bg-primary); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 10px 14px;
-  text-align: center; min-width: 70px; flex: 1;
-}
-.stat-pill .val { font-size: 20px; font-weight: 800; color: var(--primary); line-height: 1.2; }
-.stat-pill .lbl { font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-top: 4px; }
-
-/* ── Modal ─────────────────────────────────────────────── */
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px);
-  z-index: 1000; display: flex; align-items: center;
-  justify-content: center; padding: 20px;
-}
-.modal {
-  background: var(--bg-secondary); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); width: 100%;
-  max-width: 700px; max-height: 90vh;
-  overflow-y: auto; box-shadow: var(--shadow-lg);
-}
-.modal-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 20px 24px; border-bottom: 1px solid var(--border);
-}
-.modal-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.modal-close {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: var(--bg-card-hover); border: none;
-  cursor: pointer; font-size: 16px;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--text-secondary);
-}
-.modal-close:hover { background: var(--danger-bg); color: var(--danger); }
-.modal-body { padding: 24px; }
-.modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border); }
-
-/* ── Form ──────────────────────────────────────────────── */
-.form-group { margin-bottom: 16px; }
-.form-label { display: block; font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-.form-input {
-  width: 100%; padding: 9px 12px;
-  background: var(--bg-input); border: 1px solid var(--border);
-  border-radius: var(--radius); font-size: 14px; color: var(--text-primary);
-  outline: none; transition: border-color 0.2s;
-}
-.form-input:focus { border-color: var(--primary); }
-.form-input::placeholder { color: var(--text-muted); }
-.form-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-/* ── CSV Drop Zone ─────────────────────────────────────── */
-.csv-drop-zone {
-  border: 2px dashed var(--border); border-radius: var(--radius-lg);
-  padding: 32px 20px; text-align: center; cursor: pointer;
-  transition: all 0.2s; margin-bottom: 16px;
-  background: var(--bg-card);
-}
-.csv-drop-zone:hover, .csv-drop-zone.dragover {
-  border-color: var(--primary); background: rgba(249, 115, 22, 0.06);
-}
-.csv-drop-zone .icon { font-size: 40px; margin-bottom: 10px; }
-.csv-drop-zone .text { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
-.csv-drop-zone .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
-.csv-preview {
-  background: var(--bg-primary); border-radius: var(--radius);
-  padding: 12px; margin-bottom: 14px; max-height: 200px; overflow-y: auto;
-  font-size: 12px; border: 1px solid var(--border-light);
-}
-.csv-preview table { width: 100%; border-collapse: collapse; }
-.csv-preview th {
-  padding: 5px 8px; background: var(--bg-secondary);
-  font-weight: 700; text-align: center;
-  position: sticky; top: 0; font-size: 11px; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 0.5px;
-}
-.csv-preview td { padding: 5px 8px; border-bottom: 1px solid var(--border-light); text-align: center; color: var(--text-secondary); }
-.csv-preview td:first-child { text-align: left; font-weight: 600; color: var(--text-primary); }
-.csv-result { border-radius: var(--radius); padding: 12px 16px; margin-top: 12px; font-size: 13px; font-weight: 600; }
-.csv-result.success { background: var(--success-bg); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
-.csv-result.error { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
-
-/* ── Empty State ───────────────────────────────────────── */
-.empty-state {
-  text-align: left; padding: 80px 0 80px 20px; color: var(--text-muted);
-}
-.empty-state .empty-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.25; }
-.empty-state h3 { font-size: 18px; color: var(--text-secondary); margin-bottom: 8px; }
-.empty-state p { font-size: 13px; }
-
-/* ── Toast ─────────────────────────────────────────────── */
-#toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
-.toast {
-  padding: 12px 20px; border-radius: var(--radius); font-size: 13px;
-  font-weight: 600; box-shadow: var(--shadow); animation: slideIn 0.3s ease; max-width: 300px;
-}
-.toast.success { background: var(--success); color: white; }
-.toast.error { background: var(--danger); color: white; }
-.toast.warning { background: var(--warning); color: #1a1a1a; }
-.toast.info { background: var(--accent); color: white; }
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+#toast-container{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 20px;border-radius:var(--radius);font-size:13px;font-weight:600;box-shadow:var(--shadow);animation:slideIn .3s ease;max-width:300px}
+.toast.success{background:var(--success);color:#fff}
+.toast.error{background:var(--danger);color:#fff}
+.toast.warning{background:var(--warning);color:#1a1a1a}
+.toast.info{background:var(--accent);color:#fff}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 </style>
 </head>
 <body>
 <div id="toast-container"></div>
 
 <div class="app">
-  <!-- ── Sidebar Nav ── -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="app-sidebar">
     <div class="sidebar-logo">
       <div class="logo-mark">⚾</div>
       <h1>BaseAI</h1>
@@ -410,895 +211,710 @@ input, select, textarea { font-family: inherit; }
     </div>
     <div class="sidebar-footer">
       <div class="db-indicator"><span>⚡ Firebase</span></div>
-      <div style="margin-top:4px;font-size:10px; color:var(--text-muted);">v5.0 · 2026-04-23</div>
+      <div style="margin-top:4px;font-size:10px;">v4.0 · 2026-04-23</div>
     </div>
   </aside>
 
-  <!-- ── Main ── -->
   <div class="main">
     <div class="topbar">
-      <div class="topbar-left">
-        <div>
-          <div class="topbar-title">📈 技术档案</div>
-          <div class="topbar-subtitle">Module 04 · Player Profiles</div>
-        </div>
+      <div>
+        <div class="topbar-title" id="topbar-title">技术档案</div>
+        <div class="topbar-subtitle">Module 04 · Player Profiles</div>
       </div>
       <div class="topbar-stats" id="topbar-stats"></div>
     </div>
-    <div class="main-split">
-      <!-- Left: Search + Player List -->
-      <div class="search-panel">
-        <div class="search-panel-header">
-          <div class="search-box">
-            <input type="text" id="search-input" placeholder="搜索球员..." autocomplete="off">
-            <span class="search-icon">🔍</span>
-          </div>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">📈 技术档案</div>
+          <div class="page-desc">球员技术数据、成长曲线、综合能力分析</div>
         </div>
-        <div class="filter-row">
-          <select id="filter-age" onchange="renderPlayerList()">
-            <option value="">所有梯队</option>
-            <option value="U8">U8</option><option value="U10">U10</option>
-            <option value="U12">U12</option><option value="U15">U15</option>
-            <option value="U18">U18</option><option value="UW18">UW18</option>
-          </select>
-          <select id="filter-gender" onchange="renderPlayerList()">
-            <option value="">全部</option>
-            <option value="M">男</option><option value="F">女</option>
-          </select>
-        </div>
-        <div class="player-list" id="player-list"></div>
-        <div class="list-foot">
-          <button class="btn btn-primary" style="width:100%;margin-bottom:6px;" onclick="openImportModal()">📥 导入 CSV</button>
-          <button class="btn btn-ghost" style="width:100%;" onclick="openAddMeasModal()">+ 手动添加体测</button>
+        <div class="page-actions">
+          <button class="btn btn-primary" onclick="openImportModal()">📥 导入 CSV</button>
+          <button class="btn btn-ghost" onclick="openAddMeasModal()">+ 手动添加</button>
         </div>
       </div>
-      <!-- Right: Profile Content -->
-      <div id="profile-view" class="profile-panel"></div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <input type="text" id="search-input" placeholder="🔍 搜索球员姓名..." autocomplete="off" oninput="renderPlayerList()">
+        <select id="filter-age" onchange="renderPlayerList()">
+          <option value="">全部梯队</option>
+          <option value="U8">U8</option><option value="U10">U10</option>
+          <option value="U12">U12</option><option value="U15">U15</option>
+          <option value="U18">U18</option><option value="UW18">UW18</option>
+        </select>
+        <select id="filter-gender" onchange="renderPlayerList()">
+          <option value="">全部性别</option>
+          <option value="M">男</option><option value="F">女</option>
+        </select>
+      </div>
+
+      <!-- Player Grid -->
+      <div id="player-grid" class="player-grid"></div>
+
+      <!-- Profile Detail -->
+      <div id="profile-detail" style="display:none;"></div>
     </div>
   </div>
 </div>
 
 <!-- CSV Import Modal -->
-<div class="modal-overlay" id="import-modal" style="display:none;">
-  <div class="modal" style="max-width:700px;">
+<div id="csv-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('csv-modal')">
+  <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">📥 批量导入体测数据（CSV）</div>
-      <button class="modal-close" onclick="closeModal('import-modal')">✕</button>
+      <div class="modal-title">📥 批量导入体测数据</div>
+      <button class="modal-close" onclick="closeModal('csv-modal')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="csv-drop-zone" id="csv-drop" onclick="document.getElementById('csv-file-input').click()">
-        <div class="icon">📊</div>
+      <div class="csv-drop-zone" id="csv-drop-zone" onclick="document.getElementById('csv-file-input').click()">
+        <div class="icon">📄</div>
         <div class="text">点击上传 CSV 文件</div>
-        <div class="hint">或拖拽 CSV 文件到这里 · 支持 .csv 和 .txt</div>
+        <div class="hint">支持 Excel 导出格式：姓名、日期、一垒跑、全垒跑、球速等</div>
       </div>
-      <input type="file" id="csv-file-input" accept=".csv,.txt" style="display:none;" onchange="handleCSVFile(this.files[0])">
-      <div class="form-hint">
-        <b style="color:var(--text-secondary);">CSV 格式说明：</b>首行为表头，数据从第二行开始。<br>
-        列顺序：<b>姓名, 日期(YYYY-MM-DD), 立定跳远(cm), 仰卧起坐(个/分), 一垒跑(秒), 全垒跑(秒), 掷远(m), 打击距离(m), 球速(km/h), 棒速(km/h)</b><br>
-        日期和姓名必填，其余留空表示该项无数据。
-      </div>
-      <div id="csv-preview"></div>
+      <input type="file" id="csv-file-input" accept=".csv,.xlsx,.txt" style="display:none;" onchange="handleCSVFile(this.files[0])">
+      <div id="csv-preview" style="display:none;"></div>
       <div id="csv-result"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('import-modal')">取消</button>
-      <button class="btn btn-primary" id="csv-confirm-btn" disabled onclick="confirmCSVImport()">确认导入</button>
     </div>
   </div>
 </div>
 
 <!-- Add Measurement Modal -->
-<div class="modal-overlay" id="meas-modal" style="display:none;">
+<div id="meas-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('meas-modal')">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">📏 手动添加体测记录</div>
+      <div class="modal-title">➕ 添加体测数据</div>
       <button class="modal-close" onclick="closeModal('meas-modal')">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label class="form-label">选择球员</label>
+        <label class="form-label">球员姓名 *</label>
         <select class="form-input" id="meas-player-select"></select>
       </div>
-      <div class="form-group">
-        <label class="form-label">测试日期</label>
-        <input type="date" class="form-input" id="meas-date">
-      </div>
       <div class="form-grid">
-        <div class="form-group"><label class="form-label">立定跳远 (cm)</label><input type="number" class="form-input" id="m-stand-jump" placeholder="如：150"></div>
-        <div class="form-group"><label class="form-label">仰卧起坐 (个/分)</label><input type="number" class="form-input" id="m-situp" placeholder="如：30"></div>
-        <div class="form-group"><label class="form-label">一垒跑 (秒)</label><input type="number" step="0.1" class="form-input" id="m-sprint-1b" placeholder="如：8.5"></div>
-        <div class="form-group"><label class="form-label">全垒跑 (秒)</label><input type="number" step="0.1" class="form-input" id="m-sprint-hb" placeholder="如：15.2"></div>
-        <div class="form-group"><label class="form-label">掷远 (m)</label><input type="number" step="0.1" class="form-input" id="m-throw" placeholder="如：30.5"></div>
-        <div class="form-group"><label class="form-label">打击距离 (m)</label><input type="number" step="0.1" class="form-input" id="m-bat-dist" placeholder="如：40"></div>
-        <div class="form-group"><label class="form-label">球速 (km/h)</label><input type="number" step="0.1" class="form-input" id="m-pitch-speed" placeholder="如：75"></div>
-        <div class="form-group"><label class="form-label">棒速 (km/h)</label><input type="number" step="0.1" class="form-input" id="m-bat-speed" placeholder="如：60"></div>
+        <div class="form-group">
+          <label class="form-label">日期</label>
+          <input type="date" class="form-input" id="meas-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">立定跳远 (cm)</label>
+          <input type="number" class="form-input" id="meas-stand-jump" placeholder="如 185">
+        </div>
+        <div class="form-group">
+          <label class="form-label">仰卧起坐 (个/分)</label>
+          <input type="number" class="form-input" id="meas-situp" placeholder="如 30">
+        </div>
+        <div class="form-group">
+          <label class="form-label">一垒跑 (秒)</label>
+          <input type="number" class="form-input" id="meas-1b" step="0.1" placeholder="如 7.2">
+        </div>
+        <div class="form-group">
+          <label class="form-label">全垒跑 (秒)</label>
+          <input type="number" class="form-input" id="meas-hb" step="0.1" placeholder="如 14.5">
+        </div>
+        <div class="form-group">
+          <label class="form-label">掷远 (m)</label>
+          <input type="number" class="form-input" id="meas-throw" step="0.1" placeholder="如 45">
+        </div>
+        <div class="form-group">
+          <label class="form-label">打击距离 (m)</label>
+          <input type="number" class="form-input" id="meas-bat-dist" step="0.1" placeholder="如 60">
+        </div>
+        <div class="form-group">
+          <label class="form-label">球速 (km/h)</label>
+          <input type="number" class="form-input" id="meas-pitch-speed" step="0.1" placeholder="如 85">
+        </div>
+        <div class="form-group">
+          <label class="form-label">棒速 (km/h)</label>
+          <input type="number" class="form-input" id="meas-bat-speed" step="0.1" placeholder="如 75">
+        </div>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('meas-modal')">取消</button>
-      <button class="btn btn-primary" onclick="confirmAddMeas()">保存记录</button>
+      <button class="btn btn-primary" onclick="saveMeasurement()">保存</button>
     </div>
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <script src="firebase-service.js"></script>
 <script src="db.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-// ─────────────────────────────────────────────────────────
-//  State
-// ─────────────────────────────────────────────────────────
+/* ── State ──────────────────────────────────────────────────── */
 var allPlayers = [];
-var activePlayerId = null;
+var selectedPlayerId = null;
 var currentTab = 'stats';
-var parsedCSV = null;
-var growthChart = null;
-var _csvInput = null;
 
-// ─────────────────────────────────────────────────────────
-//  Toast
-// ─────────────────────────────────────────────────────────
-function showToast(msg, type) {
-  type = type || 'info';
-  var c = document.getElementById('toast-container');
-  var el = document.createElement('div');
-  el.className = 'toast ' + type;
-  el.textContent = msg;
-  c.appendChild(el);
-  setTimeout(function() { el.style.opacity = '0'; setTimeout(function(){ el.remove(); }, 300); }, 2500);
+/* ── Helpers ────────────────────────────────────────────────── */
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function toFixed(v,n){return (parseFloat(v)||0).toFixed(n||1);}
+function fmtDate(d){if(!d)return '—';var p=d.split('-');return p[1]+'/'+p[2]+'/'+p[0];}
+
+function showToast(msg,type){
+  type=type||'info';
+  var c=document.getElementById('toast-container');
+  var t=document.createElement('div');
+  t.className='toast '+type;
+  t.textContent=msg;
+  c.appendChild(t);
+  setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove();},300);},3500);
 }
 
-// ─────────────────────────────────────────────────────────
-//  Init
-// ─────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
-  _csvInput = document.createElement('input');
-  _csvInput.type = 'file';
-  _csvInput.accept = '.csv,.txt';
-  _csvInput.style.display = 'none';
-  _csvInput.addEventListener('change', function() {
-    if (_csvInput.files[0]) handleCSVFile(_csvInput.files[0]);
+function closeModal(id){document.getElementById(id).style.display='none';}
+
+/* ── Firebase Init ──────────────────────────────────────────── */
+var _dbInited=false;
+var _pending=[];
+function onDBReady(fn){if(_dbInited)fn();else _pending.push(fn);}
+
+function initNav(){
+  var html='<div class="sidebar-logo"><div class="logo-mark">⚾</div><h1>BaseAI</h1><div class="subtitle">BASEBALL SYSTEM</div></div>';
+  html+='<div class="sidebar-section"><div class="sidebar-section-label">核心模块</div>';
+  [['👥','球员资料库','players.html'],['🏆','球队梯队','teams.html'],['📊','赛事记分','games.html'],['📈','技术档案','profiles.html',true],['⚙️','权限后台','admin.html']].forEach(function(m){
+    html+='<a href="'+m[2]+'" class="nav-item'+(m[3]?' active':'')+'"><div class="nav-icon">'+m[0]+'</div><span>'+m[1]+'</span></a>';
   });
-  document.body.appendChild(_csvInput);
-
-  var dropZone = document.getElementById('csv-drop');
-  dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('dragover'); });
-  dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('dragover'); });
-  dropZone.addEventListener('drop', function(e){ e.preventDefault(); dropZone.classList.remove('dragover'); if(e.dataTransfer.files[0]) handleCSVFile(e.dataTransfer.files[0]); });
-
-  document.getElementById('search-input').addEventListener('input', renderPlayerList);
-  document.getElementById('filter-age').addEventListener('change', renderPlayerList);
-  document.getElementById('filter-gender').addEventListener('change', renderPlayerList);
-
-  DB.init(function() {
-    DB.getPlayers(function(result) {
-      allPlayers = result.data || [];
-      renderPlayerList();
-      renderTopbarStats();
-    });
-  });
-});
-
-// ─────────────────────────────────────────────────────────
-//  Topbar Stats
-// ─────────────────────────────────────────────────────────
-function renderTopbarStats() {
-  var el = document.getElementById('topbar-stats');
-  var total = allPlayers.length;
-  var withMeas = allPlayers.filter(function(p){ return p.measurements && p.measurements.length > 0; }).length;
-  el.innerHTML =
-    '<div class="topbar-stat"><div class="num" style="color:var(--accent);">'+total+'</div><div class="label">注册球员</div></div>'+
-    '<div class="topbar-stat"><div class="num" style="color:var(--success);">'+withMeas+'</div><div class="label">有体测数据</div></div>';
+  html+='</div><div class="sidebar-section"><div class="sidebar-section-label">智能模块</div>';
+  html+='<a href="ai-coach-v2.html" class="nav-item"><div class="nav-icon">🤖</div><span>AI 专属教练</span><span class="nav-badge">AI</span></a>';
+  html+='</div><div class="sidebar-section" style="margin-top:auto;"><a href="index.html" class="nav-item" style="border-top:1px solid var(--border);"><div class="nav-icon">🏠</div><span>返回首页</span></a></div>';
+  html+='<div class="sidebar-footer"><div class="db-indicator"><span>⚡ Firebase</span></div><div style="margin-top:4px;font-size:10px;">v4.0 · 2026-04-23</div></div>';
+  document.getElementById('app-sidebar').innerHTML=html;
 }
 
-// ─────────────────────────────────────────────────────────
-//  Player List
-// ─────────────────────────────────────────────────────────
-function renderPlayerList() {
-  var q = document.getElementById('search-input').value.trim().toLowerCase();
-  var age = document.getElementById('filter-age').value;
-  var gender = document.getElementById('filter-gender').value;
-  var list = document.getElementById('player-list');
-
-  var filtered = allPlayers.filter(function(p) {
-    if (q && !(p.name||'').toLowerCase().includes(q)) return false;
-    if (age && p.age_group !== age) return false;
-    if (gender && p.gender !== gender) return false;
-    return true;
-  });
-
-  if (filtered.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:12px;">无匹配球员</div>';
-    return;
-  }
-
-  var html = '';
-  filtered.forEach(function(p) {
-    var initials = (p.name||'?').charAt(0).toUpperCase();
-    var badge = p.age_group || '';
-    var meta = [p.team_name||'', p.gender==='F'?'女':'男'].filter(Boolean).join(' · ');
-    html += '<div class="player-item'+(p.id===activePlayerId?' active':'')+'" onclick="selectPlayer(\''+esc(p.id)+'\')">'+
-      '<div class="player-avatar">'+(p.photo?'<img src="'+esc(p.photo)+'" alt="">':initials)+'</div>'+
-      '<div class="player-info"><div class="player-name">'+esc(p.name||'')+'</div><div class="player-meta">'+esc(meta)+'</div></div>'+
-      (badge?'<span class="player-badge">'+esc(badge)+'</span>':'')+'</div>';
-  });
-  list.innerHTML = html;
-}
-
-// ─────────────────────────────────────────────────────────
-//  Select Player
-// ─────────────────────────────────────────────────────────
-function selectPlayer(id) {
-  activePlayerId = id;
-  renderPlayerList();
-  var player = allPlayers.find(function(p){ return p.id===id; });
-  if (!player) return;
-  renderProfile(player);
-}
-
-// ─────────────────────────────────────────────────────────
-//  Render Profile
-// ─────────────────────────────────────────────────────────
-function renderProfile(player) {
-  var view = document.getElementById('profile-view');
-  var initials = (player.name||'?').charAt(0).toUpperCase();
-  var measurements = player.measurements || [];
-  var latest = measurements.length > 0 ? measurements[measurements.length-1] : null;
-  var stats = player.stats || {};
-  var batting = stats.batting || {};
-  var pitching = stats.pitching || {};
-
-  var html = '';
-
-  // Profile Header
-  html += '<div class="profile-header">';
-  html += '<div class="profile-avatar-wrap"><div class="profile-avatar">'+(player.photo?'<img src="'+esc(player.photo)+'" alt="">':initials)+'</div></div>';
-  html += '<div class="profile-info">';
-  html += '<div class="profile-name">'+esc(player.name||'')+'</div>';
-  html += '<div class="profile-team">';
-  if (player.team_name) html += '<span style="color:var(--text-secondary);">'+esc(player.team_name)+'</span>';
-  if (player.age_group) html += '<span class="tag tag-age">'+esc(player.age_group)+'</span>';
-  if (player.gender) html += '<span class="tag tag-gender">'+(player.gender==='F'?'女':'男')+'</span>';
-  if (player.school) html += '<span style="font-size:12px;color:var(--text-muted);">'+esc(player.school)+'</span>';
-  html += '</div></div>';
-  html += '<div class="profile-actions">';
-  html += '<button class="btn btn-ghost btn-sm" onclick="openAddMeasModal()">+ 体测</button>';
-  html += '</div></div>';
-
-  // Tabs
-  html += '<div class="tabs">';
-  html += '<div class="tab'+(currentTab==='stats'?' active':'')+'" onclick="switchTab(\'stats\', \''+esc(player.id)+'\')">🎯 综合能力</div>';
-  html += '<div class="tab'+(currentTab==='meas'?' active':'')+'" onclick="switchTab(\'meas\', \''+esc(player.id)+'\')">📏 体测记录</div>';
-  html += '<div class="tab'+(currentTab==='game'?' active':'')+'" onclick="switchTab(\'game\', \''+esc(player.id)+'\')">⚾ 比赛数据</div>';
-  html += '</div>';
-
-  html += '<div id="tab-stats" class="tab-content'+(currentTab==='stats'?' active':'')+'">';
-  html += buildStatsTab(player, latest, batting, pitching);
-  html += '</div>';
-
-  html += '<div id="tab-meas" class="tab-content'+(currentTab==='meas'?' active':'')+'">';
-  html += buildMeasTab(measurements);
-  html += '</div>';
-
-  html += '<div id="tab-game" class="tab-content'+(currentTab==='game'?' active':'')+'">';
-  html += buildGameTab(batting, pitching);
-  html += '</div>';
-
-  view.innerHTML = html;
-  drawRadar(player, latest);
-  if (currentTab === 'meas') setTimeout(function(){ drawGrowthChart(measurements); }, 50);
-}
-
-// ─────────────────────────────────────────────────────────
-//  Stats Tab
-// ─────────────────────────────────────────────────────────
-function buildStatsTab(player, latest, batting, pitching) {
-  var scores = calcScores(latest);
-  var html = '<div class="profile-grid">';
-
-  // Radar Card
-  html += '<div class="card radar-card">';
-  html += '<div class="card-title"><span class="icon">🎯</span> 五维能力图</div>';
-  html += '<div class="radar-wrap"><canvas id="radarCanvas" width="300" height="300"></canvas></div>';
-  html += '<div class="radar-legend">';
-  html += '<div class="legend-item"><span class="legend-dot" style="background:#f97316"></span> 本次体测</div>';
-  html += '<div class="legend-item"><span class="legend-dot" style="background:#3b82f6"></span> 全队平均</div>';
-  html += '</div></div>';
-
-  // Score Card
-  html += '<div class="card">';
-  html += '<div class="card-title"><span class="icon">📊</span> 能力评分</div>';
-
-  html += '<div class="stat-category">⚡ 速度</div>';
-  html += '<div class="stat-row"><span class="stat-label">速度评分</span><span class="stat-value highlight">'+toFixed(scores.speed,1)+'</span></div>';
-  if (latest) {
-    if (latest.sprint_1b_s) html += '<div class="stat-row"><span class="stat-label">一垒跑</span><span class="stat-value">'+toFixed(latest.sprint_1b_s,1)+'s</span></div>';
-    if (latest.sprint_hb_s) html += '<div class="stat-row"><span class="stat-label">全垒跑</span><span class="stat-value">'+toFixed(latest.sprint_hb_s,1)+'s</span></div>';
-  }
-
-  html += '<div class="stat-category">💪 力量</div>';
-  html += '<div class="stat-row"><span class="stat-label">力量评分</span><span class="stat-value highlight">'+toFixed(scores.power,1)+'</span></div>';
-  if (latest) {
-    if (latest.pitch_speed_kmh) html += '<div class="stat-row"><span class="stat-label">球速</span><span class="stat-value">'+toFixed(latest.pitch_speed_kmh,1)+' km/h</span></div>';
-    if (latest.throw_dist_m) html += '<div class="stat-row"><span class="stat-label">掷远</span><span class="stat-value">'+toFixed(latest.throw_dist_m,1)+' m</span></div>';
-    if (latest.bat_dist_m) html += '<div class="stat-row"><span class="stat-label">打击距离</span><span class="stat-value">'+toFixed(latest.bat_dist_m,1)+' m</span></div>';
-  }
-
-  html += '<div class="stat-category">🏏 打击</div>';
-  html += '<div class="stat-row"><span class="stat-label">打击评分</span><span class="stat-value highlight">'+toFixed(scores.batting,1)+'</span></div>';
-  if (latest) {
-    if (latest.bat_speed_kmh) html += '<div class="stat-row"><span class="stat-label">棒速</span><span class="stat-value">'+toFixed(latest.bat_speed_kmh,1)+' km/h</span></div>';
-  }
-  if (batting.ab) {
-    var avg = batting.h / batting.ab;
-    html += '<div class="stat-row"><span class="stat-label">比赛 AVG</span><span class="stat-value" style="color:var(--success);">'+fmtBA(avg)+'</span></div>';
-    html += '<div class="stat-row"><span class="stat-label">比赛 AB/H/R</span><span class="stat-value">'+[batting.ab,batting.h,batting.r||0].join(' / ')+'</span></div>';
-  }
-
-  html += '<div class="stat-category">🎯 投球</div>';
-  html += '<div class="stat-row"><span class="stat-label">投球评分</span><span class="stat-value highlight">'+toFixed(scores.pitching,1)+'</span></div>';
-  if (pitching.ip) {
-    var era = pitching.er && pitching.ip ? (pitching.er * 7 / pitching.ip).toFixed(2) : '—';
-    html += '<div class="stat-row"><span class="stat-label">ERA</span><span class="stat-value" style="color:var(--warning);">'+era+'</span></div>';
-    html += '<div class="stat-row"><span class="stat-label">投球 IP/SO</span><span class="stat-value">'+fmtIP(pitching.ip)+' / '+(pitching.so||0)+'</span></div>';
-  }
-
-  html += '<div class="stat-category">🏃 敏捷</div>';
-  html += '<div class="stat-row"><span class="stat-label">敏捷评分</span><span class="stat-value highlight">'+toFixed(scores.agility,1)+'</span></div>';
-  if (latest) {
-    if (latest.situp) html += '<div class="stat-row"><span class="stat-label">仰卧起坐</span><span class="stat-value">'+latest.situp+' 个/分</span></div>';
-    if (latest.stand_jump_cm) html += '<div class="stat-row"><span class="stat-label">立定跳远</span><span class="stat-value">'+latest.stand_jump_cm+' cm</span></div>';
-  }
-
-  html += '</div></div>';
-  return html;
-}
-
-// ─────────────────────────────────────────────────────────
-//  Measurement Tab
-// ─────────────────────────────────────────────────────────
-function buildMeasTab(measurements) {
-  var html = '<div class="card" style="margin-bottom:16px;">';
-  html += '<div class="card-title"><span class="icon">📈</span> 成长曲线</div>';
-  html += '<div class="chart-wrap"><canvas id="growthChart"></canvas></div>';
-  html += '</div>';
-
-  html += '<div class="card">';
-  html += '<div class="card-title"><span class="icon">📋</span> 体测历史 ('+measurements.length+' 条记录)</div>';
-  if (measurements.length === 0) {
-    html += '<div class="no-data">暂无体测数据<br>可点击右上角「导入 CSV」批量导入，或手动添加</div>';
-  } else {
-    html += '<div class="meas-table-wrap">';
-    html += '<table class="meas-table"><thead><tr>';
-    html += '<th>日期</th><th>立定跳(cm)</th><th>仰卧(个)</th><th>一垒跑(s)</th><th>全垒跑(s)</th><th>掷远(m)</th><th>打击(m)</th><th>球速(km/h)</th><th>棒速(km/h)</th>';
-    html += '</tr></thead><tbody>';
-    var fields = ['stand_jump_cm','situp','sprint_1b_s','sprint_hb_s','throw_dist_m','bat_dist_m','pitch_speed_kmh','bat_speed_kmh'];
-    measurements.slice().reverse().forEach(function(m, idx) {
-      var prev = measurements[measurements.length-idx-2];
-      html += '<tr>';
-      html += '<td>'+esc(m.date||'')+'</td>';
-      fields.forEach(function(f) {
-        var v = m[f];
-        var p = prev ? prev[f] : null;
-        var trend = '';
-        if (v !== null && v !== undefined && p !== null && p !== undefined) {
-          if (f==='sprint_1b_s'||f==='sprint_hb_s') {
-            if (v < p) trend = ' trend-up';
-            else if (v > p) trend = ' trend-down';
-          } else {
-            if (v > p) trend = ' trend-up';
-            else if (v < p) trend = ' trend-down';
-          }
-        }
-        html += '<td class="'+trend.trim()+'">'+(v!==null&&v!==undefined?esc(String(v)):'—')+'</td>';
-      });
-      html += '</tr>';
-    });
-    html += '</tbody></table></div>';
-  }
-  html += '</div>';
-  return html;
-}
-
-// ─────────────────────────────────────────────────────────
-//  Game Tab
-// ─────────────────────────────────────────────────────────
-function buildGameTab(batting, pitching) {
-  var html = '<div class="profile-grid">';
-
-  html += '<div class="card">';
-  html += '<div class="card-title"><span class="icon">🏏</span> 打击数据汇总</div>';
-  if (!batting || !batting.ab) {
-    html += '<div class="no-data">暂无比赛打击数据</div>';
-  } else {
-    var avg = batting.h / batting.ab;
-    var obp = batting.h + batting.bb + batting.hbp || 0;
-    var den = batting.ab + batting.bb + batting.hbp + batting.sf || batting.ab;
-    obp = den > 0 ? obp/den : 0;
-    html += '<div class="stat-pills">';
-    html += '<div class="stat-pill"><div class="val">'+fmtBA(avg)+'</div><div class="lbl">AVG</div></div>';
-    html += '<div class="stat-pill"><div class="val">'+fmtBA(obp)+'</div><div class="lbl">OBP</div></div>';
-    html += '<div class="stat-pill"><div class="val">'+(batting.h||0)+'</div><div class="lbl">安打 H</div></div>';
-    html += '<div class="stat-pill"><div class="val">'+(batting.ab||0)+'</div><div class="lbl">打数 AB</div></div>';
-    html += '</div>';
-    html += '<div class="stat-row"><span class="stat-label">得分 R</span><span class="stat-value">'+(batting.r||0)+'</span></div>';
-    html += '<div class="stat-row"><span class="stat-label">打点 RBI</span><span class="stat-value">'+(batting.rbi||0)+'</span></div>';
-    html += '<div class="stat-row"><span class="stat-label">保送 BB</span><span class="stat-value">'+(batting.bb||0)+'</span></div>';
-    html += '<div class="stat-row"><span class="stat-label">三振 SO</span><span class="stat-value">'+(batting.so||0)+'</span></div>';
-    html += '<div class="stat-row"><span class="stat-label">二垒打 2B</span><span class="stat-value">'+(batting['2b']||0)+'</span></div>';
-    html += '<div class="stat-row"><span class="stat-label">三垒打 3B</span><span class="stat-value">'+(batting['3b']||0)+'</span></div>';
-    html += '<div class="stat-row"><span class="stat-label">本垒打 HR</span><span class="stat-value">'+(batting.hr||0)+'</span></div>';
-  }
-  html += '</div>';
-
-  html += '<div class="card">';
-  html += '<div class="card-title"><span class="icon">🎯</span> 投球数据汇总</div>';
-  if (!pitching || !pitching.ip) {
-    html += '<div class="no-data">暂无比赛投球数据</div>';
-  } else {
-    var era = pitching.er && pitching.ip ? (pitching.er * 7 / pitching.ip).toFixed(2) : '—';
-    var whip = pitching.h + pitching.bb ? ((pitching.h + pitching.bb)/pitching.ip).toFixed(2) : '—';
-    html += '<div class="stat-pills">';
-    html += '<div class="stat-pill"><div class="val">'+era+'</div><div class="lbl">ERA</div></div>';
-    html += '<div class="stat-pill"><div class="val">'+whip+'</div><div class="lbl">WHIP</div></div>';
-    html += '<div class="stat-pill"><div class="val">'+fmtIP(pitching.ip)+'</div><div class="lbl">投球局数</div></div>';
-    html += '<div class="stat-pill"><div class="val">'+(pitching.so||0)+'</div><div class="lbl">三振</div></div>';
-    html += '</div>';
-    html += '<div class="stat-row"><span class="stat-label">自责分 ER</span><span class="stat-value">'+(pitching.er||0)+'</span></div>';
-    html += '<div class="stat-row"><span class="stat-label">被安打 H</span><span class="stat-value">'+(pitching.h||0)+'</span></div>';
-    html += '<div class="stat-row"><span class="stat-label">保送 BB</span><span class="stat-value">'+(pitching.bb||0)+'</span></div>';
-    html += '<div class="stat-row"><span class="stat-label">投手打数 BF</span><span class="stat-value">'+(pitching.bf||0)+'</span></div>';
-  }
-  html += '</div>';
-  html += '</div>';
-  return html;
-}
-
-// ─────────────────────────────────────────────────────────
-//  Radar Chart (Canvas)
-// ─────────────────────────────────────────────────────────
-function drawRadar(player, latest) {
-  var canvas = document.getElementById('radarCanvas');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var scores = calcScores(latest);
-  var playerScores = [scores.speed, scores.power, scores.batting, scores.pitching, scores.agility];
-  var teamAvg = calcTeamAvg();
-  var avgScores = [teamAvg.speed, teamAvg.power, teamAvg.batting, teamAvg.pitching, teamAvg.agility];
-  var labels = ['速度', '力量', '打击', '投球', '敏捷'];
-  var datasets = [
-    { data: playerScores, color: '#f97316', fill: 'rgba(249,115,22,0.15)', border: '#f97316' },
-    { data: avgScores, color: '#3b82f6', fill: 'rgba(59,130,246,0.10)', border: '#3b82f6' }
-  ];
-  drawRadarChart(ctx, canvas.width, canvas.height, labels, datasets);
-}
-
-function drawRadarChart(ctx, w, h, labels, datasets) {
-  var cx = w/2, cy = h/2;
-  var maxR = Math.min(cx, cy) - 44;
-  var n = labels.length;
-  var step = Math.PI * 2 / n;
-  var startAngle = -Math.PI/2;
-
-  ctx.clearRect(0, 0, w, h);
-
-  // Grid rings
-  for (var r=1; r<=5; r++) {
-    ctx.beginPath();
-    for (var i=0; i<=n; i++) {
-      var angle = startAngle + step * i;
-      var rr = (r/5) * maxR;
-      var x = cx + Math.cos(angle) * rr;
-      var y = cy + Math.sin(angle) * rr;
-      if (i===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = r===5 ? 1.5 : 0.75;
-    ctx.stroke();
-  }
-
-  // Axes
-  for (var i=0; i<n; i++) {
-    var angle = startAngle + step * i;
-    var x2 = cx + Math.cos(angle) * maxR;
-    var y2 = cy + Math.sin(angle) * maxR;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(x2, y2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 0.75;
-    ctx.stroke();
-
-    var lx = cx + Math.cos(angle) * (maxR + 22);
-    var ly = cy + Math.sin(angle) * (maxR + 22);
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '600 12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(labels[i], lx, ly);
-  }
-
-  // Score on axes
-  for (var r=1; r<=5; r++) {
-    for (var i=0; i<n; i++) {
-      var a2 = startAngle + step * i;
-      var rr = (r/5) * maxR;
-      var sx = cx + Math.cos(a2) * rr;
-      var sy = cy + Math.sin(a2) * rr;
-      if (r===5) {
-        ctx.fillStyle = 'rgba(255,255,255,0.25)';
-        ctx.font = '9px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(String(r*20), sx, sy);
-      }
-    }
-  }
-
-  // Polygons
-  datasets.forEach(function(ds) {
-    ctx.beginPath();
-    for (var i=0; i<=n; i++) {
-      var idx = i % n;
-      var angle = startAngle + step * idx;
-      var val = Math.max(0, Math.min(100, ds.data[idx]));
-      var rr = (val/100) * maxR;
-      var x = cx + Math.cos(angle) * rr;
-      var y = cy + Math.sin(angle) * rr;
-      if (i===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.fillStyle = ds.fill;
-    ctx.fill();
-    ctx.strokeStyle = ds.border;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    for (var i=0; i<n; i++) {
-      var angle = startAngle + step * i;
-      var val = Math.max(0, Math.min(100, ds.data[i]));
-      var rr = (val/100) * maxR;
-      var x = cx + Math.cos(angle) * rr;
-      var y = cy + Math.sin(angle) * rr;
-      ctx.beginPath();
-      ctx.arc(x, y, 3.5, 0, Math.PI*2);
-      ctx.fillStyle = ds.border;
-      ctx.fill();
-    }
-  });
-}
-
-// ─────────────────────────────────────────────────────────
-//  Growth Chart (Chart.js)
-// ─────────────────────────────────────────────────────────
-function drawGrowthChart(measurements) {
-  var canvas = document.getElementById('growthChart');
-  if (!canvas || measurements.length < 2) return;
-  if (growthChart) { growthChart.destroy(); growthChart = null; }
-
-  var sorted = measurements.slice().sort(function(a,b){ return a.date<b.date?-1:1; });
-  var labels = sorted.map(function(m){ return m.date||''; });
-
-  var datasets = [
-    { key: 'sprint_1b_s', label: '一垒跑 (s)', color: '#f97316' },
-    { key: 'pitch_speed_kmh', label: '球速 (km/h)', color: '#ef4444' },
-    { key: 'throw_dist_m', label: '掷远 (m)', color: '#10b981' },
-  ];
-
-  var visible = datasets.filter(function(d){ return sorted.some(function(m){ return m[d.key]; }); });
-  if (visible.length === 0) return;
-
-  var chartData = visible.map(function(d){
-    return {
-      label: d.label,
-      data: sorted.map(function(m){ return m[d.key]||null; }),
-      borderColor: d.color,
-      backgroundColor: d.color+'22',
-      tension: 0.3, fill: false, pointRadius: 4, pointHoverRadius: 6,
-    };
-  });
-
-  growthChart = new Chart(canvas, {
-    type: 'line',
-    data: { labels: labels, datasets: chartData },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { position: 'top', labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12 } } },
-      scales: {
-        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.04)' } },
-        y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.04)' } }
-      }
-    }
-  });
-}
-
-// ─────────────────────────────────────────────────────────
-//  Scoring
-// ─────────────────────────────────────────────────────────
-function calcScores(m) {
-  if (!m) return { speed: 0, power: 0, batting: 0, pitching: 0, agility: 0 };
-
-  var speed = 100 - Math.max(0, (m.sprint_1b_s-7)*10) - Math.max(0, (m.sprint_hb_s-14)*5);
-
-  var power =
-    (m.pitch_speed_kmh ? (m.pitch_speed_kmh/140)*50 : 0) +
-    (m.throw_dist_m ? Math.min(100, (m.throw_dist_m/100)*25) : 0) +
-    (m.bat_dist_m ? Math.min(100, (m.bat_dist_m/100)*25) : 0);
-
-  var batting = 0;
-  if (m.bat_speed_kmh) batting += (m.bat_speed_kmh/90)*60;
-  if (m.bat_dist_m) batting += Math.min(100,(m.bat_dist_m/100)*40);
-
-  var pitching = m.pitch_speed_kmh ? (m.pitch_speed_kmh/140)*100 : 0;
-
-  var agility = 0;
-  var cnt = 0;
-  if (m.situp) { agility += Math.min(100, m.situp*2); cnt++; }
-  if (m.stand_jump_cm) { agility += Math.min(100, m.stand_jump_cm/2); cnt++; }
-  if (cnt > 0) agility = agility / cnt;
-
-  return {
-    speed: Math.max(0, Math.min(100, speed)),
-    power: Math.max(0, Math.min(100, power)),
-    batting: Math.max(0, Math.min(100, batting)),
-    pitching: Math.max(0, Math.min(100, pitching)),
-    agility: Math.max(0, Math.min(100, agility))
+/* ── Scoring ────────────────────────────────────────────────── */
+function calcScores(m){
+  if(!m)return{speed:0,power:0,batting:0,pitching:0,agility:0};
+  var sp=toFixed(m.pitch_speed_kmh||0,'1');
+  var bs=toFixed(m.bat_speed_kmh||0,'1');
+  var td=toFixed(m.throw_dist_m||0,'1');
+  var bd=toFixed(m.bat_dist_m||0,'1');
+  var s1=parseFloat(m.sprint_1b_s)||0;
+  var sh=parseFloat(m.sprint_hb_s)||0;
+  var su=m.situp||0;
+  var sj=m.stand_jump_cm||0;
+  return{
+    speed:   Math.max(0,100-(s1-7)*10-(sh-14)*5),
+    power:    Math.min(100,(sp/140)*50+(td/100)*25+(bd/100)*25),
+    batting:  Math.min(100,(bs/90)*60+(bd/100)*40),
+    pitching: Math.min(100,(sp/140)*100),
+    agility:  Math.min(100,su*2*0.5+sj/2*0.5)
   };
 }
 
-function calcTeamAvg() {
-  var withMeas = allPlayers.filter(function(p){ return p.measurements && p.measurements.length > 0; });
-  if (withMeas.length === 0) return { speed: 50, power: 50, batting: 50, pitching: 50, agility: 50 };
-  var sums = { speed: 0, power: 0, batting: 0, pitching: 0, agility: 0 };
-  withMeas.forEach(function(p) {
-    var latest = p.measurements[p.measurements.length-1];
-    var s = calcScores(latest);
-    Object.keys(sums).forEach(function(k){ sums[k] += s[k]; });
+/* ── Get Players ────────────────────────────────────────────── */
+function loadPlayers(){
+  onDBReady(function(){
+    DB.getPlayers(function(players){
+      allPlayers=players||[];
+      renderPlayerList();
+      updateTopbarStats();
+    });
   });
-  var n = withMeas.length;
-  Object.keys(sums).forEach(function(k){ sums[k] /= n; });
-  return sums;
 }
 
-// ─────────────────────────────────────────────────────────
-//  Tab Switching
-// ─────────────────────────────────────────────────────────
-function switchTab(tab, playerId) {
-  currentTab = tab;
-  var player = allPlayers.find(function(p){ return p.id === playerId; });
-  if (!player) return;
-  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
-  document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
-  document.querySelectorAll('.tab').forEach(function(t){
-    if ((tab==='stats'&&t.textContent.includes('综合能力')) ||
-        (tab==='meas'&&t.textContent.includes('体测记录')) ||
-        (tab==='game'&&t.textContent.includes('比赛数据'))) t.classList.add('active');
-  });
-  var target = document.getElementById('tab-'+tab);
-  if (target) target.classList.add('active');
+/* ── Update Topbar Stats ───────────────────────────────────── */
+function updateTopbarStats(){
+  var total=allPlayers.length;
+  var withMeas=allPlayers.filter(function(p){return p.measurements&&p.measurements.length>0;}).length;
+  document.getElementById('topbar-stats').innerHTML=
+    '<div class="topbar-stat"><div class="num" style="color:var(--primary);">'+total+'</div><div class="label">注册球员</div></div>'+
+    '<div class="topbar-stat"><div class="num" style="color:var(--success);">'+withMeas+'</div><div class="label">有体测数据</div></div>';
+}
 
-  if (tab === 'meas') {
-    setTimeout(function(){ drawGrowthChart(player.measurements||[]); }, 50);
+/* ── Render Player List ─────────────────────────────────────── */
+function renderPlayerList(){
+  var q=document.getElementById('search-input').value.trim().toLowerCase();
+  var age=document.getElementById('filter-age').value;
+  var gender=document.getElementById('filter-gender').value;
+  var grid=document.getElementById('player-grid');
+  var filtered=allPlayers.filter(function(p){
+    if(q&&!(p.name||'').toLowerCase().includes(q))return false;
+    if(age&&p.age_group!==age)return false;
+    if(gender&&p.gender!==gender)return false;
+    return true;
+  });
+  if(filtered.length===0){
+    grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><h3>没有找到球员</h3><p>试试调整搜索条件</p></div>';
+    return;
+  }
+  var html='';
+  filtered.forEach(function(p){
+    var initials=(p.name||'未知').substring(0,2);
+    var ageLabel=p.age_group||'';
+    var genderLabel={M:'♂ 男',F:'♀ 女'}[p.gender]||'';
+    var measCount=p.measurements?p.measurements.length:0;
+    var cls=selectedPlayerId===p.id?'selected':'';
+    var photoUrl=p.photo_url||'';
+    var avatarHtml=photoUrl?'<img src="'+esc(photoUrl)+'" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'">'+initials+'<span style="display:none">'+initials+'</span>':'<span style="display:flex">'+initials+'</span>';
+    html+='<div class="player-card '+cls+'" onclick="selectPlayer(\''+p.id+'\')">'+
+      '<div class="player-avatar">'+avatarHtml+'</div>'+
+      '<div class="player-name">'+esc(p.name||'未知')+'</div>'+
+      '<div class="player-meta">'+[ageLabel,genderLabel].filter(Boolean).join(' · ')+'</div>'+
+      (measCount>0?'<div class="profile-tag" style="margin-top:4px;font-size:10px;">'+measCount+'次体测</div>':'')+
+    '</div>';
+  });
+  grid.innerHTML=html;
+}
+
+/* ── Select Player ──────────────────────────────────────────── */
+function selectPlayer(id){
+  selectedPlayerId=id;
+  renderPlayerList();
+  var p=allPlayers.find(function(x){return x.id===id;});
+  if(!p){showToast('找不到该球员','error');return;}
+  renderProfileDetail(p);
+  document.getElementById('player-grid').style.display='none';
+  document.getElementById('profile-detail').style.display='block';
+}
+
+/* ── Render Profile Detail ──────────────────────────────────── */
+function renderProfileDetail(p){
+  var container=document.getElementById('profile-detail');
+  var initials=(p.name||'未知').substring(0,2);
+  var photoUrl=p.photo_url||'';
+  var m=p.measurements||[];
+  var latest=m.length>0?m[m.length-1]:null;
+  var scores=calcScores(latest);
+  var stats=p.stats||{};
+  var batting=stats.batting||{};
+  var pitching=stats.pitching||{};
+  var measCount=m.length;
+
+  var html='';
+
+  // Header
+  html+='<div class="profile-detail">';
+  html+='<div class="profile-header">';
+  if(photoUrl){
+    html+='<div class="profile-avatar"><img src="'+esc(photoUrl)+'" style="width:100%;height:100%;object-fit:cover"></div>';
+  }else{
+    html+='<div class="profile-avatar" style="justify-content:center;font-size:24px;">'+initials+'</div>';
+  }
+  html+='<div class="profile-info">';
+  html+='<div class="profile-name">'+esc(p.name||'未知球员')+'</div>';
+  html+='<div class="profile-tags">';
+  if(p.age_group)html+='<span class="profile-tag">'+esc(p.age_group)+'</span>';
+  if(p.gender==='M')html+='<span class="profile-tag" style="background:rgba(59,130,246,0.12);color:var(--accent);">♂ 男</span>';
+  if(p.gender==='F')html+='<span class="profile-tag" style="background:rgba(236,72,153,0.12);color:#ec4899;">♀ 女</span>';
+  if(p.team_id)html+='<span class="profile-tag" style="background:var(--info-bg);color:var(--info);">球队:'+esc(p.team_id)+'</span>';
+  html+='</div></div>';
+  html+='<button class="btn btn-ghost" onclick="backToList()" style="flex-shrink:0;">← 返回列表</button>';
+  html+='</div>';
+
+  // Tabs
+  html+='<div class="profile-body">';
+  html+='<div class="profile-tabs">';
+  html+='<button class="profile-tab'+(currentTab==='stats'?' active':'')+'" onclick="switchTab(\'stats\')">📊 能力评分</button>';
+  html+='<button class="profile-tab'+(currentTab==='meas'?' active':'')+'" onclick="switchTab(\'meas\')">📈 体测记录 ('+measCount+')</button>';
+  html+='<button class="profile-tab'+(currentTab==='game'?' active':'')+'" onclick="switchTab(\'game\')">⚾ 比赛数据</button>';
+  html+='</div>';
+
+  // Stats Tab
+  html+='<div class="tab-panel'+(currentTab==='stats'?' active':'')+'" id="tab-stats">';
+  html+='<div class="stats-grid">';
+  html+='<div class="stat-card"><div class="stat-val" style="color:var(--accent);">'+toFixed(scores.speed)+'</div><div class="stat-lbl">⚡ 速度</div></div>';
+  html+='<div class="stat-card"><div class="stat-val" style="color:var(--danger);">'+toFixed(scores.power)+'</div><div class="stat-lbl">💪 力量</div></div>';
+  html+='<div class="stat-card"><div class="stat-val" style="color:var(--warning);">'+toFixed(scores.batting)+'</div><div class="stat-lbl">🏏 打击</div></div>';
+  html+='<div class="stat-card"><div class="stat-val" style="color:var(--success);">'+toFixed(scores.pitching)+'</div><div class="stat-lbl">🎯 投球</div></div>';
+  html+='<div class="stat-card"><div class="stat-val" style="color:var(--purple);">'+toFixed(scores.agility)+'</div><div class="stat-lbl">🏃 敏捷</div></div>';
+  html+='</div>';
+
+  // Radar
+  html+='<div class="radar-card">';
+  html+='<div class="radar-title">🎯 五维能力雷达图</div>';
+  html+='<div class="radar-wrap"><canvas id="radarCanvas" width="260" height="260"></canvas></div>';
+  html+='<div class="radar-legend">';
+  html+='<div class="legend-item"><span class="legend-dot" style="background:#f97316"></span> 本次体测</div>';
+  html+='<div class="legend-item"><span class="legend-dot" style="background:#3b82f6"></span> 全队平均</div>';
+  html+='</div></div>';
+
+  // Detail scores
+  if(latest){
+    html+='<div class="table-wrap">';
+    html+='<table class="data-table"><thead><tr><th>项目</th><th>数值</th><th>说明</th></tr></thead><tbody>';
+    if(latest.sprint_1b_s)html+='<tr><td>一垒跑</td><td style="color:var(--accent);font-weight:700;">'+latest.sprint_1b_s+'s</td><td>速度维度</td></tr>';
+    if(latest.sprint_hb_s)html+='<tr><td>全垒跑</td><td style="color:var(--accent);font-weight:700;">'+latest.sprint_hb_s+'s</td><td>速度维度</td></tr>';
+    if(latest.pitch_speed_kmh)html+='<tr><td>球速</td><td style="color:var(--success);font-weight:700;">'+latest.pitch_speed_kmh+' km/h</td><td>投球/力量维度</td></tr>';
+    if(latest.throw_dist_m)html+='<tr><td>掷远</td><td style="color:var(--danger);font-weight:700;">'+latest.throw_dist_m+' m</td><td>力量维度</td></tr>';
+    if(latest.bat_dist_m)html+='<tr><td>打击距离</td><td style="color:var(--warning);font-weight:700;">'+latest.bat_dist_m+' m</td><td>打击/力量维度</td></tr>';
+    if(latest.bat_speed_kmh)html+='<tr><td>棒速</td><td style="color:var(--purple);font-weight:700;">'+latest.bat_speed_kmh+' km/h</td><td>打击维度</td></tr>';
+    if(latest.situp)html+='<tr><td>仰卧起坐</td><td>'+latest.situp+' 个/分</td><td>敏捷维度</td></tr>';
+    if(latest.stand_jump_cm)html+='<tr><td>立定跳远</td><td>'+latest.stand_jump_cm+' cm</td><td>敏捷维度</td></tr>';
+    html+='</tbody></table></div>';
+  }else{
+    html+='<div style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:13px;">暂无体测数据<br>可点击右上角「导入 CSV」批量导入</div>';
+  }
+  html+='</div>';
+
+  // Measurement Tab
+  html+='<div class="tab-panel'+(currentTab==='meas'?' active':'')+'" id="tab-meas">';
+  if(measCount>0){
+    html+='<div class="chart-wrap"><canvas id="growthChart"></canvas></div>';
+    html+='<div class="table-wrap"><table class="data-table"><thead><tr><th>日期</th><th>立定跳(cm)</th><th>仰卧(个)</th><th>一垒跑(s)</th><th>全垒跑(s)</th><th>掷远(m)</th><th>打击(m)</th><th>球速(km/h)</th><th>棒速(km/h)</th></tr></thead><tbody>';
+    m.slice().reverse().forEach(function(meas){
+      html+='<tr>';
+      html+='<td>'+(meas.date||'—')+'</td>';
+      html+='<td>'+(meas.stand_jump_cm||'—')+'</td>';
+      html+='<td>'+(meas.situp||'—')+'</td>';
+      html+='<td style="color:var(--accent);font-weight:700;">'+(meas.sprint_1b_s||'—')+'</td>';
+      html+='<td style="color:var(--accent);font-weight:700;">'+(meas.sprint_hb_s||'—')+'</td>';
+      html+='<td style="color:var(--danger);font-weight:700;">'+(meas.throw_dist_m||'—')+'</td>';
+      html+='<td>'+(meas.bat_dist_m||'—')+'</td>';
+      html+='<td style="color:var(--success);font-weight:700;">'+(meas.pitch_speed_kmh||'—')+'</td>';
+      html+='<td style="color:var(--purple);font-weight:700;">'+(meas.bat_speed_kmh||'—')+'</td>';
+      html+='</tr>';
+    });
+    html+='</tbody></table></div>';
+  }else{
+    html+='<div class="empty-state"><div class="empty-icon">📋</div><h3>暂无体测记录</h3><p>导入 CSV 或手动添加体测数据</p></div>';
+  }
+  html+='</div>';
+
+  // Game Tab
+  html+='<div class="tab-panel'+(currentTab==='game'?' active':'')+'" id="tab-game">';
+  var hasGameData=batting.ab||pitching.ip;
+  if(hasGameData){
+    html+='<div class="stats-grid">';
+    if(batting.ab){
+      var avg=batting.ab>0?(batting.h/batting.ab).toFixed(3):'—';
+      html+='<div class="stat-card"><div class="stat-val" style="color:var(--success);">'+avg+'</div><div class="stat-lbl">AVG</div></div>';
+      html+='<div class="stat-card"><div class="stat-val">'+batting.ab+'</div><div class="stat-lbl">AB</div></div>';
+      html+='<div class="stat-card"><div class="stat-val">'+batting.h+'</div><div class="stat-lbl">H</div></div>';
+      html+='<div class="stat-card"><div class="stat-val">'+batting.rbi+'</div><div class="stat-lbl">RBI</div></div>';
+      html+='<div class="stat-card"><div class="stat-val">'+(batting.bb||0)+'</div><div class="stat-lbl">BB</div></div>';
+      html+='<div class="stat-card"><div class="stat-val">'+(batting.so||0)+'</div><div class="stat-lbl">SO</div></div>';
+    }
+    if(pitching.ip){
+      var era=pitching.ip>0?((pitching.er||0)*7/pitching.ip).toFixed(2):'—';
+      html+='<div class="stat-card"><div class="stat-val" style="color:var(--warning);">'+era+'</div><div class="stat-lbl">ERA</div></div>';
+      html+='<div class="stat-card"><div class="stat-val">'+parseFloat(pitching.ip).toFixed(1)+'</div><div class="stat-lbl">IP</div></div>';
+      html+='<div class="stat-card"><div class="stat-val">'+(pitching.so||0)+'</div><div class="stat-lbl">SO</div></div>';
+    }
+    html+='</div>';
+  }else{
+    html+='<div class="empty-state"><div class="empty-icon">⚾</div><h3>暂无比赛数据</h3><p>该球员尚未参加比赛</p></div>';
+  }
+  html+='</div>';
+
+  html+='</div></div>'; // body close + detail close
+  container.innerHTML=html;
+
+  // Draw radar
+  setTimeout(function(){
+    drawRadar(latest);
+    if(currentTab==='meas'&&measCount>0)setTimeout(function(){drawGrowthChart(m);},50);
+  },50);
+}
+
+/* ── Tab Switching ──────────────────────────────────────────── */
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.profile-tab').forEach(function(el,i){
+    el.classList.toggle('active',['stats','meas','game'][i]===tab);
+  });
+  document.querySelectorAll('.tab-panel').forEach(function(el){
+    el.classList.toggle('active',el.id==='tab-'+tab);
+  });
+  var p=allPlayers.find(function(x){return x.id===selectedPlayerId;});
+  if(p)renderProfileDetail(p);
+}
+
+/* ── Back to List ───────────────────────────────────────────── */
+function backToList(){
+  selectedPlayerId=null;
+  currentTab='stats';
+  document.getElementById('player-grid').style.display='grid';
+  document.getElementById('profile-detail').style.display='none';
+  document.getElementById('profile-detail').innerHTML='';
+}
+
+/* ── Draw Radar ─────────────────────────────────────────────── */
+function drawRadar(latest){
+  var canvas=document.getElementById('radarCanvas');
+  if(!canvas)return;
+  var ctx=canvas.getContext('2d');
+  var cx=canvas.width/2,cy=canvas.height/2,r=100;
+  var labels=['速度','力量','打击','投球','敏捷'];
+  var scores=calcScores(latest);
+  var vals=[scores.speed,scores.power,scores.batting,scores.pitching,scores.agility];
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,0.08)';
+  ctx.lineWidth=1;
+  [0.2,0.4,0.6,0.8,1].forEach(function(pct){
+    ctx.beginPath();
+    for(var i=0;i<=5;i++){
+      var angle=(i/5)*Math.PI*2-Math.PI/2;
+      var x=cx+Math.cos(angle)*r*pct;
+      var y=cy+Math.sin(angle)*r*pct;
+      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  });
+
+  // Axes
+  for(var i=0;i<5;i++){
+    var angle=(i/5)*Math.PI*2-Math.PI/2;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.lineTo(cx+Math.cos(angle)*r,cy+Math.sin(angle)*r);
+    ctx.strokeStyle='rgba(255,255,255,0.06)';
+    ctx.stroke();
+    var lx=cx+Math.cos(angle)*(r+16);
+    var ly=cy+Math.sin(angle)*(r+16);
+    ctx.fillStyle='#94a3b8';
+    ctx.font='11px Space Grotesk, sans-serif';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(labels[i],lx,ly);
+  }
+
+  // Player polygon (orange)
+  ctx.beginPath();
+  vals.forEach(function(v,i){
+    var angle=(i/5)*Math.PI*2-Math.PI/2;
+    var x=cx+Math.cos(angle)*r*(v/100);
+    var y=cy+Math.sin(angle)*r*(v/100);
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  });
+  ctx.closePath();
+  ctx.fillStyle='rgba(249,115,22,0.2)';
+  ctx.fill();
+  ctx.strokeStyle='#f97316';
+  ctx.lineWidth=2;
+  ctx.stroke();
+
+  // Average polygon (blue) - mock average
+  var avgVals=[65,58,62,55,70];
+  ctx.beginPath();
+  avgVals.forEach(function(v,i){
+    var angle=(i/5)*Math.PI*2-Math.PI/2;
+    var x=cx+Math.cos(angle)*r*(v/100);
+    var y=cy+Math.sin(angle)*r*(v/100);
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  });
+  ctx.closePath();
+  ctx.strokeStyle='#3b82f6';
+  ctx.lineWidth=1.5;
+  ctx.setLineDash([4,4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Dots
+  vals.forEach(function(v,i){
+    var angle=(i/5)*Math.PI*2-Math.PI/2;
+    var x=cx+Math.cos(angle)*r*(v/100);
+    var y=cy+Math.sin(angle)*r*(v/100);
+    ctx.beginPath();
+    ctx.arc(x,y,4,0,Math.PI*2);
+    ctx.fillStyle='#f97316';
+    ctx.fill();
+  });
+}
+
+/* ── Growth Chart ───────────────────────────────────────────── */
+function drawGrowthChart(measurements){
+  var canvas=document.getElementById('growthChart');
+  if(!canvas)return;
+  if(typeof Chart==='undefined'){
+    var s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+    s.onload=function(){drawGrowthChartReal(measurements);};
+    document.head.appendChild(s);
+  }else{
+    drawGrowthChartReal(measurements);
   }
 }
 
-// ─────────────────────────────────────────────────────────
-//  CSV Import
-// ─────────────────────────────────────────────────────────
-function openImportModal() {
-  parsedCSV = null;
-  document.getElementById('csv-preview').innerHTML = '';
-  document.getElementById('csv-result').innerHTML = '';
-  document.getElementById('csv-confirm-btn').disabled = true;
-  document.getElementById('import-modal').style.display = 'flex';
+function drawGrowthChartReal(measurements){
+  var canvas=document.getElementById('growthChart');
+  if(!canvas)return;
+  var sorted=measurements.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
+  var labels=sorted.map(function(m){return m.date||'';});
+  var datasets=[];
+  var metrics=[
+    {key:'sprint_1b_s',label:'一垒跑(s)',color:'#3b82f6'},
+    {key:'pitch_speed_kmh',label:'球速(km/h)',color:'#10b981'},
+    {key:'throw_dist_m',label:'掷远(m)',color:'#f97316'}
+  ];
+  metrics.forEach(function(m){
+    var hasData=sorted.some(function(s){return s[m.key];});
+    if(!hasData)return;
+    datasets.push({
+      label:m.label,
+      data:sorted.map(function(s){return s[m.key]||null;}),
+      borderColor:m.color,
+      backgroundColor:'transparent',
+      tension:0.3,
+      pointRadius:5,
+      pointHoverRadius:7,
+      borderWidth:2,
+      spanGaps:true
+    });
+  });
+  if(datasets.length===0){
+    canvas.style.display='none';
+    return;
+  }
+  canvas.style.display='block';
+  if(canvas._chart)canvas._chart.destroy();
+  canvas._chart=new Chart(canvas,{
+    type:'line',
+    data:{labels:labels,datasets:datasets},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{family:'Space Grotesk'}}}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748b'}},
+        y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748b'}}
+      }
+    }
+  });
 }
 
-function handleCSVFile(file) {
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var text = e.target.result;
-    var lines = text.trim().split('\n');
-    if (lines.length < 2) {
-      showCSVResult('error', 'CSV 文件至少需要表头和一行数据');
-      return;
-    }
-    var headers = lines[0].split(',').map(function(h){ return h.trim().replace(/^["']|["']$/g,''); });
-    var rows = [];
-    for (var i=1; i<lines.length; i++) {
-      var vals = lines[i].split(',').map(function(v){ return v.trim().replace(/^["']|["']$/g,''); });
-      if (vals.length < 2 || !vals[0] || !vals[1]) continue;
-      var obj = { name: vals[0], date: vals[1] };
-      if (headers[2]) obj.stand_jump_cm = parseFloat(vals[2]) || null;
-      if (headers[3]) obj.situp = parseInt(vals[3]) || null;
-      if (headers[4]) obj.sprint_1b_s = parseFloat(vals[4]) || null;
-      if (headers[5]) obj.sprint_hb_s = parseFloat(vals[5]) || null;
-      if (headers[6]) obj.throw_dist_m = parseFloat(vals[6]) || null;
-      if (headers[7]) obj.bat_dist_m = parseFloat(vals[7]) || null;
-      if (headers[8]) obj.pitch_speed_kmh = parseFloat(vals[8]) || null;
-      if (headers[9]) obj.bat_speed_kmh = parseFloat(vals[9]) || null;
-      rows.push(obj);
-    }
-    if (rows.length === 0) {
-      showCSVResult('error', '未找到有效数据行（需包含姓名和日期）');
-      return;
-    }
-    parsedCSV = rows;
-    renderCSVPreview(rows, headers);
-    document.getElementById('csv-confirm-btn').disabled = false;
+/* ── CSV Import ─────────────────────────────────────────────── */
+function openImportModal(){
+  document.getElementById('csv-modal').style.display='flex';
+  document.getElementById('csv-result').innerHTML='';
+  document.getElementById('csv-preview').style.display='none';
+}
+
+function handleCSVFile(file){
+  if(!file){showToast('请选择文件','warning');return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var text=e.target.result;
+    parseCSV(text);
   };
   reader.readAsText(file);
 }
 
-function renderCSVPreview(rows, headers) {
-  var el = document.getElementById('csv-preview');
-  var sample = rows.slice(0, 5);
-  var html = '<table><thead><tr>';
-  headers.forEach(function(h){ html += '<th>'+esc(h)+'</th>'; });
-  html += '</tr></thead><tbody>';
-  sample.forEach(function(r) {
-    html += '<tr>';
-    headers.forEach(function(h){ html += '<td>'+esc(String(r[h.trim()]!==undefined?r[h.trim()]:''))+'</td>'; });
-    html += '</tr>';
-  });
-  if (rows.length > 5) html += '<tr><td colspan="'+headers.length+'" style="color:var(--text-muted);text-align:center;font-size:11px;">...还有 '+(rows.length-5)+' 行</td></tr>';
-  html += '</tbody></table>';
-  el.innerHTML = html;
-}
+function parseCSV(text){
+  var lines=text.trim().split(/\r?\n/);
+  if(lines.length<2){showToast('CSV 内容为空或格式错误','error');return;}
+  var headers=lines[0].split(',').map(function(h){return h.trim().replace(/^"|"$/g,'');});
+  var nameIdx=headers.findIndex(function(h){return h.includes('姓名')||h.includes('名字')||h==='name';});
+  var dateIdx=headers.findIndex(function(h){return h.includes('日期')||h==='date';});
+  if(nameIdx<0){showToast('找不到姓名列','error');return;}
 
-function confirmCSVImport() {
-  if (!parsedCSV || parsedCSV.length === 0) return;
-  var btn = document.getElementById('csv-confirm-btn');
-  btn.disabled = true;
-  btn.textContent = '导入中...';
-
-  var ok = 0, fail = 0, errors = [];
-  var pending = parsedCSV.slice();
-
-  function processNext() {
-    if (pending.length === 0) {
-      showCSVResult('success', '导入完成！成功 '+ok+' 条，失败 '+fail+' 条'+(errors.length?'（'+errors.join(', ')+'）':''));
-      btn.textContent = '确认导入';
-      btn.disabled = false;
-      DB.getPlayers(function(result) {
-        allPlayers = result.data || [];
-        renderPlayerList();
-        renderTopbarStats();
-        if (activePlayerId) {
-          var p = allPlayers.find(function(x){ return x.id === activePlayerId; });
-          if (p) renderProfile(p);
-        }
-      });
-      return;
-    }
-    var row = pending.shift();
-    var matched = allPlayers.find(function(p){
-      return p.name && p.name.toLowerCase() === row.name.toLowerCase();
-    }) || allPlayers.find(function(p){
-      return p.name && p.name.toLowerCase().includes(row.name.toLowerCase());
-    }) || allPlayers.find(function(p){
-      return row.name.toLowerCase().includes(p.name && p.name.toLowerCase());
+  var rows=[];
+  for(var i=1;i<lines.length;i++){
+    var vals=lines[i].split(',').map(function(v){return v.trim().replace(/^"|"$/g,'');});
+    if(!vals[nameIdx])continue;
+    var row={name:vals[nameIdx],date:dateIdx>=0?vals[dateIdx]:''};
+    headers.forEach(function(h,idx){
+      var map={'立定跳':'stand_jump_cm','仰卧':'situp','一垒跑':'sprint_1b_s','全垒跑':'sprint_hb_s','掷远':'throw_dist_m','打击':'bat_dist_m','球速':'pitch_speed_kmh','棒速':'bat_speed_kmh'};
+      var key=map[h];
+      if(key&&vals[idx])row[key]=parseFloat(vals[idx])||0;
     });
-
-    if (!matched) {
-      fail++;
-      errors.push(row.name + '(未匹配)');
-      processNext();
-      return;
-    }
-
-    var meas = matched.measurements || [];
-    var exists = meas.some(function(m){ return m.date === row.date; });
-    if (exists) {
-      var idx = meas.findIndex(function(m){ return m.date === row.date; });
-      meas[idx] = row;
-    } else {
-      meas.push(row);
-    }
-    matched.measurements = meas;
-
-    DB.updatePlayer(matched.id, { measurements: meas }, function(result) {
-      if (result.success) ok++; else { fail++; errors.push(row.name); }
-      processNext();
-    });
+    rows.push(row);
   }
-  processNext();
-}
 
-function showCSVResult(type, msg) {
-  var el = document.getElementById('csv-result');
-  el.className = 'csv-result ' + type;
-  el.innerHTML = msg;
-}
+  if(rows.length===0){showToast('没有找到有效数据行','error');return;}
 
-// ─────────────────────────────────────────────────────────
-//  Manual Add Measurement
-// ─────────────────────────────────────────────────────────
-function openAddMeasModal() {
-  var select = document.getElementById('meas-player-select');
-  select.innerHTML = allPlayers.map(function(p){
-    return '<option value="'+esc(p.id)+'"'+(p.id===activePlayerId?' selected':'')+'>'+esc(p.name||'')+'</option>';
-  }).join('');
-  document.getElementById('meas-date').value = new Date().toISOString().split('T')[0];
-  ['m-stand-jump','m-situp','m-sprint-1b','m-sprint-hb','m-throw','m-bat-dist','m-pitch-speed','m-bat-speed'].forEach(function(id){
-    document.getElementById(id).value = '';
+  // Show preview
+  var preview=document.getElementById('csv-preview');
+  var html='<table class="data-table"><thead><tr>';
+  ['姓名','日期','一垒跑','全垒跑','球速','掷远'].forEach(function(h){html+='<th>'+h+'</th>';});
+  html+='</tr></thead><tbody>';
+  rows.slice(0,5).forEach(function(r){
+    html+='<tr>';
+    html+='<td>'+esc(r.name)+'</td>';
+    html+='<td>'+esc(r.date)+'</td>';
+    html+='<td>'+toFixed(r.sprint_1b_s)+'</td>';
+    html+='<td>'+toFixed(r.sprint_hb_s)+'</td>';
+    html+='<td>'+toFixed(r.pitch_speed_kmh)+'</td>';
+    html+='<td>'+toFixed(r.throw_dist_m)+'</td>';
+    html+='</tr>';
   });
-  document.getElementById('meas-modal').style.display = 'flex';
+  if(rows.length>5)html+='<tr><td colspan="6" style="color:var(--text-muted);">...还有 '+(rows.length-5)+' 条</td></tr>';
+  html+='</tbody></table>';
+  preview.innerHTML='<div style="margin-bottom:10px;font-size:13px;font-weight:600;color:var(--success);">✅ 解析成功 '+rows.length+' 条</div>'+html;
+  preview.style.display='block';
+
+  // Save
+  var matched=0;
+  var notFound=[];
+  rows.forEach(function(row){
+    var player=allPlayers.find(function(p){return p.name===row.name;});
+    if(!player){notFound.push(row.name);return;}
+    var m=row;
+    m.date=m.date||new Date().toISOString().substring(0,10);
+    if(!player.measurements)player.measurements=[];
+    player.measurements.push(m);
+    matched++;
+    DB.savePlayer(player,function(){},function(e){});
+  });
+  var result=document.getElementById('csv-result');
+  if(matched>0){
+    result.innerHTML='<div class="csv-result success">✅ 成功匹配 '+matched+' 名球员，其中 '+(rows.length-matched)+' 名未找到（'+notFound.slice(0,3).join(',')+(notFound.length>3?'...':'')+'）</div>';
+    showToast('导入完成：'+matched+' 名球员体测数据已更新','success');
+    renderPlayerList();
+  }else{
+    result.innerHTML='<div class="csv-result error">❌ 未匹配到任何球员，请检查姓名是否正确</div>';
+  }
 }
 
-function confirmAddMeas() {
-  var playerId = document.getElementById('meas-player-select').value;
-  var date = document.getElementById('meas-date').value;
-  if (!date) { showToast('请选择日期', 'warning'); return; }
+/* ── Manual Add ─────────────────────────────────────────────── */
+function openAddMeasModal(){
+  document.getElementById('meas-modal').style.display='flex';
+  var sel=document.getElementById('meas-player-select');
+  sel.innerHTML=allPlayers.map(function(p){return'<option value="'+p.id+'">'+esc(p.name||'未知')+'</option>';}).join('');
+  document.getElementById('meas-date').value=new Date().toISOString().substring(0,10);
+}
 
-  var m = {
-    date: date,
-    stand_jump_cm: parseFloat(document.getElementById('m-stand-jump').value) || null,
-    situp: parseInt(document.getElementById('m-situp').value) || null,
-    sprint_1b_s: parseFloat(document.getElementById('m-sprint-1b').value) || null,
-    sprint_hb_s: parseFloat(document.getElementById('m-sprint-hb').value) || null,
-    throw_dist_m: parseFloat(document.getElementById('m-throw').value) || null,
-    bat_dist_m: parseFloat(document.getElementById('m-bat-dist').value) || null,
-    pitch_speed_kmh: parseFloat(document.getElementById('m-pitch-speed').value) || null,
-    bat_speed_kmh: parseFloat(document.getElementById('m-bat-speed').value) || null
+function saveMeasurement(){
+  var pid=document.getElementById('meas-player-select').value;
+  var player=allPlayers.find(function(p){return p.id===pid;});
+  if(!player){showToast('请选择球员','warning');return;}
+  var m={
+    date:document.getElementById('meas-date').value,
+    stand_jump_cm:parseFloat(document.getElementById('meas-stand-jump').value)||0,
+    situp:parseInt(document.getElementById('meas-situp').value)||0,
+    sprint_1b_s:parseFloat(document.getElementById('meas-1b').value)||0,
+    sprint_hb_s:parseFloat(document.getElementById('meas-hb').value)||0,
+    throw_dist_m:parseFloat(document.getElementById('meas-throw').value)||0,
+    bat_dist_m:parseFloat(document.getElementById('meas-bat-dist').value)||0,
+    pitch_speed_kmh:parseFloat(document.getElementById('meas-pitch-speed').value)||0,
+    bat_speed_kmh:parseFloat(document.getElementById('meas-bat-speed').value)||0
   };
-
-  var player = allPlayers.find(function(p){ return p.id === playerId; });
-  if (!player) return;
-
-  var meas = player.measurements || [];
-  var exists = meas.some(function(x){ return x.date === date; });
-  if (exists) {
-    var idx = meas.findIndex(function(x){ return x.date === date; });
-    meas[idx] = m;
-  } else {
-    meas.push(m);
-  }
-
-  DB.updatePlayer(playerId, { measurements: meas }, function(result) {
-    if (result.success) {
-      player.measurements = meas;
-      closeModal('meas-modal');
-      showToast('体测记录已保存', 'success');
-      if (playerId === activePlayerId) renderProfile(player);
-      renderPlayerList();
-      renderTopbarStats();
-    } else {
-      showToast('保存失败', 'error');
+  if(!player.measurements)player.measurements=[];
+  player.measurements.push(m);
+  DB.savePlayer(player,function(){
+    showToast('体测数据已保存','success');
+    closeModal('meas-modal');
+    renderPlayerList();
+    if(selectedPlayerId===pid){
+      var p=allPlayers.find(function(x){return x.id===pid;});
+      if(p)renderProfileDetail(p);
     }
+    updateTopbarStats();
+  },function(e){showToast('保存失败：'+e,'error');});
+}
+
+/* ── Drag Drop ─────────────────────────────────────────────── */
+var dz=document.getElementById('csv-drop-zone');
+if(dz){
+  dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('dragover');});
+  dz.addEventListener('dragleave',function(){dz.classList.remove('dragover');});
+  dz.addEventListener('drop',function(e){
+    e.preventDefault();
+    dz.classList.remove('dragover');
+    var file=e.dataTransfer.files[0];
+    if(file)handleCSVFile(file);
   });
 }
 
-// ─────────────────────────────────────────────────────────
-//  Modal Helpers
-// ─────────────────────────────────────────────────────────
-function closeModal(id) {
-  document.getElementById(id).style.display = 'none';
-}
-document.addEventListener('keydown', function(e){ if(e.key==='Escape') { document.querySelectorAll('.modal-overlay').forEach(function(m){ m.style.display='none'; }); } });
-
-// ─────────────────────────────────────────────────────────
-//  Utilities
-// ─────────────────────────────────────────────────────────
-function esc(s) {
-  if (s === null || s === undefined) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function toFixed(v, decimals) {
-  if (v === null || v === undefined) return '—';
-  return Number(v).toFixed(decimals);
-}
-function fmtBA(v) {
-  if (!v || isNaN(v)) return '.---';
-  return v.toFixed(3).replace(/^0/, '');
-}
-function fmtIP(ip) {
-  if (!ip) return '0';
-  var whole = Math.floor(ip);
-  var frac = Math.round((ip - whole) * 3);
-  return whole + (frac ? '-' + frac : '');
-}
+/* ── Init ───────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded',function(){
+  initNav();
+  loadPlayers();
+});
 </script>
 </body>
 </html>
