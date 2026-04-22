@@ -590,6 +590,24 @@ function renderAddModal() {
   body.innerHTML = renderWizardSteps() + renderWizardContent();
   bindWizardFooter(isEdit);
   updateGCBanner();
+
+  // Ensure allPlayers is loaded before rendering Step3
+  if (!allPlayers || allPlayers.length === 0) {
+    DB.getPlayers(function(players) {
+      allPlayers = players || [];
+      console.log('[Init] allPlayers loaded:', allPlayers.length);
+      if (_wizardStep === 3) {
+        autoMatchAllGCPlayers();
+        document.getElementById('modal-body-content').innerHTML = renderWizardSteps() + renderWizardContent();
+        bindWizardFooter(isEdit);
+      }
+    });
+  } else if (_wizardStep === 3) {
+    // Step3: auto-run matching if already loaded
+    autoMatchAllGCPlayers();
+    document.getElementById('modal-body-content').innerHTML = renderWizardSteps() + renderWizardContent();
+    bindWizardFooter(isEdit);
+  }
 }
 
 function renderWizardSteps() {
@@ -893,7 +911,7 @@ function autoMatchAllGCPlayers() {
 
   allGC.forEach(function(gcp) {
     if (existingIds.has(String(gcp.lib_id||''))) return; // already bound
-    var match = findBestMatch(gcp.name||'', gcp.number||'');
+    var match = findBestMatch(gcp.name||'');
     if (match) {
       _wizardGame.roster.push({
         player_id: match.id,
@@ -914,7 +932,7 @@ function autoMatchAllGCPlayers() {
   });
 }
 
-function findBestMatch(name, gcNumber) {
+function findBestMatch(name) {
   if (!name) return null;
   if (!allPlayers || allPlayers.length === 0) return null;
   var n = name.toLowerCase().trim();
@@ -924,7 +942,6 @@ function findBestMatch(name, gcNumber) {
   for (var i = 0; i < allPlayers.length; i++) {
     var p = allPlayers[i];
     var pn = (p.name||'').toLowerCase().trim();
-    var pnum = String(p.number||p.jersey_number||'');
     var score = 0;
 
     if (pn === n) score = 100;
@@ -941,8 +958,6 @@ function findBestMatch(name, gcNumber) {
         if (pInit && plInit && pInit === plInit && last && plLast && (last === plLast || plLast.includes(last) || last.includes(plLast))) score = 30;
       }
     }
-    // Bonus: jersey number match (highest priority after exact name)
-    if (gcNumber && pnum && pnum === String(gcNumber)) score = Math.max(score, 95);
     if (score > bestScore) { bestScore = score; best = p; }
   }
   return bestScore >= 30 ? best : null;
