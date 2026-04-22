@@ -325,6 +325,7 @@ input, select, textarea { font-family: inherit; }
 .gamedata-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-light); color: var(--text-secondary); text-align: center; }
 .gamedata-table td:first-child { text-align: left; font-weight: 600; color: var(--text-primary); }
 .gamedata-table tbody tr:hover { background: var(--bg-card-hover); }
+.gamedata-meta { text-align: center; font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
 .gamedata-inning-row.gamedata-inning-head .ginn-team { background: var(--bg-secondary); color: var(--text-muted); font-weight: 700; text-align: center; }
 </style>
 </head>
@@ -481,12 +482,12 @@ function viewGameData(gameId) {
 function renderGameDataModal(game) {
   closeModal('gamedata-modal');
   var homeR = game.hk_runs_by_inning||[];
-  var awayR = [];
+  var awayR = game.away_runs_by_inning||[];
 
   var h = '<div class="modal-overlay" id="gamedata-modal">'+
     '<div class="modal" style="max-width:900px;">'+
       '<div class="modal-header">'+
-        '<div class="modal-title">📋 赛事数据详情 — '+escHtml(game.home||'')+' vs '+escHtml(game.away||'')+'</div>'+
+        '<div class="modal-title">📋 赛事数据详情</div>'+
         '<button class="modal-close" onclick="closeModal(\'gamedata-modal\')">✕</button>'+
       '</div>'+
       '<div class="modal-body" style="padding:0;">';
@@ -494,6 +495,10 @@ function renderGameDataModal(game) {
   // ── Section 1: 总比分概览 ──
   h += '<div class="gamedata-section">'+
     '<div class="gamedata-section-title">🏆 总比分</div>'+
+    '<div class="gamedata-meta">'+
+      '<span>'+escHtml(game.date||'未知日期')+'</span>'+
+      (game.venue?' · <span>'+escHtml(game.venue)+'</span>':'')+
+    '</div>'+
     '<div class="gamedata-score-wrap">'+
       '<div class="gamedata-team-block">'+
         '<div class="gamedata-team-name">'+escHtml(game.home||'')+'</div>'+
@@ -508,41 +513,32 @@ function renderGameDataModal(game) {
   '</div>';
 
   // ── Section 2: 逐局比分 ──
-  var hasInnings = homeR.length > 0;
+  var hasInnings = homeR.length > 0 || awayR.length > 0;
   if (hasInnings) {
-    var maxInnings = homeR.length;
+    var maxInnings = Math.max(homeR.length, awayR.length);
     h += '<div class="gamedata-section">'+
       '<div class="gamedata-section-title">📊 逐局比分</div>'+
       '<div class="gamedata-inning-table">';
-    // header
     h += '<div class="gamedata-inning-row gamedata-inning-head">'+
       '<div class="ginn-team">球队</div>';
     for (var i=0; i<maxInnings; i++) { h += '<div class="ginn-inn">'+(i+1)+'</div>'; }
-    h += '<div class="ginn-inn ginn-total">R</div></div>';
+    h += '<div class="ginn-inn ginn-total">R</div>'+
+         '<div class="ginn-inn ginn-total" style="background:var(--text-muted);">H</div>'+
+         '<div class="ginn-inn ginn-total" style="background:var(--text-muted);">E</div></div>';
 
-    // home
     var homeTotal = 0; homeR.forEach(function(v){ homeTotal += (v||0); });
     h += '<div class="gamedata-inning-row">'+
       '<div class="ginn-team ginn-home">'+escHtml(game.home||'')+'</div>';
-    homeR.forEach(function(v){ h += '<div class="ginn-inn">'+(v||0)+'</div>'; });
-    h += '<div class="ginn-inn ginn-total">'+homeTotal+'</div></div>';
+    for (var hi=0; hi<maxInnings; hi++) { h += '<div class="ginn-inn">'+(homeR[hi]||0)+'</div>'; }
+    h += '<div class="ginn-inn ginn-total">'+homeTotal+'</div>'+
+         '<div class="ginn-inn">—</div><div class="ginn-inn">—</div></div>';
 
-    // away (derive from total - home)
-    for (var j=0; j<maxInnings; j++) {
-      var ht = (j < (homeR.length||[]).length) ? (homeR[j]||0) : 0;
-      var hs = (game.home_score||0);
-      var as = (game.away_score||0);
-    }
-    // compute away innings: derive from total scores and home innings if not stored
-    // For now derive away innings as: use home innings if GC provides, else estimate
-    var awayEstTotal = 0;
+    var awayTotal = 0; awayR.forEach(function(v){ awayTotal += (v||0); });
     h += '<div class="gamedata-inning-row">'+
       '<div class="ginn-team ginn-away">'+escHtml(game.away||'')+'</div>';
-    for (var k=0; k<maxInnings; k++) {
-      var totalInn = (k < (homeR.length||[]).length) ? (homeR[k]||0) : 0;
-      h += '<div class="ginn-inn">—</div>';
-    }
-    h += '<div class="ginn-inn ginn-total">'+(game.away_score||0)+'</div></div>';
+    for (var ai=0; ai<maxInnings; ai++) { h += '<div class="ginn-inn">'+(awayR[ai]||0)+'</div>'; }
+    h += '<div class="ginn-inn ginn-total">'+awayTotal+'</div>'+
+         '<div class="ginn-inn">—</div><div class="ginn-inn">—</div></div>';
 
     h += '</div></div>';
   }
