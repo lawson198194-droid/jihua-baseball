@@ -309,14 +309,14 @@ input, select, textarea { font-family: inherit; }
 .gamedata-total-score { font-size: 52px; font-weight: 900; font-family: 'JetBrains Mono', monospace; line-height: 1; color: var(--primary); }
 .gamedata-vs { font-size: 20px; font-weight: 700; color: var(--text-muted); }
 .gamedata-inning-table { overflow-x: auto; }
-.gamedata-inning-row { display: flex; gap: 4px; min-width: 400px; align-items: center; margin-bottom: 4px; }
+.gamedata-inning-row { display: flex; gap: 3px; align-items: center; margin-bottom: 4px; }
 .gamedata-inning-row:first-child { margin-bottom: 6px; }
-.ginn-team { min-width: 90px; font-size: 12px; font-weight: 600; padding: 4px 6px; border-radius: 4px; }
+.ginn-team { min-width: 88px; max-width: 88px; font-size: 12px; font-weight: 600; padding: 4px 6px; border-radius: 4px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ginn-home { color: var(--success); }
 .ginn-away { color: var(--accent); }
-.ginn-inn { min-width: 36px; height: 30px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: var(--bg-secondary); color: var(--text-secondary); }
-.ginn-total { background: var(--primary); color: white; font-weight: 900; }
-.ginn-inn[style], .ginn-inn:not([class*="ginn"]) { /* noop */ }
+.ginn-inn { width: 36px; min-width: 36px; height: 30px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: var(--bg-secondary); color: var(--text-secondary); }
+.ginn-total { background: var(--primary); color: white; }
+.ginn-x { color: var(--text-muted); font-weight: 600; }
 .gamedata-table-wrap { overflow-x: auto; }
 .gamedata-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .gamedata-table th { padding: 8px 12px; background: var(--bg-secondary); color: var(--text-muted); font-weight: 700; text-align: center; border-bottom: 1px solid var(--border); }
@@ -517,34 +517,52 @@ function renderGameDataModal(game) {
   // ── Section 2: 逐局比分 ──
   var hasInnings = homeR.length > 0 || awayR.length > 0;
   if (hasInnings) {
-    var maxInnings = Math.max(homeR.length, awayR.length);
+    // Normalize: convert "X" to null, find max innings
+    var normHome = homeR.map(function(v){ return v==='X'||v==='x' ? null : (parseInt(v)||0); });
+    var normAway = awayR.map(function(v){ return v==='X'||v==='x' ? null : (parseInt(v)||0); });
+    var homeReal = normHome.filter(function(v){ return v!==null; });
+    var awayReal = normAway.filter(function(v){ return v!==null; });
+    var maxInnings = Math.max(homeReal.length, awayReal.length);
+    if (maxInnings === 0) maxInnings = 1;
+
     h += '<div class="gamedata-section">'+
       '<div class="gamedata-section-title">📊 逐局比分</div>'+
-      '<div class="gamedata-inning-table">';
-    h += '<div class="gamedata-inning-row gamedata-inning-head">'+
-      '<div class="ginn-team">球队</div>';
-    for (var i=0; i<maxInnings; i++) { h += '<div class="ginn-inn">'+(i+1)+'</div>'; }
-    h += '<div class="ginn-inn ginn-total">R</div>'+
-         '<div class="ginn-inn ginn-total" style="background:var(--text-muted);">H</div>'+
-         '<div class="ginn-inn ginn-total" style="background:var(--text-muted);">E</div></div>';
+      '<div style="overflow-x:auto;padding:0 4px;">'+
+      '<div style="display:inline-flex;gap:3px;align-items:center;min-width:fit-content;">';
 
-    var homeTotal = 0; homeR.forEach(function(v){ homeTotal += (v||0); });
-    h += '<div class="gamedata-inning-row">'+
-      '<div class="ginn-team ginn-home">'+escHtml(game.home||'')+'</div>';
-    for (var hi=0; hi<maxInnings; hi++) { h += '<div class="ginn-inn">'+(homeR[hi]||0)+'</div>'; }
+    // Header row
+    h += '<div class="gamedata-inning-row">';
+    h += '<div class="ginn-team" style="background:var(--bg-secondary);color:var(--text-muted);font-weight:700;">球队</div>';
+    for (var i=0; i<maxInnings; i++) { h += '<div class="ginn-inn" style="background:var(--bg-secondary);color:var(--text-muted);font-weight:700;">'+(i+1)+'</div>'; }
+    h += '<div class="ginn-inn ginn-total">R</div>'+
+         '<div class="ginn-inn" style="background:var(--text-muted);color:white;font-weight:700;">H</div>'+
+         '<div class="ginn-inn" style="background:var(--text-muted);color:white;font-weight:700;">E</div></div>';
+
+    // Home row
+    var homeTotal = 0; homeReal.forEach(function(v){ homeTotal += (v||0); });
+    h += '<div class="gamedata-inning-row">';
+    h += '<div class="ginn-team ginn-home">'+escHtml(game.home||'')+'</div>';
+    for (var hi=0; hi<maxInnings; hi++) {
+      var hv = normHome[hi];
+      h += '<div class="ginn-inn'+(hv===null?' ginn-x':'')+'">'+(hv===null?'—':hv)+'</div>';
+    }
     h += '<div class="ginn-inn ginn-total">'+homeTotal+'</div>'+
          '<div class="ginn-inn">'+(game.home_hits!==null&&game.home_hits!==undefined?game.home_hits:'—')+'</div>'+
          '<div class="ginn-inn">'+(game.home_errors!==null&&game.home_errors!==undefined?game.home_errors:'—')+'</div></div>';
 
-    var awayTotal = 0; awayR.forEach(function(v){ awayTotal += (v||0); });
-    h += '<div class="gamedata-inning-row">'+
-      '<div class="ginn-team ginn-away">'+escHtml(game.away||'')+'</div>';
-    for (var ai=0; ai<maxInnings; ai++) { h += '<div class="ginn-inn">'+(awayR[ai]||0)+'</div>'; }
+    // Away row
+    var awayTotal = 0; awayReal.forEach(function(v){ awayTotal += (v||0); });
+    h += '<div class="gamedata-inning-row">';
+    h += '<div class="ginn-team ginn-away">'+escHtml(game.away||'')+'</div>';
+    for (var ai=0; ai<maxInnings; ai++) {
+      var av = normAway[ai];
+      h += '<div class="ginn-inn'+(av===null?' ginn-x':'')+'">'+(av===null?'—':av)+'</div>';
+    }
     h += '<div class="ginn-inn ginn-total">'+awayTotal+'</div>'+
          '<div class="ginn-inn">'+(game.away_hits!==null&&game.away_hits!==undefined?game.away_hits:'—')+'</div>'+
          '<div class="ginn-inn">'+(game.away_errors!==null&&game.away_errors!==undefined?game.away_errors:'—')+'</div></div>';
 
-    h += '</div></div>';
+    h += '</div></div></div>';
   } else {
     h += '<div class="gamedata-section">'+
       '<div class="gamedata-section-title">📊 逐局比分</div>'+
