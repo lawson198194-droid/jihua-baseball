@@ -1359,8 +1359,29 @@ function saveGameBasic(game, isEdit) {
     hk_pitching: gc&&gc.success ? gc.hk_pitching : [],
     hk_runs_by_inning: gc&&gc.success ? (gc.hk_runs_by_inning||[]) : [],
     hk_pdf_players: gc&&gc.success ? gc.hk_batting.concat(gc.hk_pitching).filter(function(v,i,a){return a.findIndex(function(t){return t.name===v.name;})===i;}).map(function(v){return v.name;}) : [],
-    roster: (src ? src.roster : (game ? game.roster : [])) || []
+    roster: buildRosterFromGC(src, gc)
   };
+  function buildRosterFromGC(src, gc) {
+    if (src && src.roster && src.roster.length > 0) return src.roster;
+    var batting = gc && gc.success ? (gc.hk_batting||[]) : [];
+    var pitching = gc && gc.success ? (gc.hk_pitching||[]) : [];
+    var all = batting.concat(pitching);
+    var seen = {};
+    var roster = [];
+    all.forEach(function(p) {
+      if (!p.lib_id || seen[p.name]) return;
+      seen[p.name] = true;
+      roster.push({
+        player_id: p.lib_id,
+        name: p.name,
+        number: p.number || '',
+        position: p.position || '',
+        ab: p.ab, r: p.r, h: p.h, rbi: p.rbi, bb: p.bb, so: p.so,
+        ip: p.ip, er: p.er, so_p: p.so_p
+      });
+    });
+    return roster;
+  }
   if (isEdit) data.id = game.id;
   DB.upsertGame(data, function(res){
     if (!res.success) { showToast('保存失败: '+res.error, 'error'); return; }
