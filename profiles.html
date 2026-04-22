@@ -406,8 +406,8 @@ function calcScores(m){
 /* ── Get Players ────────────────────────────────────────────── */
 function loadPlayers(){
   onDBReady(function(){
-    DB.getPlayers(function(players){
-      allPlayers=players||[];
+    DB.getPlayers(function(result){
+      allPlayers=(result&&result.data)||[];
       renderPlayerList();
       updateTopbarStats();
     });
