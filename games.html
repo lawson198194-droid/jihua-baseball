@@ -137,7 +137,30 @@ input, select, textarea { font-family: inherit; }
 .pdf-drop-text { font-size: 14px; color: var(--text-secondary); }
 .pdf-drop-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 
-.gc-preview { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 16px; }
+.gc-info-banner {
+  background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(249,115,22,0.08));
+  border: 1.5px solid rgba(16,185,129,0.3);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 4px;
+}
+.gc-info-banner.gc-no-data {
+  background: rgba(245,158,11,0.08);
+  border-color: rgba(245,158,11,0.25);
+}
+.gc-teams {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.gc-team { text-align: center; }
+.gc-team-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+.gc-team-name { font-size: 14px; font-weight: 700; }
+.gc-vs { font-size: 20px; font-weight: 900; color: var(--accent); text-align: center; }
+.gc-meta { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+.gc-hint { font-size: 12px; color: var(--text-muted); font-style: italic; }
 .gc-preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .gc-preview-title { font-size: 14px; font-weight: 700; }
 .gc-preview-teams { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
@@ -588,28 +611,51 @@ function renderWizardContent() {
 }
 
 function renderStep1() {
-  var g = _wizardGame;
+  // GC auto-fill
   var gc = _gcResult;
-  // Auto-fill from GC if available and step1 is being rendered fresh
-  if (gc && gc.success) {
+  if (gc && gc.success && !_wizardGame.id) {
     var our = gc.hk_team_key === 'away' ? gc.away_team : gc.home_team;
     var opp = gc.hk_team_key === 'away' ? gc.home_team : gc.away_team;
-    g.home = g.home || our;
-    g.away = g.away || opp;
-    g.home_score = g.home_score || (gc.hk_team_key === 'away' ? gc.home_score : gc.away_score);
-    g.away_score = g.away_score || (gc.hk_team_key === 'away' ? gc.away_score : gc.home_score);
-    if (!g.date && gc.date) g.date = gc.date;
-    if (!g.venue && gc.venue) g.venue = gc.venue;
+    if (!_wizardGame.home)  _wizardGame.home  = our;
+    if (!_wizardGame.away)  _wizardGame.away  = opp;
+    if (!_wizardGame.home_score && gc.hk_team_key === 'away') _wizardGame.home_score = gc.home_score;
+    if (!_wizardGame.away_score && gc.hk_team_key === 'away') _wizardGame.away_score = gc.away_score;
+    if (!_wizardGame.home_score && gc.hk_team_key === 'home') _wizardGame.home_score = gc.home_score;
+    if (!_wizardGame.away_score && gc.hk_team_key === 'home') _wizardGame.away_score = gc.away_score;
+    if (!_wizardGame.date)  _wizardGame.date  = gc.date || '';
+    if (!_wizardGame.venue) _wizardGame.venue = gc.venue || '';
   }
-
+  var g = _wizardGame;
   var now = new Date();
-  var yr = now.getFullYear();
+  var yr  = now.getFullYear();
   var yrOpts = '';
-  for (var y = yr; y <= yr + 3; y++) yrOpts += '<option value="'+y+'"'+(g.year===y?' selected':(y===yr&&!g.year?' selected':''))+'>'+y+'年</option>';
+  for (var y = yr; y <= yr + 3; y++)
+    yrOpts += '<option value="'+y+'"'+(g.year===y?' selected':(y===yr&&!g.year?' selected':''))+'>'+y+'年</option>';
+
+  // GC info banner (auto-filled, read-only)
+  var gcBanner = '';
+  if (gc && gc.success) {
+    var our = gc.hk_team_key==='away' ? gc.away_team : gc.home_team;
+    var opp = gc.hk_team_key==='away' ? gc.home_team : gc.away_team;
+    gcBanner = '<div class="gc-info-banner">'+
+      '<div class="gc-teams">'+
+        '<div class="gc-team"><div class="gc-team-label">主队</div><div class="gc-team-name">'+escHtml(g.home||our)+'</div></div>'+
+        '<div class="gc-vs">'+escHtml(g.home_score||'')+' : '+escHtml(g.away_score||'')+'</div>'+
+        '<div class="gc-team"><div class="gc-team-label">客队</div><div class="gc-team-name">'+escHtml(g.away||opp)+'</div></div>'+
+      '</div>'+
+      '<div class="gc-meta">'+(gc.date?'📅 '+escHtml(gc.date):'')+' '+(g.venue?'📍 '+escHtml(g.venue):'')+'</div>'+
+      '<div class="gc-hint">以上信息已从 GC PDF 自动提取，无需手动填写</div>'+
+    '</div>';
+  } else {
+    gcBanner = '<div class="gc-info-banner gc-no-data">'+
+      '<div class="gc-hint">→ 请在第 2 步上传 GC PDF，主客队、比分、日期、场地会自动提取</div>'+
+    '</div>';
+  }
 
   return '<div class="modal-section">'+
     '<div class="modal-section-title">📋 基本信息</div>'+
-    '<div class="modal-form-grid">'+
+    gcBanner+
+    '<div class="modal-form-grid" style="margin-top:16px;">'+
       '<div><label>年份</label><select id="gf-year">'+yrOpts+'</select></div>'+
       '<div><label>赛事名称</label>'+renderTournamentSelect(g.tournament||'')+'</div>'+
       '<div id="gf-tournament-new-wrap" style="display:none;"><label>新赛事名称</label><input id="gf-tournament-new" placeholder="输入新赛事名称"></div>'+
@@ -621,17 +667,6 @@ function renderStep1() {
         '<option value="u15"'+(g.category==='u15'?' selected':'')+'>🏆 U15</option>'+
         '<option value="u18"'+(g.category==='u18'?' selected':'')+'>🎖️ U18</option>'+
         '<option value="uw18"'+(g.category==='uw18'?' selected':'')+'>👧 UW18</option>'+
-      '</select></div>'+
-      '<div><label>比赛日期</label><input id="gf-date" type="date" value="'+(g.date||'')+'"></div>'+
-      '<div><label>主队 *</label><input id="gf-home" value="'+escHtml(g.home||'')+'" placeholder="如：香港少年老虎 U12"></div>'+
-      '<div><label>客队 *</label><input id="gf-away" value="'+escHtml(g.away||'')+'" placeholder="如：SISHK 国际 U12"></div>'+
-      '<div><label>主队得分</label><input id="gf-hs" type="number" min="0" value="'+(g.home_score||0)+'"></div>'+
-      '<div><label>客队得分</label><input id="gf-as" type="number" min="0" value="'+(g.away_score||0)+'"></div>'+
-      '<div class="full"><label>比赛场地</label><input id="gf-venue" value="'+escHtml(g.venue||'')+'" placeholder="比赛地点"></div>'+
-      '<div class="full"><label>状态</label><select id="gf-status">'+
-        '<option value="scheduled"'+(g.status==='scheduled'?' selected':'')+'>📅 未开始</option>'+
-        '<option value="in-progress"'+(g.status==='in-progress'?' selected':'')+'>🔴 进行中</option>'+
-        '<option value="completed"'+(g.status==='completed'?' selected':'')+'>✅ 已完成</option>'+
       '</select></div>'+
     '</div>'+
     '<div class="tournament-add" id="tournament-add-area" style="display:none;">'+
@@ -751,6 +786,10 @@ function renderStep3() {
 
 // ── Wizard Navigation ─────────────────────────────────────────
 function bindWizardFooter(isEdit) {
+  // Remove existing footer if present (prevents double binding)
+  var existing = document.querySelector('#modal-inner .modal-footer');
+  if (existing) existing.remove();
+
   var footer = document.createElement('div');
   footer.className = 'modal-footer';
   footer.style.cssText = 'position:sticky;bottom:0;background:var(--bg-secondary);border-top:1px solid var(--border);padding:16px 24px;';
@@ -762,10 +801,11 @@ function bindWizardFooter(isEdit) {
   footer.innerHTML = backBtn + '<button class="btn btn-ghost" onclick="closeModal(\'game-modal\')">取消</button><button class="btn btn-primary" id="btn-next-step" onclick="wizardNext('+!!isEdit+')">'+nextLabel+'</button>';
   document.getElementById('modal-inner').appendChild(footer);
 
-  // Bind PDF drop zone (step 2)
+  // Bind PDF drop zone (step 2) — only once per step
   if (_wizardStep === 2) {
     var dropZone = document.getElementById('pdf-drop');
-    if (dropZone) {
+    if (dropZone && !dropZone._bound) {
+      dropZone._bound = true;
       dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag-over'); });
       dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag-over'); });
       dropZone.addEventListener('drop', function(e){
@@ -777,6 +817,17 @@ function bindWizardFooter(isEdit) {
         var inp = document.getElementById('_gc-pdf-input');
         if (inp) inp.click();
       });
+
+      // Hidden file input for click trigger
+      var inp = document.createElement('input');
+      inp.type = 'file';
+      inp.id = '_gc-pdf-input';
+      inp.accept = '.pdf';
+      inp.style.display = 'none';
+      inp.addEventListener('change', function(){
+        if (inp.files[0]) uploadGCFile(inp.files[0]);
+      });
+      dropZone.parentNode.insertBefore(inp, dropZone.nextSibling);
     }
   }
 }
@@ -1193,7 +1244,8 @@ function renderGCTables() {
 }
 
 function uploadGCFile(file) {
-  if (file.type !== 'application/pdf') {
+  if (!file) return;
+  if (file.type && file.type !== 'application/pdf') {
     showToast('请上传 PDF 文件', 'error'); return;
   }
   showToast('正在解析 GC PDF，请稍候...', 'info');
@@ -1203,29 +1255,28 @@ function uploadGCFile(file) {
     .then(function(r){ return r.json(); })
     .then(function(data){
       _gcResult = data;
-      showToast(data.success ? 'PDF 解析成功！' : '解析完成但数据不完整', data.success ? 'success' : 'warning');
-      // Auto-fill wizard game data from GC
+      showToast(data.success ? '✅ PDF 解析成功！' : '⚠️ 解析完成但数据不完整', data.success ? 'success' : 'warning');
+      // Auto-fill _wizardGame from GC data
       if (data.success) {
-        _wizardGame.home = _wizardGame.home || (data.hk_team_key === 'away' ? data.away_team : data.home_team);
-        _wizardGame.away = _wizardGame.away || (data.hk_team_key === 'away' ? data.home_team : data.away_team);
-        _wizardGame.home_score = _wizardGame.home_score || (data.hk_team_key === 'away' ? data.home_score : data.away_score);
-        _wizardGame.away_score = _wizardGame.away_score || (data.hk_team_key === 'away' ? data.away_score : data.home_score);
-        if (!_wizardGame.date && data.date) _wizardGame.date = data.date;
-        if (!_wizardGame.venue && data.venue) _wizardGame.venue = data.venue;
+        _wizardGame.home       = _wizardGame.home || (data.hk_team_key === 'away' ? data.away_team : data.home_team);
+        _wizardGame.away       = _wizardGame.away || (data.hk_team_key === 'away' ? data.home_team : data.away_team);
+        var isHome = data.hk_team_key === 'home';
+        _wizardGame.home_score = _wizardGame.home_score || (isHome ? data.home_score : data.away_score);
+        _wizardGame.away_score = _wizardGame.away_score || (isHome ? data.away_score : data.home_score);
+        if (!_wizardGame.date)  _wizardGame.date  = data.date || '';
+        if (!_wizardGame.venue) _wizardGame.venue = data.location || '';
       }
-      // Re-render current step without re-creating modal
-      document.getElementById('modal-body-content').innerHTML = renderWizardContent();
+      // Re-render current step (no full modal rebuild)
+      var body = document.getElementById('modal-body-content');
+      if (body) body.innerHTML = renderWizardContent();
+      // rebind footer (wizard step unchanged)
       bindWizardFooter(!!_wizardGame.id);
-      // Auto-advance to step 3 if GC has player data
-      if (data.success && (data.hk_batting.length > 0 || data.hk_pitching.length > 0)) {
-        setTimeout(function() {
-          showToast('GC 数据解析成功 → 继续匹配阵容', 'success');
-        }, 500);
-      }
     })
     .catch(function(e){
       _gcResult = { success:false, error:'网络错误: '+e.message };
-      showToast('GC 解析失败，请确保 _gc_server.py 正在运行', 'error');
+      showToast('❌ GC 解析失败，请确保 _gc_server.py 正在运行', 'error');
+      var body = document.getElementById('modal-body-content');
+      if (body) body.innerHTML = renderWizardContent();
     });
 }
 
