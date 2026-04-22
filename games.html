@@ -589,6 +589,19 @@ function renderWizardContent() {
 
 function renderStep1() {
   var g = _wizardGame;
+  var gc = _gcResult;
+  // Auto-fill from GC if available and step1 is being rendered fresh
+  if (gc && gc.success) {
+    var our = gc.hk_team_key === 'away' ? gc.away_team : gc.home_team;
+    var opp = gc.hk_team_key === 'away' ? gc.home_team : gc.away_team;
+    g.home = g.home || our;
+    g.away = g.away || opp;
+    g.home_score = g.home_score || (gc.hk_team_key === 'away' ? gc.home_score : gc.away_score);
+    g.away_score = g.away_score || (gc.hk_team_key === 'away' ? gc.away_score : gc.home_score);
+    if (!g.date && gc.date) g.date = gc.date;
+    if (!g.venue && gc.venue) g.venue = gc.venue;
+  }
+
   var now = new Date();
   var yr = now.getFullYear();
   var yrOpts = '';
@@ -1191,17 +1204,28 @@ function uploadGCFile(file) {
     .then(function(data){
       _gcResult = data;
       showToast(data.success ? 'PDF 解析成功！' : '解析完成但数据不完整', data.success ? 'success' : 'warning');
-      var game = { date:document.getElementById('gf-date').value, home:document.getElementById('gf-home').value,
-                   away:document.getElementById('gf-away').value, home_score:0, away_score:0,
-                   venue:document.getElementById('gf-venue').value, category:document.getElementById('gf-cat').value,
-                   status:'completed' };
-      renderAddModal(game, false);
+      // Auto-fill wizard game data from GC
+      if (data.success) {
+        _wizardGame.home = _wizardGame.home || (data.hk_team_key === 'away' ? data.away_team : data.home_team);
+        _wizardGame.away = _wizardGame.away || (data.hk_team_key === 'away' ? data.home_team : data.away_team);
+        _wizardGame.home_score = _wizardGame.home_score || (data.hk_team_key === 'away' ? data.home_score : data.away_score);
+        _wizardGame.away_score = _wizardGame.away_score || (data.hk_team_key === 'away' ? data.away_score : data.home_score);
+        if (!_wizardGame.date && data.date) _wizardGame.date = data.date;
+        if (!_wizardGame.venue && data.venue) _wizardGame.venue = data.venue;
+      }
+      // Re-render current step without re-creating modal
+      document.getElementById('modal-body-content').innerHTML = renderWizardContent();
+      bindWizardFooter(!!_wizardGame.id);
+      // Auto-advance to step 3 if GC has player data
+      if (data.success && (data.hk_batting.length > 0 || data.hk_pitching.length > 0)) {
+        setTimeout(function() {
+          showToast('GC 数据解析成功 → 继续匹配阵容', 'success');
+        }, 500);
+      }
     })
     .catch(function(e){
       _gcResult = { success:false, error:'网络错误: '+e.message };
       showToast('GC 解析失败，请确保 _gc_server.py 正在运行', 'error');
-      var game = {};
-      renderAddModal(game, false);
     });
 }
 
