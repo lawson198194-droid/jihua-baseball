@@ -721,6 +721,10 @@ function renderRosterModal(game) {
         '<div class="roster-section">'+
           '<div class="roster-section-title">➕ 从资料库添加球员</div>'+
           '<div class="roster-search"><input type="text" id="roster-search" placeholder="搜索球员姓名..." oninput="filterRosterList()"></div>'+
+          '<div id="roster-avail-empty" style="display:none;margin-bottom:10px;text-align:center;padding:12px;background:rgba(249,115,22,0.06);border:1px dashed rgba(249,115,22,0.3);border-radius:8px;">'+
+            '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">球员资料库为空</div>'+
+            '<button class="btn btn-sm" style="background:#f97316;color:#fff;border:none;cursor:pointer;padding:6px 16px;border-radius:6px;" id="btn-quick-add" onclick="quickAddDemoPlayers()">⚡ 一键创建12名示例球员（测试用）</button>'+
+          '</div>'+
           '<div class="roster-grid" id="roster-available"></div>'+
         '</div>'+
 
@@ -737,6 +741,10 @@ function renderRosterModal(game) {
 
   renderRosterGrid(selected,   document.getElementById('roster-selected'),   true);
   renderRosterGrid(unrostered, document.getElementById('roster-available'), false);
+
+  // Show quick-add button if no players in library
+  var emptyMsg = document.getElementById('roster-avail-empty');
+  if (emptyMsg) emptyMsg.style.display = (allPlayers.length === 0) ? 'block' : 'none';
 
   if (game.hk_batting && game.hk_batting.length) {
     renderStatsBind(game);
@@ -787,6 +795,48 @@ function toggleRosterPlayer(pid) {
   if (_currentGameCache) {
     renderRosterModal(_currentGameCache);
   }
+}
+
+// Quick-add 12 demo players matching the GC PDF names
+function quickAddDemoPlayers() {
+  var demoPlayers = [
+    { name: 'I Chan',   number: '18', gender: 'M', birth_year: 2015, positions: ['SS'],    age_group: 'U12', team_id: '', status: 'active', school: '' },
+    { name: 'D Lau',   number: '32', gender: 'M', birth_year: 2015, positions: ['3B'],    age_group: 'U12', team_id: '', status: 'active', school: '' },
+    { name: 'Bi',      number: '50', gender: 'M', birth_year: 2014, positions: ['P', 'SS'], age_group: 'U12', team_id: '', status: 'active', school: '' },
+    { name: 'M Mai',   number: '22', gender: 'M', birth_year: 2015, positions: ['P', '1B'], age_group: 'U12', team_id: '', status: 'active', school: '' },
+    { name: 'E Luo',   number: '77', gender: 'M', birth_year: 2015, positions: ['2B'],    age_group: 'U12', team_id: '', status: 'active', school: '' },
+    { name: 'J Liu',   number: '11', gender: 'M', birth_year: 2014, positions: ['SS'],    age_group: 'U12', team_id: '', status: 'active', school: '' },
+    { name: 'W Wei',   number: '3',  gender: 'M', birth_year: 2015, positions: ['LF'],    age_group: 'U12', team_id: '', status: 'active', school: '' },
+    { name: 'O Chan',  number: '8',  gender: 'M', birth_year: 2015, positions: ['RF'],    age_group: 'U12', team_id: '', status: 'active', school: '' },
+    { name: 'Teresa',  number: '46', gender: 'F', birth_year: 2015, positions: ['C'],     age_group: 'U12', team_id: '', status: 'active', school: '' },
+    { name: 'Vincent', number: '7',  gender: 'M', birth_year: 2015, positions: ['CF'],    age_group: 'U12', team_id: '', status: 'active', school: '' },
+    { name: 'K Li',    number: '59', gender: 'M', birth_year: 2014, positions: ['P'],    age_group: 'U12', team_id: '', status: 'active', school: '' },
+    { name: 'Anson',   number: '2',  gender: 'M', birth_year: 2015, positions: ['C'],     age_group: 'U12', team_id: '', status: 'active', school: '' },
+  ];
+
+  var btn = document.getElementById('btn-quick-add');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 创建中...'; }
+
+  var saved = 0, total = demoPlayers.length;
+  demoPlayers.forEach(function(p) {
+    DB.upsertPlayer(p, function(res) {
+      saved++;
+      if (saved === total) {
+        // Reload players then re-render modal
+        DB.getPlayers(function(r) {
+          allPlayers = ((r&&r.data)||[]).filter(function(p2){ return p2.status==='active'; });
+          var game = _currentGameCache || {};
+          _rosterIds = _rosterIds || new Set();
+          var unrostered = allPlayers.filter(function(p2){ return !_rosterIds.has(String(p2.id||p2.player_id||'')); });
+          renderRosterGrid([], document.getElementById('roster-selected'), true);
+          renderRosterGrid(unrostered, document.getElementById('roster-available'), false);
+          var emptyMsg = document.getElementById('roster-avail-empty');
+          if (emptyMsg) emptyMsg.style.display = 'none';
+          showToast('12名示例球员已创建！', 'success');
+        });
+      }
+    });
+  });
 }
 
 function filterRosterList() {
