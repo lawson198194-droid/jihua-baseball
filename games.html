@@ -1064,38 +1064,19 @@ function renderAddModalLegacy(game, isEdit) {
     '<button class="btn btn-ghost" onclick="closeModal(\'game-modal\')">取消</button>'+
     '<button class="btn btn-primary" id="btn-next-step">'+(isEdit?'💾 保存修改':'下一步 → 选择阵容')+'</button>';
   document.getElementById('modal-inner').appendChild(footer);
-  document.getElementById('btn-next-step').onclick = function() {
-    saveGameBasic(game, isEdit);
-  };
-}
-    '<div class="modal" id="modal-inner">'+
+  document.getElementById('btn-next-step').onclick = function() { saveGameBasic(game, isEdit); };
+
+  // Modal template
+  var html =
+    '<div class="game-form-modal" id="game-modal">'+
       '<div class="modal-header"><div class="modal-title">'+(isEdit?'✏️ 编辑赛事':'📊 新建赛事')+'</div><button class="modal-close" onclick="closeModal(\'game-modal\')">✕</button></div>'+
       '<div class="modal-body" id="modal-body-content"></div>'+
-    '</div>'+
-  '</div>';
+      '<div class="modal-footer" style="position:sticky;bottom:0;background:var(--bg-secondary);border-top:1px solid var(--border);padding:16px 24px;">'+
+        '<button class="btn btn-ghost" onclick="closeModal(\'game-modal\')">取消</button>'+
+        '<button class="btn btn-primary" id="btn-next-step">'+(isEdit?'💾 保存修改':'下一步 → 选择阵容')+'</button>'+
+      '</div>'+
+    '</div>';
   document.body.insertAdjacentHTML('beforeend', html);
-
-  var step1 = '<div class="modal-section"><div class="modal-section-title">📋 基本信息</div><div class="modal-form-grid">'+
-    '<div class="full"><label>比赛日期</label><input id="gf-date" type="date" value="'+(game.date||'')+'" placeholder="选择日期"></div>'+
-    '<div><label>主队 *</label><input id="gf-home" value="'+escHtml(game.home||'')+'" placeholder="如：香港少年老虎 U12"></div>'+
-    '<div><label>客队 *</label><input id="gf-away" value="'+escHtml(game.away||'')+'" placeholder="如：SISHK 国际 U12"></div>'+
-    '<div><label>主队得分</label><input id="gf-hs" type="number" min="0" value="'+(game.home_score||0)+'"></div>'+
-    '<div><label>客队得分</label><input id="gf-as" type="number" min="0" value="'+(game.away_score||0)+'"></div>'+
-    '<div><label>比赛场地</label><input id="gf-venue" value="'+escHtml(game.venue||'')+'" placeholder="比赛地点"></div>'+
-    '<div><label>年龄组别</label><select id="gf-cat"><option value="">—</option>'+
-      '<option value="u8"'+(game.category==='u8'?' selected':'')+'>🌱 U8</option>'+
-      '<option value="u10"'+(game.category==='u10'?' selected':'')+'>🌱 U10</option>'+
-      '<option value="u12"'+(game.category==='u12'?' selected':'')+'>⚾ U12</option>'+
-      '<option value="u15"'+(game.category==='u15'?' selected':'')+'>🏆 U15</option>'+
-      '<option value="u18"'+(game.category==='u18'?' selected':'')+'>🎖️ U18</option>'+
-      '<option value="uw18"'+(game.category==='uw18'?' selected':'')+'>👧 UW18</option>'+
-    '</select></div>'+
-    '<div class="full"><label>状态</label><select id="gf-status">'+
-      '<option value="scheduled"'+(game.status==='scheduled'?' selected':'')+'>📅 未开始</option>'+
-      '<option value="in-progress"'+(game.status==='in-progress'?' selected':'')+'>🔴 进行中</option>'+
-      '<option value="completed"'+(game.status==='completed'?' selected':'')+'>✅ 已完成</option>'+
-    '</select></div>'+
-  '</div></div>';
 
   // GC PDF drop
   var gcDrop = '<div class="pdf-drop-zone" id="pdf-drop">'+
