@@ -318,8 +318,9 @@ var allGames    = [];
 var allPlayers  = [];
 var activeTab   = 'all';
 var _gcResult   = null;   // parsed GC PDF data
-var _gameStep    = 1;      // 1=basic, 2=roster, 3=bind
-var _rosterIds   = new Set();  // selected player IDs for current game
+var _gameStep         = 1;         // 1=basic, 2=roster, 3=bind
+var _rosterIds        = new Set(); // selected player IDs for current game
+var _currentGameCache = null;      // cached game object for roster modal
 
 /* ── Firebase Init ────────────────────────────────────────── */
 var _dbInited = false;
@@ -696,6 +697,7 @@ function autoMatchPlayers(game, callback) {
 }
 
 function renderRosterModal(game) {
+  _currentGameCache = game;   // 缓存供 toggleRosterPlayer 使用
   closeModal('roster-modal');
   var roster = game.roster || [];
   var unrostered = allPlayers.filter(function(p){ return !_rosterIds.has(p.id||p.player_id); });
@@ -767,12 +769,10 @@ function toggleRosterPlayer(pid) {
   } else {
     _rosterIds.add(pid);
   }
-  var game = window._currentGame;
-  DB.getGame(game&&game.id, function(res) {
-    var g = res.data||{};
-    renderRosterModal(g);
-    window._currentGame = g;
-  });
+  // 直接用缓存的 game 对象重新渲染，不需要再请求 Firebase
+  if (_currentGameCache) {
+    renderRosterModal(_currentGameCache);
+  }
 }
 
 function filterRosterList() {
