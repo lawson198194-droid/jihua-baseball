@@ -347,15 +347,21 @@ input, select, textarea { font-family: inherit; }
           <p>记录比赛成绩、实时比分、历史数据统计</p>
         </div>
         <div class="page-actions">
+          <select id="filter-tournament" style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text-primary);font-size:13px;">
+            <option value="">全部赛事</option>
+          </select>
+          <select id="filter-category" style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text-primary);font-size:13px;">
+            <option value="">全部组别</option>
+            <option value="u8">🌱 U8</option>
+            <option value="u10">🌱 U10</option>
+            <option value="u12">⚾ U12</option>
+            <option value="u15">🏆 U15</option>
+            <option value="u18">🎖️ U18</option>
+            <option value="uw18">👧 UW18</option>
+          </select>
           <button class="btn btn-ghost" id="btn-import-pdf">📄 导入 GameChanger PDF</button>
           <button class="btn btn-primary" id="btn-add">+ 录入赛事</button>
         </div>
-      </div>
-      <div class="game-tabs" id="game-tabs">
-        <button class="game-tab active" data-tab="all">全部</button>
-        <button class="game-tab" data-tab="completed">✅ 已完成</button>
-        <button class="game-tab" data-tab="in-progress">🔴 进行中</button>
-        <button class="game-tab" data-tab="scheduled">📅 未开始</button>
       </div>
       <div id="game-list"></div>
     </div>
@@ -370,7 +376,8 @@ input, select, textarea { font-family: inherit; }
 /* ── State ─────────────────────────────────────────────────── */
 var allGames    = [];
 var allPlayers  = [];
-var activeTab   = 'all';
+var _filterTournament = '';
+var _filterCategory   = '';
 var _gcResult   = null;   // parsed GC PDF data
 var _gameStep         = 1;         // 1=basic, 2=roster, 3=bind
 var _rosterIds        = new Set(); // selected player IDs for current game
@@ -438,57 +445,46 @@ function renderInnings(innings, isHome) {
 
 /* ── Game list & render ────────────────────────────────────── */
 function getStats() {
-  return {
-    total: allGames.length,
-    completed: allGames.filter(function(g){ return g.status==='completed'; }).length,
-    inProgress: allGames.filter(function(g){ return g.status==='in-progress'; }).length,
-    scheduled: allGames.filter(function(g){ return g.status==='scheduled'; }).length
-  };
+  return { total: allGames.length };
 }
 
 function updateTopbarStats() {
   var s = getStats();
   document.getElementById('topbar-stats').innerHTML =
-    '<div class="topbar-stat"><div class="num">'+s.total+'</div><div class="label">总赛事</div></div>'+
-    '<div class="topbar-stat"><div class="num" style="color:var(--success)">'+s.completed+'</div><div class="label">已完成</div></div>'+
-    '<div class="topbar-stat"><div class="num" style="color:var(--warning)">'+s.inProgress+'</div><div class="label">进行中</div></div>'+
-    '<div class="topbar-stat"><div class="num" style="color:var(--info)">'+s.scheduled+'</div><div class="label">未开始</div></div>';
+    '<div class="topbar-stat"><div class="num">'+s.total+'</div><div class="label">总赛事</div></div>';
 }
 
 function renderGames() {
   var list = document.getElementById('game-list');
   updateTopbarStats();
-  var filtered = activeTab==='all' ? allGames : allGames.filter(function(g){ return g.status===activeTab; });
+  var filtered = allGames.filter(function(g){
+    if (_filterTournament && g.tournament !== _filterTournament) return false;
+    if (_filterCategory && g.category !== _filterCategory) return false;
+    return true;
+  });
   if (!filtered.length) {
     list.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><h3>暂无赛事数据</h3><p>点击右上角「录入赛事」或「导入 GC PDF」开始</p></div>';
     return;
   }
   var html = '';
   filtered.forEach(function(g) {
-    var hkTeam = g.hk_team || '';
     var winner = (g.home_score||0)>(g.away_score||0) ? escHtml(g.home||'') :
                  (g.away_score||0)>(g.home_score||0) ? escHtml(g.away||'') :
-                 '<span style="color:var(--warning)">平局</span>';
+                 '<span style="color:var(--warning)">—</span>';
     html += '<div class="scoreboard-card">'+
       '<div class="score-header">'+
-        '<div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">'+(g.year||'')+(g.tournament?' · '+escHtml(g.tournament):'')+'</div>'+
-        '<div>'+
-        (function(){
-          var parts = [];
-          if (g.category) parts.push(getCatLabel(g.category));
-          if (g.date) parts.push(fmtDate(g.date));
-          if (g.venue) parts.push(escHtml(g.venue));
-          return '<div class="score-date">'+parts.join(' · ')+'</div>';
-        }())+
-        getStatusBadge(g.status||'scheduled')+
+        '<div style="font-size:11px;color:var(--text-muted);">'+(g.year||'')+(g.tournament?' · '+escHtml(g.tournament):'')+'</div>'+
+        '<div class="score-date">'+
+          (g.category?getCatLabel(g.category):'')+(g.category&&g.date?' · ':'')+(g.date?fmtDate(g.date):'')+(g.date&&g.venue?' · ':'')+(g.venue?escHtml(g.venue):'')+
+        '</div>'+
       '</div>'+
       '<div class="score-teams">'+
-        '<div class="score-team"><div class="score-team-name">'+(g.home_score>0||g.away_score>0?'🏠 ':'')+escHtml(g.home||'')+'</div><div class="score-team-scr">'+(g.home_score||0)+'</div></div>'+
-        '<div class="score-center"><div class="score-vs">VS</div><div class="score-info">'+(g.status==='in-progress'?'🔴 比赛中':'FINAL')+'</div></div>'+
-        '<div class="score-team"><div class="score-team-name">'+(g.home_score>0||g.away_score>0?'✈️ ':'')+escHtml(g.away||'')+'</div><div class="score-team-scr">'+(g.away_score||0)+'</div></div>'+
+        '<div class="score-team"><div class="score-team-name">'+escHtml(g.home||'')+'</div><div class="score-team-scr">'+(g.home_score||0)+'</div></div>'+
+        '<div class="score-center"><div class="score-vs">VS</div><div class="score-info">'+(g.roster&&g.roster.length?g.roster.length+'人阵容':'—')+'</div></div>'+
+        '<div class="score-team"><div class="score-team-name">'+escHtml(g.away||'')+'</div><div class="score-team-scr">'+(g.away_score||0)+'</div></div>'+
       '</div>'+
       '<div class="score-footer">'+
-        '<span style="font-size:12px;color:var(--text-muted);">🏆 '+winner+'</span>'+
+        '<span style="font-size:12px;color:var(--text-muted);">'+(winner?'🏆 '+winner:'&nbsp;')+'</span>'+
         '<div style="display:flex;gap:6px;">'+
           (g.roster&&g.roster.length?'<button class="btn btn-ghost btn-sm" onclick="viewRoster(\''+escHtml(g.id)+'\')">👥 阵容</button>':'')+
           '<button class="btn btn-ghost btn-sm" onclick="editGame(\''+escHtml(g.id||'')+'\')">✏️ 编辑</button>'+
@@ -498,12 +494,37 @@ function renderGames() {
     '</div>';
   });
   list.innerHTML = html;
+  // Keep filter dropdowns in sync with available tournaments
+  updateTournamentFilter();
 }
 
 function switchTab(tab) {
   activeTab = tab;
   document.querySelectorAll('.game-tab').forEach(function(b){ b.classList.toggle('active',b.dataset.tab===tab); });
   renderGames();
+}
+
+// ── Filter helpers ────────────────────────────────────────────────
+function updateTournamentFilter() {
+  var sel = document.getElementById('filter-tournament');
+  if (!sel) return;
+  var tours = {};
+  allGames.forEach(function(g){ if (g.tournament) tours[g.tournament] = true; });
+  var opts = Object.keys(tours).sort().map(function(t){
+    return '<option value="'+escHtml(t)+'"'+(t===_filterTournament?' selected':'')+'>'+escHtml(t)+'</option>';
+  });
+  sel.innerHTML = '<option value="">全部赛事</option>'+opts.join('');
+}
+
+function bindFilterEvents() {
+  document.getElementById('filter-tournament').addEventListener('change', function(){
+    _filterTournament = this.value;
+    renderGames();
+  });
+  document.getElementById('filter-category').addEventListener('change', function(){
+    _filterCategory = this.value;
+    renderGames();
+  });
 }
 
 /* ── Modals ────────────────────────────────────────────────── */
@@ -1450,6 +1471,7 @@ function saveGameBasic(game, isEdit) {
     if (!res.success) { showToast('保存失败: '+res.error, 'error'); return; }
     closeModal('game-modal');
     showToast(isEdit?'赛事已更新':'赛事已保存！','success');
+
     // Directly update allGames instead of loadGames() to avoid Firebase fetch issues
     var savedGame = JSON.parse(JSON.stringify(data));
     savedGame.id = res.id;
@@ -1461,6 +1483,26 @@ function saveGameBasic(game, isEdit) {
     }
     renderGames();
     _wizardGame = {};
+
+    // ── Push batting + pitching stats to each player's lifetime record ──
+    var roster = data.roster || [];
+    if (roster.length === 0) return;
+    var pending = 0;
+    roster.forEach(function(r) {
+      if (!r.player_id) return;
+      var hasBatting = (r.ab||0) > 0 || (r.h||0) > 0 || (r.r||0) > 0 || (r.rbi||0) > 0 || (r.bb||0) > 0 || (r.so||0) > 0;
+      var hasPitching = (r.ip||0) > 0 || (r.er||0) > 0 || (r.so_p||0) > 0;
+      if (!hasBatting && !hasPitching) return;
+      pending++;
+      // Merge batting + pitching into ONE call per player to avoid race conditions
+      DB.updatePlayerGameStats(r.player_id, {
+        ab: r.ab||0, r: r.r||0, h: r.h||0, rbi: r.rbi||0, bb: r.bb||0, so: r.so||0,
+        ip: r.ip||0, er: r.er||0, pso: r.so_p||0
+      }, function(){
+        console.log('[Stats] saved for player', r.player_id, r.name);
+        pending--; if (pending <= 0) console.log('[Stats] All player stats updated');
+      });
+    });
   });
 }
 
@@ -1836,9 +1878,7 @@ document.getElementById('btn-add').addEventListener('click', function(){
   openAddModal({});
 });
 
-document.querySelectorAll('.game-tab').forEach(function(btn){
-  btn.addEventListener('click', function(){ switchTab(this.dataset.tab); });
-});
+bindFilterEvents();
 
 /* ── Init ──────────────────────────────────────────────────── */
 (function() {
@@ -1877,6 +1917,7 @@ document.querySelectorAll('.game-tab').forEach(function(btn){
           });
         });
         renderGames();
+        bindFilterEvents();
         _pendingLoads.forEach(function(fn){ fn(); });
       }
     }
