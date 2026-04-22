@@ -395,7 +395,10 @@ function closeModal(id){document.getElementById(id).style.display='none';}
 /* ── Firebase Init ──────────────────────────────────────────── */
 var _dbInited=false;
 var _pending=[];
-function onDBReady(fn){if(_dbInited)fn();else _pending.push(fn);}
+function onDBReady(fn){
+  console.log('[Profiles] onDBReady called, _dbInited=',_dbInited,', pending=',_pending.length);
+  if(_dbInited)fn();else _pending.push(fn);
+}
 
 /* ── Scoring ────────────────────────────────────────────────── */
 function calcScores(m){
@@ -419,9 +422,13 @@ function calcScores(m){
 
 /* ── Load Players ───────────────────────────────────────────── */
 function loadPlayers(){
+  console.log('[Profiles] loadPlayers called');
   onDBReady(function(){
+    console.log('[Profiles] onDBReady fired, calling DB.getPlayers');
     DB.getPlayers(function(result){
+      console.log('[Profiles] DB.getPlayers callback, result length:', (result&&result.data)?result.data.length:'null');
       allPlayers=(result&&result.data)||[];
+      console.log('[Profiles] allPlayers.length:', allPlayers.length);
       updateTopbarStats();
       renderNameList();
     });
