@@ -1186,6 +1186,11 @@ function loadPlayers() {
   DB.getPlayers(function(result){
     console.log('[DEBUG] DB.getPlayers done, count='+(result.data||[]).length);
     allPlayers=result.data||[];
+    // Cache to localStorage so games.html can read it (bypasses Firebase SDK CORS)
+    if (allPlayers.length > 0) {
+      try { localStorage.setItem('baseai_players', JSON.stringify(allPlayers)); } catch(e){}
+      console.log('[DEBUG] Cached', allPlayers.length, 'players to localStorage');
+    }
     // Sort: pending first (by submitted_at desc), then active (by name)
     allPlayers.sort(function(a,b){
       if(a.status==='pending' && b.status!=='pending') return -1;
