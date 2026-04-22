@@ -80,11 +80,11 @@ input,select,textarea{font-family:inherit}
 .page-actions{display:flex;gap:8px;flex-wrap:wrap}
 
 /* ── Filter Bar ─────────────────────────────────────────────── */
-.filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;flex-direction:column;align-items:stretch;max-width:240px}
 .filter-bar input,.filter-bar select{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text-primary);font-size:13px;outline:none;transition:border-color .2s}
 .filter-bar input:focus,.filter-bar select:focus{border-color:var(--primary)}
-.filter-bar input{width:200px}
-.filter-bar select{cursor:pointer}
+.filter-bar input{width:100%}
+.filter-bar select{width:100%;cursor:pointer}
 
 /* ── Player Grid ─────────────────────────────────────────── */
 .player-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
