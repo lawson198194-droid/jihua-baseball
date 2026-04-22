@@ -543,16 +543,6 @@
           if (callback) callback({ success: true, id: newId });
         });
     },
-      var ref = id ? this.db.ref('games/' + id) : this.db.ref('games').push();
-      var finalId = id || ref.key;
-      delete data.id;
-      ref.set(data).then(function() {
-        if (callback) callback({ success: true, id: finalId });
-      }).catch(function(e) {
-        console.error('[Firebase] upsertGame error:', e);
-        if (callback) callback({ success: false, error: e });
-      });
-    },
 
     deleteGame: function(id, callback) {
       var self = this;
