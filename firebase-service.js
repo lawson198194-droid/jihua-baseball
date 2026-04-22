@@ -507,21 +507,42 @@
       var self = this;
       var data = Object.assign({}, gameData);
       var id = data.id;
-      if (!this.isConfigured) {
-        var games = JSON.parse(localStorage.getItem('baseai_games') || '[]');
-        if (id) {
-          var idx = games.findIndex(function(g){ return g.id === id; });
-          if (idx >= 0) games[idx] = data;
-          else games.unshift(data);
-        } else {
-          id = 'G' + Date.now();
-          data.id = id;
-          games.unshift(data);
-        }
-        localStorage.setItem('baseai_games', JSON.stringify(games));
-        setTimeout(function(){ if(callback) callback({ success: true, id: id }); }, 0);
-        return;
-      }
+      delete data.id;
+      var REST_BASE = 'https://baseai-hk-default-rtdb.asia-southeast1.firebasedatabase.app';
+      var url = id ? REST_BASE + '/games/' + id + '.json' : REST_BASE + '/games.json';
+      var method = id ? 'PUT' : 'POST';
+      fetch(url, { method: method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) })
+        .then(function(resp) { return resp.json(); })
+        .then(function(result) {
+          var newId = id || result.name;
+          data.id = newId;
+          // Update localStorage cache so getGames reads it
+          var games = JSON.parse(localStorage.getItem('baseai_games') || '[]');
+          if (id) {
+            var idx = games.findIndex(function(g){ return g.id === id; });
+            if (idx >= 0) games[idx] = data; else games.unshift(data);
+          } else {
+            games.unshift(data);
+          }
+          localStorage.setItem('baseai_games', JSON.stringify(games));
+          if (callback) callback({ success: true, id: newId });
+        })
+        .catch(function(e) {
+          console.error('[Firebase] upsertGame REST error:', e);
+          // Fallback to localStorage
+          var games = JSON.parse(localStorage.getItem('baseai_games') || '[]');
+          var newId = id || ('G' + Date.now());
+          data.id = newId;
+          if (id) {
+            var idx = games.findIndex(function(g){ return g.id === id; });
+            if (idx >= 0) games[idx] = data; else games.unshift(data);
+          } else {
+            games.unshift(data);
+          }
+          localStorage.setItem('baseai_games', JSON.stringify(games));
+          if (callback) callback({ success: true, id: newId });
+        });
+    },
       var ref = id ? this.db.ref('games/' + id) : this.db.ref('games').push();
       var finalId = id || ref.key;
       delete data.id;
