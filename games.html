@@ -781,8 +781,8 @@ function renderStep2() {
     '<div id="gc-player-summary"></div>'+
     '<div id="gc-player-list"></div>'+
   '</div>';
+  rebindDropZone();
 }
-rebindPDFHandlers();
 
 function renderStep3() {
   var gc = _gcResult;
@@ -1312,20 +1312,43 @@ function renderGCTables() {
   document.getElementById('gc-pitching-table').innerHTML = pHtml;
 }
 
+/* ── PDF Upload (single persistent input, never re-created) ── */
+var _gcUploading = false;
+function initGCPersistentInput() {
+  var existing = document.getElementById('_gc-pdf-input');
+  if (existing) existing.remove();
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.id = '_gc-pdf-input';
+  inp.accept = '.pdf';
+  inp.style.display = 'none';
+  document.body.appendChild(inp);
+  inp.addEventListener('change', function() {
+    if (this.files && this.files[0] && !_gcUploading) {
+      uploadGCFile(this.files[0]);
+    }
+    var newInp = document.createElement('input');
+    newInp.type = 'file'; newInp.accept = '.pdf'; newInp.id = '_gc-pdf-input'; newInp.style.display = 'none';
+    this.parentNode.replaceChild(newInp, this);
+  });
+}
+initGCPersistentInput();
+
 function uploadGCFile(file) {
-  if (!file) return;
+  if (!file || _gcUploading) return;
   if (file.type && file.type !== 'application/pdf') {
     showToast('请上传 PDF 文件', 'error'); return;
   }
+  _gcUploading = true;
   showToast('正在解析 GC PDF，请稍候...', 'info');
   var fd = new FormData();
   fd.append('file', file);
   fetch('http://localhost:5500/parse', { method:'POST', body:fd })
     .then(function(r){ return r.json(); })
     .then(function(data){
+      _gcUploading = false;
       _gcResult = data;
       showToast(data.success ? '✅ PDF 解析成功！' : '⚠️ 解析完成但数据不完整', data.success ? 'success' : 'warning');
-      // Auto-fill _wizardGame from GC data
       if (data.success) {
         _wizardGame.home       = _wizardGame.home || (data.hk_team_key === 'away' ? data.away_team : data.home_team);
         _wizardGame.away       = _wizardGame.away || (data.hk_team_key === 'away' ? data.home_team : data.away_team);
@@ -1335,20 +1358,35 @@ function uploadGCFile(file) {
         if (!_wizardGame.date)  _wizardGame.date  = data.date || '';
         if (!_wizardGame.venue) _wizardGame.venue = data.location || '';
       }
-      // Update current step content in-place
       var body = document.getElementById('modal-body-content');
-      if (body) {
-        body.innerHTML = renderWizardContent();
-        rebindPDFHandlers();
-      }
+      if (body) body.innerHTML = renderWizardSteps() + renderWizardContent();
+      rebindDropZone();
       bindWizardFooter(!!_wizardGame.id);
     })
     .catch(function(e){
+      _gcUploading = false;
       _gcResult = { success:false, error:'网络错误: '+e.message };
       showToast('❌ GC 解析失败，请确保 _gc_server.py 正在运行', 'error');
       var body = document.getElementById('modal-body-content');
-      if (body) body.innerHTML = renderWizardContent();
+      if (body) body.innerHTML = renderWizardSteps() + renderWizardContent();
     });
+}
+
+/* ── Drop zone event binding ─────────────────────────────── */
+function rebindDropZone() {
+  var dropZone = document.getElementById('pdf-drop');
+  if (!dropZone) return;
+  dropZone.ondragover  = function(e){ e.preventDefault(); dropZone.classList.add('drag-over'); };
+  dropZone.ondragleave = function(){ dropZone.classList.remove('drag-over'); };
+  dropZone.ondrop      = function(e){
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    var f = e.dataTransfer.files[0];
+    if (f && !_gcUploading) uploadGCFile(f);
+  };
+  dropZone.onclick     = function(){
+    var inp = document.getElementById('_gc-pdf-input');
+    if (inp) inp.click();
+  };
 }
 
 function saveGameBasic(game, isEdit) {
