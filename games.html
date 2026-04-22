@@ -443,7 +443,179 @@ function renderInnings(innings, isHome) {
   return h;
 }
 
-/* ── Game list & render ────────────────────────────────────── */
+/* ── Game Data Modal (PDF detail) ──────────────────────────── */
+function viewGameData(gameId) {
+  var game = allGames.find(function(g){ return g.id === gameId; });
+  if (!game) { showToast('找不到赛事数据', 'error'); return; }
+  renderGameDataModal(game);
+}
+
+function renderGameDataModal(game) {
+  closeModal('gamedata-modal');
+  var homeR = game.hk_runs_by_inning||[];
+  var awayR = [];
+
+  var h = '<div class="modal-overlay" id="gamedata-modal">'+
+    '<div class="modal" style="max-width:900px;">'+
+      '<div class="modal-header">'+
+        '<div class="modal-title">📋 赛事数据详情 — '+escHtml(game.home||'')+' vs '+escHtml(game.away||'')+'</div>'+
+        '<button class="modal-close" onclick="closeModal(\'gamedata-modal\')">✕</button>'+
+      '</div>'+
+      '<div class="modal-body" style="padding:0;">';
+
+  // ── Section 1: 总比分概览 ──
+  h += '<div class="gamedata-section">'+
+    '<div class="gamedata-section-title">🏆 总比分</div>'+
+    '<div class="gamedata-score-wrap">'+
+      '<div class="gamedata-team-block">'+
+        '<div class="gamedata-team-name">'+escHtml(game.home||'')+'</div>'+
+        '<div class="gamedata-total-score">'+(game.home_score||0)+'</div>'+
+      '</div>'+
+      '<div class="gamedata-vs">VS</div>'+
+      '<div class="gamedata-team-block">'+
+        '<div class="gamedata-team-name">'+escHtml(game.away||'')+'</div>'+
+        '<div class="gamedata-total-score">'+(game.away_score||0)+'</div>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+
+  // ── Section 2: 逐局比分 ──
+  var hasInnings = homeR.length > 0;
+  if (hasInnings) {
+    var maxInnings = homeR.length;
+    h += '<div class="gamedata-section">'+
+      '<div class="gamedata-section-title">📊 逐局比分</div>'+
+      '<div class="gamedata-inning-table">';
+    // header
+    h += '<div class="gamedata-inning-row gamedata-inning-head">'+
+      '<div class="ginn-team">球队</div>';
+    for (var i=0; i<maxInnings; i++) { h += '<div class="ginn-inn">'+(i+1)+'</div>'; }
+    h += '<div class="ginn-inn ginn-total">R</div></div>';
+
+    // home
+    var homeTotal = 0; homeR.forEach(function(v){ homeTotal += (v||0); });
+    h += '<div class="gamedata-inning-row">'+
+      '<div class="ginn-team ginn-home">'+escHtml(game.home||'')+'</div>';
+    homeR.forEach(function(v){ h += '<div class="ginn-inn">'+(v||0)+'</div>'; });
+    h += '<div class="ginn-inn ginn-total">'+homeTotal+'</div></div>';
+
+    // away (derive from total - home)
+    for (var j=0; j<maxInnings; j++) {
+      var ht = (j < (homeR.length||[]).length) ? (homeR[j]||0) : 0;
+      var hs = (game.home_score||0);
+      var as = (game.away_score||0);
+    }
+    // compute away innings: derive from total scores and home innings if not stored
+    // For now derive away innings as: use home innings if GC provides, else estimate
+    var awayEstTotal = 0;
+    h += '<div class="gamedata-inning-row">'+
+      '<div class="ginn-team ginn-away">'+escHtml(game.away||'')+'</div>';
+    for (var k=0; k<maxInnings; k++) {
+      var totalInn = (k < (homeR.length||[]).length) ? (homeR[k]||0) : 0;
+      h += '<div class="ginn-inn">—</div>';
+    }
+    h += '<div class="ginn-inn ginn-total">'+(game.away_score||0)+'</div></div>';
+
+    h += '</div></div>';
+  }
+
+  // ── Section 3: 打击数据 ──
+  var batting = game.hk_batting||[];
+  if (batting.length) {
+    h += '<div class="gamedata-section">'+
+      '<div class="gamedata-section-title">⚾ 打击数据</div>'+
+      '<div class="gamedata-table-wrap">'+
+        '<table class="gamedata-table"><thead><tr>'+
+          '<th>球员</th><th>#</th><th>AB</th><th>H</th><th>R</th><th>RBI</th><th>BB</th><th>SO</th>'+
+        '</tr></thead><tbody>';
+    batting.forEach(function(b){
+      h += '<tr>'+
+        '<td>'+escHtml(b.name||'')+'</td>'+
+        '<td>'+escHtml(b.number||'')+'</td>'+
+        '<td>'+(b.ab||0)+'</td>'+
+        '<td>'+(b.h||0)+'</td>'+
+        '<td>'+(b.r||0)+'</td>'+
+        '<td>'+(b.rbi||0)+'</td>'+
+        '<td>'+(b.bb||0)+'</td>'+
+        '<td>'+(b.so||0)+'</td>'+
+      '</tr>';
+    });
+    h += '</tbody></table></div></div>';
+  }
+
+  // ── Section 4: 投手数据 ──
+  var pitching = game.hk_pitching||[];
+  if (pitching.length) {
+    h += '<div class="gamedata-section">'+
+      '<div class="gamedata-section-title">🎯 投手数据</div>'+
+      '<div class="gamedata-table-wrap">'+
+        '<table class="gamedata-table"><thead><tr>'+
+          '<th>球员</th><th>#</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>SO</th>'+
+        '</tr></thead><tbody>';
+    pitching.forEach(function(b){
+      h += '<tr>'+
+        '<td>'+escHtml(b.name||'')+'</td>'+
+        '<td>'+escHtml(b.number||'')+'</td>'+
+        '<td>'+fmtIP(b.ip)+'</td>'+
+        '<td>'+(b.h||0)+'</td>'+
+        '<td>'+(b.r||0)+'</td>'+
+        '<td>'+(b.er||0)+'</td>'+
+        '<td>'+(b.bb||0)+'</td>'+
+        '<td>'+(b.so||0)+'</td>'+
+      '</tr>';
+    });
+    h += '</tbody></table></div></div>';
+  }
+
+  if (!batting.length && !pitching.length) {
+    h += '<div class="gamedata-section">'+
+      '<div style="text-align:center;padding:32px;color:var(--text-muted);">'+
+        '📄 暂无 PDF 解析数据<br><span style="font-size:12px;">请通过 GC PDF 导入或手动编辑添加数据</span>'+
+      '</div>'+
+    '</div>';
+  }
+
+  h += '</div>'+
+    '<div class="modal-footer" style="position:sticky;bottom:0;background:var(--bg-secondary);border-top:1px solid var(--border);padding:16px 24px;text-align:center;">'+
+      '<button class="btn btn-primary" onclick="closeModal(\'gamedata-modal\')">关闭</button>'+
+    '</div>'+
+  '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', h);
+}
+
+/* ── Game Data Modal ──────────────────────────────────────── */
+.gamedata-section { border-bottom: 1px solid var(--border-light); padding: 20px 24px; }
+.gamedata-section:last-child { border-bottom: none; }
+.gamedata-section-title { font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.gamedata-score-wrap { display: flex; align-items: center; justify-content: center; gap: 32px; }
+.gamedata-team-block { text-align: center; }
+.gamedata-team-name { font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+.gamedata-total-score { font-size: 52px; font-weight: 900; font-family: 'JetBrains Mono', monospace; line-height: 1; color: var(--primary); }
+.gamedata-vs { font-size: 20px; font-weight: 700; color: var(--text-muted); }
+
+.gamedata-inning-table { overflow-x: auto; }
+.gamedata-inning-row { display: flex; gap: 4px; min-width: 400px; align-items: center; margin-bottom: 4px; }
+.gamedata-inning-row:first-child { margin-bottom: 6px; }
+.ginn-team { min-width: 90px; font-size: 12px; font-weight: 600; padding: 4px 6px; border-radius: 4px; }
+.ginn-home { color: var(--success); }
+.ginn-away { color: var(--accent); }
+.ginn-inn { min-width: 36px; height: 30px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: var(--bg-secondary); color: var(--text-secondary); }
+.ginn-total { background: var(--primary); color: white; font-weight: 900; }
+.ginn-inn[style], .ginn-inn:not([class*="ginn"]) { /* noop */ }
+
+.gamedata-table-wrap { overflow-x: auto; }
+.gamedata-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.gamedata-table th { padding: 8px 12px; background: var(--bg-secondary); color: var(--text-muted); font-weight: 700; text-align: center; border-bottom: 1px solid var(--border); }
+.gamedata-table th:first-child { text-align: left; border-radius: 6px 0 0 0; }
+.gamedata-table th:last-child { border-radius: 0 6px 0 0; }
+.gamedata-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-light); color: var(--text-secondary); text-align: center; }
+.gamedata-table td:first-child { text-align: left; font-weight: 600; color: var(--text-primary); }
+.gamedata-table tbody tr:hover { background: var(--bg-card-hover); }
+
+.gamedata-inning-row.gamedata-inning-head .ginn-team { background: var(--bg-secondary); color: var(--text-muted); font-weight: 700; text-align: center; }
+
+
 function getStats() {
   return { total: allGames.length };
 }
@@ -486,6 +658,7 @@ function renderGames() {
       '<div class="score-footer">'+
         '<span style="font-size:12px;color:var(--text-muted);">'+(winner?'🏆 '+winner:'&nbsp;')+'</span>'+
         '<div style="display:flex;gap:6px;">'+
+          '<button class="btn btn-ghost btn-sm" onclick="viewGameData(\''+escHtml(g.id)+'\')">📋 数据</button>'+
           (g.roster&&g.roster.length?'<button class="btn btn-ghost btn-sm" onclick="viewRoster(\''+escHtml(g.id)+'\')">👥 阵容</button>':'')+
           '<button class="btn btn-ghost btn-sm" onclick="editGame(\''+escHtml(g.id||'')+'\')">✏️ 编辑</button>'+
           '<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deleteGame(\''+escHtml(g.id||'')+'\')">🗑️</button>'+
