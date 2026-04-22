@@ -913,7 +913,11 @@ if(dz){
 /* ── Init ───────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded',function(){
   initNav();
-  loadPlayers();
+  DB.init(function(){
+    _dbInited=true;
+    _pending.forEach(function(f){f();});
+    loadPlayers();
+  });
 });
 </script>
 </body>
