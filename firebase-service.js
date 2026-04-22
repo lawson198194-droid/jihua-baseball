@@ -47,41 +47,39 @@
 
     getPlayers: function(callback) {
       var self = this;
-      // Fallback REST API helper (bypasses SDK security rules)
-      function fetchViaRest(fallback) {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', 'https://baseai-hk-default-rtdb.asia-southeast1.firebasedatabase.app/players.json', true);
-        xhr.onreadystatechange = function() {
-          if (xhr.readyState === 4) {
-            if (xhr.status === 200) {
-              try {
-                var raw = JSON.parse(xhr.responseText);
-                var data = [];
-                if (raw && typeof raw === 'object') {
-                  Object.keys(raw).forEach(function(k) {
-                    var item = raw[k];
-                    item.id = k;
-                    data.push(item);
-                  });
-                }
-                console.log('[Firebase] REST fallback loaded', data.length, 'players');
-                callback({ data: data });
-              } catch(e) {
-                console.error('[Firebase] REST parse error:', e);
-                callback({ data: [] });
-              }
-            } else {
-              console.error('[Firebase] REST HTTP error:', xhr.status);
-              callback({ data: [] });
+      var REST_BASE = 'https://baseai-hk-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+      function fetchViaRest() {
+        // Use fetch() API for better CORS handling in browsers
+        fetch(REST_BASE + '/players.json')
+          .then(function(resp) {
+            console.log('[Firebase] REST fetch status:', resp.status);
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.json();
+          })
+          .then(function(raw) {
+            var data = [];
+            if (raw && typeof raw === 'object') {
+              Object.keys(raw).forEach(function(k) {
+                var item = raw[k];
+                item.id = k;
+                data.push(item);
+              });
             }
-          }
-        };
-        xhr.onerror = function() { callback({ data: [] }); };
-        xhr.send();
+            console.log('[Firebase] REST fallback loaded', data.length, 'players');
+            // Sync to localStorage so SDK fallback can also read it
+            if (data.length > 0) {
+              try { localStorage.setItem('baseai_players', JSON.stringify(data)); } catch(e){}
+            }
+            callback({ data: data });
+          })
+          .catch(function(e) {
+            console.error('[Firebase] REST fallback error:', e);
+            callback({ data: [] });
+          });
       }
 
       if (!this.isConfigured) {
-        // Try REST API when SDK not configured
         fetchViaRest();
         return;
       }
@@ -92,7 +90,6 @@
           item.id = child.key;
           data.push(item);
         });
-        // SDK returned empty → use REST API fallback
         if (data.length === 0) {
           console.warn('[Firebase] SDK returned 0 players, trying REST fallback...');
           fetchViaRest();
@@ -441,28 +438,32 @@
     // ── Games ──────────────────────────────────────────────────
     getGames: function(callback) {
       var self = this;
+      var REST_BASE = 'https://baseai-hk-default-rtdb.asia-southeast1.firebasedatabase.app';
       function fetchViaRest() {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', 'https://baseai-hk-default-rtdb.asia-southeast1.firebasedatabase.app/games.json', true);
-        xhr.onreadystatechange = function() {
-          if (xhr.readyState === 4 && xhr.status === 200) {
-            try {
-              var raw = JSON.parse(xhr.responseText);
-              var data = [];
-              if (raw && typeof raw === 'object') {
-                Object.keys(raw).forEach(function(k) {
-                  var item = raw[k];
-                  item.id = k;
-                  data.unshift(item);
-                });
-              }
-              console.log('[Firebase] REST fallback loaded', data.length, 'games');
-              callback({ data: data });
-            } catch(e) { callback({ data: [] }); }
-          }
-        };
-        xhr.onerror = function() { callback({ data: [] }); };
-        xhr.send();
+        fetch(REST_BASE + '/games.json')
+          .then(function(resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.json();
+          })
+          .then(function(raw) {
+            var data = [];
+            if (raw && typeof raw === 'object') {
+              Object.keys(raw).forEach(function(k) {
+                var item = raw[k];
+                item.id = k;
+                data.unshift(item);
+              });
+            }
+            console.log('[Firebase] REST fallback loaded', data.length, 'games');
+            if (data.length > 0) {
+              try { localStorage.setItem('baseai_games', JSON.stringify(data)); } catch(e){}
+            }
+            callback({ data: data });
+          })
+          .catch(function(e) {
+            console.error('[Firebase] REST fallback error:', e);
+            callback({ data: [] });
+          });
       }
       if (!this.isConfigured) {
         fetchViaRest();
