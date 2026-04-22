@@ -488,6 +488,8 @@ function renderGameDataModal(game) {
     '<div class="modal" style="max-width:900px;">'+
       '<div class="modal-header">'+
         '<div class="modal-title">📋 赛事数据详情</div>'+
+        '<div style="font-size:11px;color:var(--text-muted);font-weight:400;margin-top:2px;">'+
+          escHtml(game.date||'') + (game.venue?' · '+escHtml(game.venue):'') +'</div>'+
         '<button class="modal-close" onclick="closeModal(\'gamedata-modal\')">✕</button>'+
       '</div>'+
       '<div class="modal-body" style="padding:0;">';
@@ -531,14 +533,16 @@ function renderGameDataModal(game) {
       '<div class="ginn-team ginn-home">'+escHtml(game.home||'')+'</div>';
     for (var hi=0; hi<maxInnings; hi++) { h += '<div class="ginn-inn">'+(homeR[hi]||0)+'</div>'; }
     h += '<div class="ginn-inn ginn-total">'+homeTotal+'</div>'+
-         '<div class="ginn-inn">—</div><div class="ginn-inn">—</div></div>';
+         '<div class="ginn-inn">'+(game.home_hits!==null&&game.home_hits!==undefined?game.home_hits:'—')+'</div>'+
+         '<div class="ginn-inn">'+(game.home_errors!==null&&game.home_errors!==undefined?game.home_errors:'—')+'</div></div>';
 
     var awayTotal = 0; awayR.forEach(function(v){ awayTotal += (v||0); });
     h += '<div class="gamedata-inning-row">'+
       '<div class="ginn-team ginn-away">'+escHtml(game.away||'')+'</div>';
     for (var ai=0; ai<maxInnings; ai++) { h += '<div class="ginn-inn">'+(awayR[ai]||0)+'</div>'; }
     h += '<div class="ginn-inn ginn-total">'+awayTotal+'</div>'+
-         '<div class="ginn-inn">—</div><div class="ginn-inn">—</div></div>';
+         '<div class="ginn-inn">'+(game.away_hits!==null&&game.away_hits!==undefined?game.away_hits:'—')+'</div>'+
+         '<div class="ginn-inn">'+(game.away_errors!==null&&game.away_errors!==undefined?game.away_errors:'—')+'</div></div>';
 
     h += '</div></div>';
   }
@@ -1596,6 +1600,11 @@ function saveGameBasic(game, isEdit) {
     hk_batting: gc&&gc.success ? gc.hk_batting : [],
     hk_pitching: gc&&gc.success ? gc.hk_pitching : [],
     hk_runs_by_inning: gc&&gc.success ? (gc.hk_runs_by_inning||[]) : [],
+    away_runs_by_inning: gc&&gc.success ? (gc.away_runs_by_inning||[]) : [],
+    away_hits: gc&&gc.success ? (gc.away_hits||null) : null,
+    away_errors: gc&&gc.success ? (gc.away_errors||null) : null,
+    home_hits: gc&&gc.success ? (gc.home_hits||null) : null,
+    home_errors: gc&&gc.success ? (gc.home_errors||null) : null,
     hk_pdf_players: gc&&gc.success ? gc.hk_batting.concat(gc.hk_pitching).filter(function(v,i,a){return a.findIndex(function(t){return t.name===v.name;})===i;}).map(function(v){return v.name;}) : [],
     roster: buildRosterFromGC(src, gc)
   };
