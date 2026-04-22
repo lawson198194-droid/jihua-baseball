@@ -90,13 +90,14 @@
           item.id = child.key;
           data.push(item);
         });
+        console.log('[Firebase] SDK path returned', data.length, 'players, isConfigured=', this.isConfigured);
         if (data.length === 0) {
           console.warn('[Firebase] SDK returned 0 players, trying REST fallback...');
           fetchViaRest();
           return;
         }
         callback({ data: data });
-      }).catch(function(error) {
+      }.bind(this)).catch(function(error) {
         console.error('[Firebase] getPlayers error, trying REST fallback:', error);
         fetchViaRest();
       });
