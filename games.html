@@ -625,10 +625,12 @@ function rebindPDFHandlers() {
 }
 
 function ensurePlayersThenMatch() {
-  if (!allPlayers || allPlayers.length === 0) {
-    DB.getPlayers(function(players) {
-      allPlayers = players || [];
-      console.log('[Match] allPlayers loaded:', allPlayers.length);
+  console.log('[Match] ensurePlayersThenMatch, allPlayers:', typeof allPlayers, Array.isArray(allPlayers) ? allPlayers.length : allPlayers, '_wizardStep:', _wizardStep, '_gcResult:', _gcResult ? 'exists' : 'null');
+  if (!allPlayers || !Array.isArray(allPlayers) || allPlayers.length === 0) {
+    DB.getPlayers(function(result) {
+      var data = (result && result.data) || [];
+      allPlayers = Array.isArray(data) ? data : [];
+      console.log('[Match] allPlayers loaded from DB:', allPlayers.length, 'first few:', allPlayers.slice(0,3).map(function(p){return p.name;}));
       if (_wizardStep === 3 && _gcResult && _gcResult.success) {
         autoMatchAllGCPlayers();
         var content = document.getElementById('modal-body-content');
@@ -637,6 +639,7 @@ function ensurePlayersThenMatch() {
       }
     });
   } else if (_wizardStep === 3 && _gcResult && _gcResult.success) {
+    console.log('[Match] running autoMatchAllGCPlayers with', allPlayers.length, 'players');
     autoMatchAllGCPlayers();
     var content = document.getElementById('modal-body-content');
     if (content) content.innerHTML = renderWizardSteps() + renderWizardContent();
@@ -998,10 +1001,13 @@ function findBestMatch(name) {
 }
 
 function findMatchSuggestions(name, limit) {
-  if (!name || !allPlayers) return [];
+  limit = limit || 10;
+  if (!name) return [];
+  var pool = allPlayers;
+  if (!Array.isArray(pool) || pool.length === 0) return [];
   var matches = [];
   var n = name.toLowerCase().trim();
-  allPlayers.forEach(function(p) {
+  pool.forEach(function(p) {
     var pn = (p.name||'').toLowerCase();
     var score = 0;
     if (pn === n) score = 100;
