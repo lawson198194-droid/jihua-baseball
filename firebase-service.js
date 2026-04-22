@@ -507,16 +507,16 @@
       var self = this;
       var data = Object.assign({}, gameData);
       var id = data.id;
-      delete data.id;
       if (!this.isConfigured) {
         var games = JSON.parse(localStorage.getItem('baseai_games') || '[]');
         if (id) {
           var idx = games.findIndex(function(g){ return g.id === id; });
           if (idx >= 0) games[idx] = data;
+          else games.unshift(data);
         } else {
           id = 'G' + Date.now();
           data.id = id;
-          games.push(data);
+          games.unshift(data);
         }
         localStorage.setItem('baseai_games', JSON.stringify(games));
         setTimeout(function(){ if(callback) callback({ success: true, id: id }); }, 0);
