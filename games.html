@@ -1092,10 +1092,29 @@ document.querySelectorAll('.game-tab').forEach(function(btn){
         _pendingLoads.forEach(function(fn){ fn(); });
       }
     }
-    DB.getPlayers(function(r){
-      var raw = (r&&r.data)||[];
+    // Load players from local static JSON first (bypasses Firebase CORS), fallback to DB.getPlayers
+    (function loadPlayersFromStatic(cb) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', 'players.json?t=' + Date.now(), true);
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+          try {
+            var data = JSON.parse(xhr.responseText);
+            console.log('[Init] Loaded', data.length, 'players from local players.json');
+            cb(data);
+          } catch(e) {
+            console.warn('[Init] players.json parse error, try DB:', e);
+            DB.getPlayers(function(r){ cb((r&&r.data)||[]); });
+          }
+        }
+      };
+      xhr.onerror = function() {
+        console.warn('[Init] players.json not available, using DB');
+        DB.getPlayers(function(r){ cb((r&&r.data)||[]); });
+      };
+      xhr.send();
+    })(function(raw) {
       var active = raw.filter(function(p){ return p.status==='active'; });
-      // Fallback: if filter returned 0 but raw has data, maybe status field is missing - include all
       if (active.length === 0 && raw.length > 0) {
         console.warn('[Init] No players with status=active, showing all', raw.length, 'players');
         allPlayers = raw;
