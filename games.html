@@ -677,7 +677,7 @@ function openRosterModal(gameId, cb) {
   cb = cb || function(){};
 
   function proceed(game) {
-    console.log('[Roster] allPlayers count:', allPlayers.length);
+    console.log('[Roster] allPlayers count:', allPlayers.length, '| game roster:', (game.roster||[]).length, '| hk_batting:', (game.hk_batting||[]).length);
     finishModal(game);
   }
 
@@ -1093,7 +1093,16 @@ document.querySelectorAll('.game-tab').forEach(function(btn){
       }
     }
     DB.getPlayers(function(r){
-      allPlayers = ((r&&r.data)||[]).filter(function(p){ return p.status==='active'; });
+      var raw = (r&&r.data)||[];
+      var active = raw.filter(function(p){ return p.status==='active'; });
+      // Fallback: if filter returned 0 but raw has data, maybe status field is missing - include all
+      if (active.length === 0 && raw.length > 0) {
+        console.warn('[Init] No players with status=active, showing all', raw.length, 'players');
+        allPlayers = raw;
+      } else {
+        allPlayers = active;
+      }
+      console.log('[Init] allPlayers loaded:', allPlayers.length, '(raw:', raw.length, ')');
       check();
     });
     DB.getGames(function(r){
