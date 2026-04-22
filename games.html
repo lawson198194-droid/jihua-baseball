@@ -602,26 +602,39 @@ function renderAddModal() {
 
 function rebindPDFHandlers() {
   var dropZone = document.getElementById('pdf-drop');
-  if (!dropZone || dropZone._bound) return;
-  dropZone._bound = true;
-  dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag-over'); });
-  dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag-over'); });
-  dropZone.addEventListener('drop', function(e){
-    e.preventDefault(); dropZone.classList.remove('drag-over');
-    var f = e.dataTransfer.files[0];
-    if (f) uploadGCFile(f);
-  });
-  // Click on drop zone opens file picker
-  dropZone.addEventListener('click', function() {
-    var inp = document.getElementById('_gc-pdf-input');
-    if (!inp) {
-      inp = document.createElement('input');
-      inp.type = 'file'; inp.id = '_gc-pdf-input'; inp.accept = '.pdf'; inp.style.display = 'none';
-      document.body.appendChild(inp);
-      inp.addEventListener('change', function() { if (this.files[0]) uploadGCFile(this.files[0]); this.value = ''; });
-    }
-    inp.click();
-  });
+  if (!dropZone) return;
+  // Always re-bind (innerHTML replaces the element, _bound is on old element)
+  dropZone.removeEventListener('dragover', onDragOver);
+  dropZone.removeEventListener('dragleave', onDragLeave);
+  dropZone.removeEventListener('drop', onDrop);
+  dropZone.removeEventListener('click', onDropClick);
+  dropZone.addEventListener('dragover', onDragOver);
+  dropZone.addEventListener('dragleave', onDragLeave);
+  dropZone.addEventListener('drop', onDrop);
+  dropZone.addEventListener('click', onDropClick);
+}
+function onDragOver(e){ e.preventDefault(); document.getElementById('pdf-drop').classList.add('drag-over'); }
+function onDragLeave(){ var d=document.getElementById('pdf-drop'); if(d)d.classList.remove('drag-over'); }
+function onDrop(e){
+  e.preventDefault();
+  var d=document.getElementById('pdf-drop'); if(d)d.classList.remove('drag-over');
+  var f=e.dataTransfer.files[0];
+  if(f) uploadGCFile(f);
+}
+function onDropClick(){
+  var inp=document.getElementById('_gc-pdf-input');
+  if(!inp){
+    inp=document.createElement('input');
+    inp.type='file'; inp.id='_gc-pdf-input'; inp.accept='.pdf'; inp.style.display='none';
+    document.body.appendChild(inp);
+    inp.addEventListener('change',function(){
+      if(this.files&&this.files[0]) uploadGCFile(this.files[0]);
+      // Reset via new input to avoid change event on same file re-select
+      var newInp=document.createElement('input'); newInp.type='file'; newInp.accept='.pdf'; newInp.style.display='none'; newInp.id='_gc-pdf-input';
+      this.parentNode.replaceChild(newInp,this);
+    });
+  }
+  inp.click();
 }
 
 function ensurePlayersThenMatch() {
@@ -769,6 +782,7 @@ function renderStep2() {
     '<div id="gc-player-list"></div>'+
   '</div>';
 }
+rebindPDFHandlers();
 
 function renderStep3() {
   var gc = _gcResult;
@@ -1338,11 +1352,9 @@ function uploadGCFile(file) {
 }
 
 function saveGameBasic(game, isEdit) {
-  // Prefer _wizardGame (wizard flow), fallback to DOM (legacy/bulk edit)
   var src = _wizardGame && (_wizardGame.home || _wizardGame.year) ? _wizardGame : null;
-  var home = src ? src.home : (document.getElementById('gf-home')||{}).value.trim();
-  var away = src ? src.away : (document.getElementById('gf-away')||{}).value.trim();
-  if (!home || !away) { showToast('请填写主客队名称', 'warning'); return; }
+  var home = src ? src.home : '';
+  var away = src ? src.away : '';
   var gc = _gcResult;
   var data = {
     home: home, away: away,
@@ -1363,21 +1375,34 @@ function saveGameBasic(game, isEdit) {
   };
   function buildRosterFromGC(src, gc) {
     if (src && src.roster && src.roster.length > 0) return src.roster;
-    var batting = gc && gc.success ? (gc.hk_batting||[]) : [];
+    var batting  = gc && gc.success ? (gc.hk_batting||[])  : [];
     var pitching = gc && gc.success ? (gc.hk_pitching||[]) : [];
-    var all = batting.concat(pitching);
-    var seen = {};
+    // Merge batting + pitching into one list per player name
+    var nameMap = {};
+    batting.forEach(function(p) {
+      if (!p.lib_id || !p.name) return;
+      if (!nameMap[p.name]) nameMap[p.name] = { lib_id: p.lib_id, name: p.name, number: p.number||'', position: p.position||'', batting: p, pitching: null };
+      else Object.assign(nameMap[p.name], { batting: p });
+    });
+    pitching.forEach(function(p) {
+      if (!p.lib_id || !p.name) return;
+      if (!nameMap[p.name]) nameMap[p.name] = { lib_id: p.lib_id, name: p.name, number: p.number||'', position: p.position||'', batting: null, pitching: p };
+      else Object.assign(nameMap[p.name], { pitching: p });
+    });
     var roster = [];
-    all.forEach(function(p) {
-      if (!p.lib_id || seen[p.name]) return;
-      seen[p.name] = true;
+    Object.keys(nameMap).forEach(function(name) {
+      var m = nameMap[name];
+      var b = m.batting, p = m.pitching;
       roster.push({
-        player_id: p.lib_id,
-        name: p.name,
-        number: p.number || '',
-        position: p.position || '',
-        ab: p.ab, r: p.r, h: p.h, rbi: p.rbi, bb: p.bb, so: p.so,
-        ip: p.ip, er: p.er, so_p: p.so_p
+        player_id: m.lib_id,
+        name: m.name,
+        number: m.number,
+        position: m.position,
+        // batting stats
+        ab:  b ? b.ab  : 0,  r:  b ? b.r  : 0,  h:  b ? b.h  : 0,
+        rbi: b ? b.rbi : 0,  bb: b ? b.bb : 0,  so: b ? b.so : 0,
+        // pitching stats
+        ip:   p ? p.ip   : 0,  er:   p ? p.er   : 0,  so_p: p ? p.so_p : 0
       });
     });
     return roster;
