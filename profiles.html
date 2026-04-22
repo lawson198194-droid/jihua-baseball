@@ -448,6 +448,7 @@ function renderNameList(){
     if(gender&&p.gender!==gender)return false;
     return true;
   });
+  console.log('[Profiles] Render:', {total:allPlayers.length, filtered:filtered.length, age:age, gender:gender, q:q});
   if(filtered.length===0){
     list.innerHTML='<div class="name-empty">没有匹配的球员<br><span style="font-size:11px;margin-top:4px;display:block;">试试调整筛选条件</span></div>';
     return;
