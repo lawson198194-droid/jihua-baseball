@@ -663,17 +663,19 @@ function saveGameBasic(game, isEdit) {
 function openRosterModal(gameId, cb) {
   DB.getGame(gameId, function(res){
     var game = res.data || {};
-    _rosterIds = new Set((game.roster||[]).map(function(p){ return p.player_id||p.id; }));
+    // Normalize IDs to string to avoid int/string mismatch
+    _rosterIds = new Set((game.roster||[]).map(function(p){ return String(p.player_id||p.id||''); }).filter(Boolean));
     // Auto-pre-select players matching PDF batting/pitching names
     if ((game.hk_batting||[]).length > 0 || (game.hk_pitching||[]).length > 0) {
       autoMatchPlayers(game, function(matchedIds){
-        matchedIds.forEach(function(id){ _rosterIds.add(id); });
+        matchedIds.forEach(function(id){ _rosterIds.add(String(id)); });
         renderRosterModal(game);
+        if (cb) cb();
       });
     } else {
       renderRosterModal(game);
+      if (cb) cb();
     }
-    if (cb) cb();
   });
 }
 
@@ -699,8 +701,9 @@ function autoMatchPlayers(game, callback) {
 function renderRosterModal(game) {
   _currentGameCache = game;   // 缓存供 toggleRosterPlayer 使用
   closeModal('roster-modal');
-  var roster = game.roster || [];
-  var unrostered = allPlayers.filter(function(p){ return !_rosterIds.has(p.id||p.player_id); });
+  // 基于 _rosterIds 分组（已选 / 未选）
+  var selected   = allPlayers.filter(function(p){ return _rosterIds.has(String(p.id||p.player_id||'')); });
+  var unrostered = allPlayers.filter(function(p){ return !_rosterIds.has(String(p.id||p.player_id||'')); });
 
   var html = '<div class="modal-overlay" id="roster-modal">'+
     '<div class="modal" style="max-width:900px;">'+
@@ -710,7 +713,7 @@ function renderRosterModal(game) {
 
         // Already selected
         '<div class="roster-section">'+
-          '<div class="roster-section-title">✅ 已选球员 <span id="roster-count" style="color:var(--primary)">('+roster.length+')</span></div>'+
+          '<div class="roster-section-title">✅ 已选球员 <span id="roster-count" style="color:var(--primary)">('+selected.length+')</span></div>'+
           '<div class="roster-grid" id="roster-selected"></div>'+
         '</div>'+
 
@@ -732,7 +735,7 @@ function renderRosterModal(game) {
   '</div>';
   document.body.insertAdjacentHTML('beforeend', html);
 
-  renderRosterGrid(roster, document.getElementById('roster-selected'), true);
+  renderRosterGrid(selected,   document.getElementById('roster-selected'),   true);
   renderRosterGrid(unrostered, document.getElementById('roster-available'), false);
 
   if (game.hk_batting && game.hk_batting.length) {
@@ -745,13 +748,13 @@ function renderRosterModal(game) {
 }
 
 function renderRosterGrid(players, container, isSelected) {
-  if (!players.length) {
+  if (!players || !players.length) {
     container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px;">'+(isSelected?'暂无选中球员':'无匹配球员')+'</div>';
     return;
   }
   var html = '';
   players.forEach(function(p) {
-    var pid = p.id||p.player_id||'';
+    var pid = String(p.id||p.player_id||'');
     var sel = isSelected || _rosterIds.has(pid);
     html += '<div class="roster-player-card'+(sel?' selected':'')+'" data-id="'+escHtml(pid)+'" onclick="toggleRosterPlayer(\''+escHtml(pid)+'\')">'+
       '<div class="rpc-check">✓</div>'+
@@ -764,6 +767,7 @@ function renderRosterGrid(players, container, isSelected) {
 }
 
 function toggleRosterPlayer(pid) {
+  pid = String(pid);
   if (_rosterIds.has(pid)) {
     _rosterIds.delete(pid);
   } else {
