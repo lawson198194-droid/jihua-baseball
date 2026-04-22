@@ -677,18 +677,8 @@ function openRosterModal(gameId, cb) {
   cb = cb || function(){};
 
   function proceed(game) {
-    // Ensure allPlayers is loaded (fallback reload if empty)
-    if (!allPlayers || !allPlayers.length) {
-      console.warn('[Roster] allPlayers empty — reloading from Firebase...');
-      DB.getPlayers(function(r) {
-        allPlayers = ((r&&r.data)||[]).filter(function(p){ return p.status==='active'; });
-        console.log('[Roster] Reloaded. allPlayers count:', allPlayers.length);
-        finishModal(game);
-      });
-    } else {
-      console.log('[Roster] Using cached allPlayers. count:', allPlayers.length);
-      finishModal(game);
-    }
+    console.log('[Roster] allPlayers count:', allPlayers.length);
+    finishModal(game);
   }
 
   function finishModal(game) {
@@ -716,22 +706,43 @@ function openRosterModal(gameId, cb) {
   }
 }
 
-// Auto-match PDF player names to library players
+// Auto-match PDF player names to library players (multi-level fuzzy matching)
 function autoMatchPlayers(game, callback) {
   var pdfPlayers = (game.hk_batting||[]).concat(game.hk_pitching||[]);
   if (!pdfPlayers.length) { callback([]); return; }
   var matched = [];
   allPlayers.forEach(function(p){
-    var pn = (p.name||'').toLowerCase();
+    var pn = (p.name||'').toLowerCase().trim();
     for (var i=0; i<pdfPlayers.length; i++) {
-      var bn = (pdfPlayers[i].name||'').toLowerCase();
-      if (pn===bn || pn.includes(bn) || bn.includes(pn) || pn.split(' ')[0]===bn.split(' ')[0]) {
-        var pid = p.id||p.player_id;
-        if (!matched.includes(pid)) matched.push(pid);
+      var bn = (pdfPlayers[i].name||'').toLowerCase().trim();
+      var pid = String(p.id||p.player_id||'');
+      if (!pid) continue;
+      // Level 1: exact match (case-insensitive)
+      var match = pn === bn;
+      // Level 2: one contains the other (handles "I Chan" ↔ "i chan" or partial)
+      if (!match) match = pn.includes(bn) || bn.includes(pn);
+      // Level 3: first token matches (handles "I" in "I Chan" matching "I" in "I Chan")
+      if (!match) {
+        var pnToks = pn.split(/\s+/);
+        var bnToks = bn.split(/\s+/);
+        match = pnToks.some(function(t){ return bnToks.includes(t) && t.length > 1; });
+      }
+      // Level 4: initial + last name (e.g. "I Chan" matches "I Chan")
+      if (!match) {
+        var pLast = pnToks[pnToks.length-1];
+        var bLast = bnToks[bnToks.length-1];
+        var pInit = pnToks[0][0]||'';
+        var bInit = bnToks[0][0]||'';
+        match = (pInit===bInit && pLast===bLast && pLast.length > 1);
+      }
+      if (match && !matched.includes(pid)) {
+        matched.push(pid);
+        console.log('[AutoMatch] ✓', bn, '→', p.name, '(#'+p.number+')');
         break;
       }
     }
   });
+  console.log('[AutoMatch] Total matched:', matched.length, '/', pdfPlayers.length);
   callback(matched);
 }
 
