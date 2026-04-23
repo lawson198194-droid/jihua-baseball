@@ -613,21 +613,28 @@
       this.getPlayer(playerId, function(result) {
         var p = result.data || {};
         var s = p.stats || {};
+        var b = s.batting || {};
+        var pt = s.pitching || {};
         var ns = {
           games:    (s.games||0) + 1,
-          ab:       (s.ab||0)    + (gameStats.ab||0),
-          r:        (s.r||0)     + (gameStats.r||0),
-          h:        (s.h||0)     + (gameStats.h||0),
-          rbi:      (s.rbi||0)   + (gameStats.rbi||0),
-          bb:       (s.bb||0)    + (gameStats.bb||0),
-          so:       (s.so||0)    + (gameStats.so||0),
-          ip:       (s.ip||0)    + (gameStats.ip||0),
-          ph:       (s.ph||0)    + (gameStats.ph||0),
-          pr:       (s.pr||0)    + (gameStats.pr||0),
-          per:      (s.per||0)   + (gameStats.er||0),
-          pbb:      (s.pbb||0)   + (gameStats.pbb||0),
-          pso:      (s.pso||0)   + (gameStats.pso||0),
-          phr:      (s.phr||0)   + (gameStats.phr||0)
+          batting: {
+            ab:   (b.ab||0)   + (gameStats.ab||0),
+            r:    (b.r||0)    + (gameStats.r||0),
+            h:    (b.h||0)    + (gameStats.h||0),
+            rbi:  (b.rbi||0)  + (gameStats.rbi||0),
+            bb:   (b.bb||0)   + (gameStats.bb||0),
+            so:   (b.so||0)   + (gameStats.so||0),
+            hr:   (b.hr||0)   + (gameStats.hr||0)
+          },
+          pitching: {
+            ip:   (pt.ip||0)   + (gameStats.ip||0),
+            er:   (pt.er||0)   + (gameStats.er||0),
+            so:   (pt.so||0)   + (gameStats.so||0),
+            bb:   (pt.bb||0)   + (gameStats.bb||0),
+            h:    (pt.h||0)    + (gameStats.ph||0),
+            r:    (pt.r||0)    + (gameStats.pr||0),
+            hr:   (pt.hr||0)   + (gameStats.phr||0)
+          }
         };
         self.updatePlayer(playerId, { stats: ns }, callback);
       });
