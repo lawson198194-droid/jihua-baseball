@@ -1553,29 +1553,31 @@ initGCPersistentInput();
 function parseGCText(text) {
   var result = { success: false, hk_batting: [], hk_pitching: [], home_batting: [], home_pitching: [], hk_runs_by_inning: [], home_runs_by_inning: [] };
 
-  // ══ 1. Team names + Score (from full-text, not per-line) ══════════════
-  // Title format: "TEAM1  #  -  #  TEAM2"  (teams and score on same line)
-  // OR:           "TEAM1  #  -  #  TEAM2"  (score first in some PDFs)
-  // Teams contain letters/spaces/dots, score is 1-2 digits.
-  // Strategy: find "X - Y" (X and Y = 1-2 digits) surrounded by team names,
-  // then split around it. Also handle "X - Y" at very end of page 1.
-  var titleMatch = text.match(/([A-Za-z][A-Za-z\s\.]*?)\s+(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z][A-Za-z\s\.]*)/);
-  if (!titleMatch) {
-    // Try score-first: "2 - 9" before home team name
-    titleMatch = text.match(/([A-Za-z][A-Za-z\s\.]*?)\s+(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z][A-Za-z\s\.]*)/);
+  // ══ 1. Team names + Score ════════════════════════════════════════════════
+  // Real text: "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9 Away Sunday March 08, 2026"
+  // Strategy: split into words, find "X - Y" pattern (X and Y are integers),
+  // everything before = away team words, everything after = home team words.
+  var words = text.trim().split(/\s+/);
+  var scoreDashIdx = -1;
+  for (var wi = 0; wi < words.length - 2; wi++) {
+    if (/^\d+$/.test(words[wi]) && words[wi+1] === '-' && /^\d+$/.test(words[wi+2])) {
+      scoreDashIdx = wi; break;
+    }
   }
-  if (!titleMatch) {
-    console.log('[GC Parse] Title+score not found in full text');
-    console.log('[GC Parse] Text snippet:', text.substring(0, 200));
+  if (scoreDashIdx < 0) {
+    console.log('[GC Parse] Score pattern "X - Y" not found');
+    console.log('[GC Parse] Text snippet:', text.substring(0, 300));
     return result;
   }
-  result.away_team = titleMatch[1].trim();
-  result.home_team = titleMatch[4].trim();
-  result.away_score = parseInt(titleMatch[2]);
-  result.home_score = parseInt(titleMatch[3]);
+  result.away_team = words.slice(0, scoreDashIdx).join(' ').trim();
+  result.home_team = words.slice(scoreDashIdx + 3).join(' ').trim();
+  result.away_score = parseInt(words[scoreDashIdx]);
+  result.home_score = parseInt(words[scoreDashIdx + 2]);
+  // Clean home_team: strip leading "Away" or "Home" if it's the location marker
+  result.home_team = result.home_team.replace(/^(?:Away|Home)\s+/i, '').trim();
   console.log('[GC Parse] Teams:', result.away_team, '(Away', result.away_score, ') vs', result.home_team, '(Home', result.home_score, ')');
 
-  // ══ 2. Date: "Away Sunday March 08, 2026" or "Home Saturday Jan 01, 2025" ══
+  // ══ 2. Date: "Away Sunday March 08, 2026" ══════════════════════════════
   var dateMatch = text.match(/(?:Away|Home)\s+(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+(\w+)\s+(\d{1,2}),?\s+(\d{4})/);
   if (dateMatch) {
     var monthMap = { January:1, February:2, March:3, April:4, May:5, June:6, July:7, August:8, September:9, October:10, November:11, December:12 };
@@ -1587,48 +1589,58 @@ function parseGCText(text) {
   }
 
   // ══ 3. Innings row: "KKRL 0 0 0 1 0 1 2 8 0"  or  "TTBC 0 2 4 0 3 X 9 11 1" ══
-  // Build away/home 4-letter codes
+  // 4-letter codes from the abbreviation lines (KKRL / TTBC) are NOT the same as team name first-4.
+  // So we find all team-like 4-letter words near numbers and assign by position in file.
   var awayCode = result.away_team.substring(0,4).toUpperCase();
   var homeCode = result.home_team.substring(0,4).toUpperCase();
-  // Search full text for inning rows (team code followed by 6+ number groups)
-  var innRegex = new RegExp('(' + awayCode + '|' + homeCode + ')\\s+([\\dX\\s]+)', 'g');
+  // Search for inning rows: a 4+ letter code followed by 5+ number groups
+  var innRegex = /(?:[A-Z]{4,})\s+([\dX\s]+)/g;
   var innMatch;
+  var foundInnings = [];
   while ((innMatch = innRegex.exec(text)) !== null) {
-    var code = innMatch[1].toUpperCase();
-    var allNums = innMatch[2].trim().split(/\s+/);
-    if (allNums.length >= 5) {
-      var inningNums = allNums.slice(0, allNums.length - 3); // last 3 are R/H/E
-      if (code === awayCode) {
-        result.away_runs_by_inning = inningNums.map(function(v){ return v === 'X' ? 0 : parseInt(v) || 0; });
-      } else {
-        result.home_runs_by_inning = inningNums.map(function(v){ return v === 'X' ? 0 : parseInt(v) || 0; });
-      }
+    var nums = innMatch[1].trim().split(/\s+/);
+    if (nums.length >= 5) {
+      foundInnings.push({ code: innMatch[0].substring(0,4).toUpperCase(), nums: nums });
     }
   }
-  console.log('[GC Parse] Innings - Away:', result.away_runs_by_inning, 'Home:', result.home_runs_by_inning);
+  // Assign: first found = away, second = home (consistent with GC PDF format)
+  if (foundInnings.length >= 1) {
+    result.away_runs_by_inning = foundInnings[0].nums.slice(0, foundInnings[0].nums.length - 3).map(function(v){ return v === 'X' ? 0 : parseInt(v) || 0; });
+    console.log('[GC Parse] Innings row[0]:', foundInnings[0].code, '->', result.away_runs_by_inning);
+  }
+  if (foundInnings.length >= 2) {
+    result.home_runs_by_inning = foundInnings[1].nums.slice(0, foundInnings[1].nums.length - 3).map(function(v){ return v === 'X' ? 0 : parseInt(v) || 0; });
+    console.log('[GC Parse] Innings row[1]:', foundInnings[1].code, '->', result.home_runs_by_inning);
+  }
 
   // ══ 4. Batting / Pitching sections ══════════════════════════════════════
   var battingStart = text.indexOf('BATTING');
   var pitchingStart = text.indexOf('PITCHING');
   if (battingStart < 0 || pitchingStart < 0) {
     console.log('[GC Parse] BATTING or PITCHING section not found');
-    result.success = true; // Still return what we have
-    return result;
+    result.success = true; return result;
   }
 
-  // Split batting block into lines
   var battingBlock = text.substring(battingStart + 7, pitchingStart);
   var battingLines = battingBlock.split(/\n/);
   var currentTeam = null;
 
+  // In GC PDFs the batting section starts with the AWAY team name (full name, no code).
+  // After that, player rows contain #NN and stats. Lines with Totals reset context.
   for (var bi = 0; bi < battingLines.length; bi++) {
     var line = battingLines[bi].trim();
     if (!line) continue;
 
-    // Detect team headers by checking for awayCode / homeCode
-    if (line.indexOf(awayCode) >= 0 && line.indexOf('Totals') < 0 && line.indexOf('BATTING') < 0) currentTeam = 'away';
-    else if (line.indexOf(homeCode) >= 0 && line.indexOf('Totals') < 0 && line.indexOf('BATTING') < 0) currentTeam = 'home';
-    else if (line.indexOf('Totals') >= 0) currentTeam = null;
+    // Reset on Totals
+    if (line.indexOf('Totals') >= 0) { currentTeam = null; continue; }
+
+    // Line with # = player data. Use currentTeam from previous header.
+    if (line.indexOf('#') < 0) {
+      // This might be a team header (full name, no hash = header line)
+      // First team header encountered = away team (GC PDF convention)
+      if (!currentTeam) currentTeam = 'away';
+      continue;
+    }
 
     // Player batting: "I Chan #18 (SS)  3  0  1  0  0  1"
     var pMatch = line.match(/^([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
@@ -1649,7 +1661,7 @@ function parseGCText(text) {
     }
   }
 
-  // 5. Find PITCHING section
+  // 5. PITCHING section — team codes (KKRL / TTBC) appear in pitching rows
   var pitchingBlock = text.substring(pitchingStart + 8);
   var pitchingLines = pitchingBlock.split(/\n/);
   currentTeam = null;
@@ -1658,9 +1670,10 @@ function parseGCText(text) {
     var line = pitchingLines[pi].trim();
     if (!line) continue;
 
-    if (line.indexOf(awayCode) >= 0 && line.indexOf('Totals') < 0 && line.indexOf('PITCHING') < 0) currentTeam = 'away';
-    else if (line.indexOf(homeCode) >= 0 && line.indexOf('Totals') < 0 && line.indexOf('PITCHING') < 0) currentTeam = 'home';
-    else if (line.indexOf('Totals') >= 0) currentTeam = null;
+    if (line.indexOf('Totals') >= 0) { currentTeam = null; continue; }
+    // Team codes (KKRL / TTBC) in pitching rows
+    if (line.indexOf(awayCode) >= 0) currentTeam = 'away';
+    else if (line.indexOf(homeCode) >= 0) currentTeam = 'home';
 
     // Pitcher: "Bi #50  3.2  9  6  6  0  7  1"
     var pMatch = line.match(/^([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
