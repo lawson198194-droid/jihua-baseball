@@ -249,7 +249,11 @@ input,select,textarea{font-family:inherit}
           <div class="topbar-subtitle">Module 04 · Player Profiles</div>
         </div>
       </div>
-      <div class="topbar-stats" id="topbar-stats"></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="topbar-stats" id="topbar-stats"></div>
+        <button class="btn btn-ghost" style="font-size:12px;" onclick="openImportModal()">📥 CSV导入</button>
+        <button class="btn btn-primary" style="font-size:12px;" onclick="openAddMeasModal()">➕ 手动录入</button>
+      </div>
     </div>
 
     <!-- Body: Left (Search) + Right (Detail) -->
@@ -571,11 +575,31 @@ function renderProfileDetail(p){
   // ── Tab: Measurements ──
   html+='<div class="tab-panel'+(currentTab==='meas'?' active':'')+'" id="tab-meas">';
   if(measCount>0){
-    html+='<div class="chart-wrap"><canvas id="growthChart"></canvas></div>';
-    html+='<div class="table-wrap"><table class="data-table"><thead><tr><th>日期</th><th>立定跳(cm)</th><th>仰卧(个)</th><th>一垒跑(s)</th><th>全垒跑(s)</th><th>掷远(m)</th><th>打击(m)</th><th>球速(km/h)</th><th>棒速(km/h)</th></tr></thead><tbody>';
-    m.slice().reverse().forEach(function(meas){
+    // 顶部操作栏
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">';
+    html+='<div style="font-size:13px;color:var(--text-muted);">共 <b style="color:var(--primary);">'+measCount+'</b> 次体测记录，按日期升序</div>';
+    html+='<div style="display:flex;gap:8px;">';
+    html+='<button class="btn btn-ghost" style="font-size:12px;" onclick="openImportModal()">📥 CSV导入</button>';
+    html+='<button class="btn btn-primary" style="font-size:12px;" onclick="openAddMeasModal(\''+esc(p.id)+'\')">➕ 添加本次体测</button>';
+    html+='</div></div>';
+
+    // 成长曲线
+    html+='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:20px;">';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+    html+='<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">📈 成长曲线</div>';
+    html+='<div style="display:flex;gap:12px;font-size:11px;" id="growth-chart-legend"></div>';
+    html+='</div>';
+    html+='<div style="position:relative;height:200px;"><canvas id="growthChart"></canvas></div>';
+    html+='</div>';
+
+    // 历史记录表格
+    html+='<div class="table-wrap"><table class="data-table"><thead><tr>';
+    html+='<th>日期</th><th>立定跳(cm)</th><th>仰卧(个)</th><th>一垒跑(s)</th><th>全垒跑(s)</th><th>掷远(m)</th><th>打击(m)</th><th>球速(km/h)</th><th>棒速(km/h)</th><th>操作</th>';
+    html+='</tr></thead><tbody>';
+    m.slice().reverse().forEach(function(meas,revIdx){
+      var origIdx=m.length-1-revIdx;
       html+='<tr>';
-      html+='<td>'+(meas.date||'—')+'</td>';
+      html+='<td style="white-space:nowrap;font-weight:700;">'+(meas.date||'—')+'</td>';
       html+='<td>'+(meas.stand_jump_cm||'—')+'</td>';
       html+='<td>'+(meas.situp||'—')+'</td>';
       html+='<td style="color:var(--accent);font-weight:700;">'+(meas.sprint_1b_s||'—')+'</td>';
@@ -584,11 +608,16 @@ function renderProfileDetail(p){
       html+='<td>'+(meas.bat_dist_m||'—')+'</td>';
       html+='<td style="color:var(--success);font-weight:700;">'+(meas.pitch_speed_kmh||'—')+'</td>';
       html+='<td style="color:var(--purple);font-weight:700;">'+(meas.bat_speed_kmh||'—')+'</td>';
+      html+='<td><button style="background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:13px;" onclick="deleteMeasurement(\''+esc(p.id)+'\','+origIdx+')">🗑</button></td>';
       html+='</tr>';
     });
     html+='</tbody></table></div>';
   }else{
-    html+='<div class="empty-state"><div class="empty-icon">📋</div><h3>暂无体测记录</h3><p>导入 CSV 或手动添加体测数据</p></div>';
+    html+='<div class="empty-state"><div class="empty-icon">📋</div><h3>暂无体测记录</h3><p>每次训练后录入，追踪成长曲线</p>';
+    html+='<div style="display:flex;gap:12px;justify-content:center;margin-top:20px;">';
+    html+='<button class="btn btn-ghost" onclick="openImportModal()">📥 CSV批量导入</button>';
+    html+='<button class="btn btn-primary" onclick="openAddMeasModal(\''+esc(p.id)+'\')">➕ 手动录入</button>';
+    html+='</div></div>';
   }
   html+='</div>'; // tab-meas close
 
@@ -623,7 +652,9 @@ function renderProfileDetail(p){
   // Draw charts after DOM update
   setTimeout(function(){
     drawRadar(latest);
-    if(currentTab==='meas'&&measCount>0)setTimeout(function(){drawGrowthChart(m);},50);
+    if(measCount>0){
+      setTimeout(function(){drawGrowthChart(m);},80);
+    }
   },50);
 }
 
@@ -732,9 +763,14 @@ function drawGrowthChart(measurements){
   var canvas=document.getElementById('growthChart');
   if(!canvas)return;
   if(typeof Chart==='undefined'){
+    if(drawGrowthChart._loading)return;
+    drawGrowthChart._loading=true;
     var s=document.createElement('script');
     s.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
-    s.onload=function(){drawGrowthChartReal(measurements);};
+    s.onload=function(){
+      drawGrowthChart._loading=false;
+      drawGrowthChartReal(measurements);
+    };
     document.head.appendChild(s);
   }else{
     drawGrowthChartReal(measurements);
@@ -746,33 +782,49 @@ function drawGrowthChartReal(measurements){
   if(!canvas)return;
   var sorted=measurements.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
   var labels=sorted.map(function(m){return m.date||'';});
-  var datasets=[];
   var metrics=[
-    {key:'sprint_1b_s',label:'一垒跑(s)',color:'#3b82f6'},
     {key:'pitch_speed_kmh',label:'球速(km/h)',color:'#10b981'},
-    {key:'throw_dist_m',label:'掷远(m)',color:'#f97316'}
+    {key:'bat_speed_kmh',label:'棒速(km/h)',color:'#8b5cf6'},
+    {key:'throw_dist_m',label:'掷远(m)',color:'#f97316'},
+    {key:'bat_dist_m',label:'打击(m)',color:'#f59e0b'},
+    {key:'sprint_1b_s',label:'一垒跑(s)',color:'#3b82f6'},
+    {key:'sprint_hb_s',label:'全垒跑(s)',color:'#06b6d4'}
   ];
+  var datasets=[];
   metrics.forEach(function(m){
-    var hasData=sorted.some(function(s){return s[m.key];});
+    var hasData=sorted.some(function(s){return s[m.key]&&parseFloat(s[m.key])>0;});
     if(!hasData)return;
     datasets.push({
-      label:m.label,data:sorted.map(function(s){return s[m.key]||null;}),
-      borderColor:m.color,backgroundColor:'transparent',
-      tension:0.3,pointRadius:5,pointHoverRadius:7,borderWidth:2,spanGaps:true
+      label:m.label,
+      data:sorted.map(function(s){return (s[m.key]&&parseFloat(s[m.key])>0)?parseFloat(s[m.key]):null;}),
+      borderColor:m.color,backgroundColor:m.color+'18',
+      tension:0.35,pointRadius:5,pointHoverRadius:8,borderWidth:2,spanGaps:true,fill:false
     });
   });
-  if(datasets.length===0){canvas.style.display='none';return;}
-  canvas.style.display='block';
+  if(datasets.length===0){canvas.parentElement.style.display='none';return;}
+  canvas.parentElement.style.display='block';
   if(canvas._chart)canvas._chart.destroy();
   canvas._chart=new Chart(canvas,{
     type:'line',
     data:{labels:labels,datasets:datasets},
     options:{
       responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#94a3b8',font:{family:'Space Grotesk'}}}},
+      plugins:{
+        legend:{
+          position:'top',
+          labels:{color:'#94a3b8',font:{family:'Space Grotesk',size:11},boxWidth:14,padding:12}
+        },
+        tooltip:{
+          mode:'index',intersect:false,
+          backgroundColor:'rgba(15,22,41,0.95)',
+          titleColor:'#f1f5f9',bodyColor:'#94a3b8',
+          borderColor:'rgba(255,255,255,0.1)',borderWidth:1
+        }
+      },
+      interaction:{mode:'nearest',axis:'x',intersect:false},
       scales:{
-        x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748b'}},
-        y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748b'}}
+        x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:11}}},
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:11}}}
       }
     }
   });
@@ -857,11 +909,32 @@ function parseCSV(text){
 }
 
 /* ── Manual Add ─────────────────────────────────────────────── */
-function openAddMeasModal(){
+function openAddMeasModal(preSelectId){
   document.getElementById('meas-modal').style.display='flex';
   var sel=document.getElementById('meas-player-select');
-  sel.innerHTML=allPlayers.map(function(p){return'<option value="'+p.id+'">'+esc(p.name||'未知')+'</option>';}).join('');
+  var pid=preSelectId||selectedPlayerId||'';
+  sel.innerHTML=allPlayers.map(function(p){
+    return'<option value="'+p.id+'"'+(p.id===pid?' selected':'')+'>'+esc(p.name||'未知')+'</option>';
+  }).join('');
   document.getElementById('meas-date').value=new Date().toISOString().substring(0,10);
+  // Clear fields
+  ['meas-stand-jump','meas-situp','meas-1b','meas-hb','meas-throw','meas-bat-dist','meas-pitch-speed','meas-bat-speed'].forEach(function(id){
+    document.getElementById(id).value='';
+  });
+}
+
+/* ── Delete Measurement ─────────────────────────────────────── */
+function deleteMeasurement(pid,idx){
+  if(!confirm('确定删除这条体测记录？'))return;
+  var player=allPlayers.find(function(p){return p.id===pid;});
+  if(!player||!player.measurements)return;
+  player.measurements.splice(idx,1);
+  DB.savePlayer(player,function(){
+    showToast('已删除该条体测记录','success');
+    renderNameList();
+    updateTopbarStats();
+    renderProfileDetail(player);
+  },function(e){showToast('删除失败：'+e,'error');});
 }
 
 function saveMeasurement(){
