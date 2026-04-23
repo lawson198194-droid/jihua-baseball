@@ -904,7 +904,7 @@ function parseCSV(text){
     if(!player.measurements)player.measurements=[];
     player.measurements.push(m);
     matched++;
-    DB.savePlayer(player,function(){},function(e){});
+    DB.updatePlayer(player.id, player, function(){});
   });
   var result=document.getElementById('csv-result');
   if(matched>0){
