@@ -1641,8 +1641,9 @@ function parseGCText(text) {
       continue;
     }
 
-    // Player batting: "I Chan #18 (SS)  3  0  1  0  0  1"
-    var pMatch = line.match(/^([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+    // Player batting: "I Chan #18 (SS)  3  0  1  0  0  1" or "Elijah M #22 (RF) 4 1 1 0 0 2"
+    // Name may end with a middle initial (single letter, no parens) before #
+    var pMatch = line.match(/^([A-Za-z][A-Za-z\s\.]*?(?:\s+[A-Za-z])?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
     if (pMatch && currentTeam) {
       var player = {
         name: pMatch[1].trim(),
@@ -1664,16 +1665,16 @@ function parseGCText(text) {
   // This catches players even when pdf.js failed to split them into separate lines.
   if (result.hk_batting.length === 0 && result.home_batting.length === 0) {
     console.log('[GC Parse] Batting Pass A found 0 players, trying Pass B (full-text)...');
-    var batAll = battingBlock.match(/([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g);
+    var batAll = battingBlock.match(/([A-Za-z][A-Za-z\s\.]*?(?:\s+[A-Za-z])?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g);
     if (batAll) {
       // Determine team split: count how many player rows before "Totals"
       var totIdx = battingBlock.indexOf('Totals');
       var preTot = totIdx >= 0 ? battingBlock.substring(0, totIdx) : '';
-      var preTotMatches = preTot.match(/([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g) || [];
+      var preTotMatches = preTot.match(/([A-Za-z][A-Za-z\s\.]*?(?:\s+[A-Za-z])?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g) || [];
       var preTotCount = preTotMatches.length;
       console.log('[GC Parse] Pass B: found', batAll.length, 'total,', preTotCount, 'before Totals (away/hk)');
       batAll.forEach(function(m, i) {
-        var pm = m.match(/([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+        var pm = m.match(/([A-Za-z][A-Za-z\s\.]*?(?:\s+[A-Za-z])?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
         if (pm) {
           var p = { name: pm[1].trim(), number: parseInt(pm[2]), pos: pm[3],
                     ab: parseInt(pm[4]), r: parseInt(pm[5]), h: parseInt(pm[6]),
@@ -1696,8 +1697,8 @@ function parseGCText(text) {
     if (line.indexOf(awayCode) >= 0) currentTeam = 'away';
     else if (line.indexOf(homeCode) >= 0) currentTeam = 'home';
 
-    // Pitcher: "Bi #50  3.2  9  6  6  0  7  1"
-    var pMatch = line.match(/^([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+    // Pitcher: "Bi #50  3.2  9  6  6  0  7  1" or "Annika L #6 3.0 4 0 0 3 2 0"
+    var pMatch = line.match(/^([A-Za-z][A-Za-z\s\.]*?(?:\s+[A-Za-z])?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
     if (pMatch && currentTeam) {
       var pitcher = {
         name: pMatch[1].trim(), number: parseInt(pMatch[2]), ip: parseFloat(pMatch[3]),
@@ -1713,14 +1714,14 @@ function parseGCText(text) {
   if (result.hk_pitching.length === 0 && result.home_pitching.length === 0) {
     console.log('[GC Parse] Pitching Pass A found 0, trying Pass B (full-text)...');
     // Pitcher rows: name #num ip h r er bb so hr — no (POS) parenthetical
-    var pitAll = pitchingBlock.match(/([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g);
+    var pitAll = pitchingBlock.match(/([A-Za-z][A-Za-z\s\.]*?(?:\s+[A-Za-z])?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g);
     if (pitAll) {
       var pitTotIdx = pitchingBlock.indexOf('Totals');
       var prePitTot = pitTotIdx >= 0 ? pitchingBlock.substring(0, pitTotIdx) : '';
-      var prePitTotMatches = prePitTot.match(/([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g) || [];
+      var prePitTotMatches = prePitTot.match(/([A-Za-z][A-Za-z\s\.]*?(?:\s+[A-Za-z])?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g) || [];
       var prePitTotCount = prePitTotMatches.length;
       pitAll.forEach(function(m, i) {
-        var pm = m.match(/([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+        var pm = m.match(/([A-Za-z][A-Za-z\s\.]*?(?:\s+[A-Za-z])?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
         if (pm) {
           var p = { name: pm[1].trim(), number: parseInt(pm[2]), ip: parseFloat(pm[3]),
                     h: parseInt(pm[4]), r: parseInt(pm[5]), er: parseInt(pm[6]),
@@ -1756,11 +1757,11 @@ function uploadGCFile(file) {
         pagePromises.push(pdf.getPage(i).then(function(page) {
           return page.getTextContent().then(function(content) {
             // Preserve line breaks between text items by checking y position
-            // Use a very tight threshold (> 0.5) to avoid breaking up tightly-spaced rows
+            // Use a very tight threshold (> 0.1) to avoid merging adjacent rows
             var lastY = null, lines = [], line = [];
             content.items.forEach(function(item) {
               var y = item.transform[5]; // keep full precision
-              if (lastY !== null && Math.abs(y - lastY) > 0.5) {
+              if (lastY !== null && Math.abs(y - lastY) > 0.1) {
                 if (line.length > 0) lines.push(line.join(' '));
                 line = [item.str];
               } else {
@@ -1816,10 +1817,6 @@ function rebindDropZone() {
     e.preventDefault(); dropZone.classList.remove('drag-over');
     var f = e.dataTransfer.files[0];
     if (f && !_gcUploading) uploadGCFile(f);
-  };
-  dropZone.onclick     = function(){
-    var inp = document.getElementById('_gc-pdf-input');
-    if (inp) inp.click();
   };
 }
 
