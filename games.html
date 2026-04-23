@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>赛事管理与记分 — BaseAI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 <style>
 :root {
   --bg-primary: #0a0e1a;
@@ -1547,6 +1549,116 @@ function initGCPersistentInput() {
 }
 initGCPersistentInput();
 
+/* ── Client-side GC PDF Parser (no server needed) ─────────── */
+function parseGCText(text) {
+  var lines = text.trim().split(/\n/);
+  var result = { success: false, hk_batting: [], hk_pitching: [], hk_runs_by_inning: [], away_runs_by_inning: [] };
+
+  // 1. Title: "Kaakiro Lions Majors 2 - 9 TTBC Majors Eagles"
+  var titleMatch = text.match(/^(.+?)\s+(\d+)\s*-\s*(\d+)\s+(.+)$/m);
+  if (!titleMatch) return result;
+  result.away_team = titleMatch[1].replace(/\s*#\d+\s*/g, '').trim();
+  result.home_team = titleMatch[4].trim();
+  result.away_score = parseInt(titleMatch[2]);
+  result.home_score = parseInt(titleMatch[3]);
+
+  // 2. Date: "Away Sunday March 08, 2026"
+  var dateMatch = text.match(/(?:Away|Home)\s+(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+(\w+)\s+(\d+),\s+(\d{4})/);
+  if (dateMatch) {
+    var monthMap = { January:1, February:2, March:3, April:4, May:5, June:6, July:7, August:8, September:9, October:10, November:11, December:12 };
+    var month = monthMap[dateMatch[1]] || 1;
+    var day = parseInt(dateMatch[2]);
+    var year = dateMatch[3];
+    result.date = year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+  }
+
+  // 3. Innings scores
+  var awayCode = result.away_team.split(' ')[0].substring(0, 4).toUpperCase();
+  var homeCode = result.home_team.split(' ')[0].substring(0, 4).toUpperCase();
+  var innLines = text.match(/[A-Z]{2,}\s+[\dX\s]+/g) || [];
+  for (var i = 0; i < innLines.length; i++) {
+    var m = innLines[i].match(/([A-Z]{2,})\s+([\dX]+)\s+([\dX]+)\s+([\dX]+)/);
+    if (m) {
+      var scores = m[2].split(/\s+/).map(function(v){ return v === 'X' ? 0 : parseInt(v); });
+      if (i === 0) { result.away_runs_by_inning = scores; }
+      else if (i === 1) { result.home_runs_by_inning = scores; }
+    }
+  }
+
+  // 4. Batting section
+  var battingStart = text.indexOf('BATTING');
+  var pitchingStart = text.indexOf('PITCHING');
+  if (battingStart < 0 || pitchingStart < 0) { result.success = true; return result; }
+
+  var battingBlock = text.substring(battingStart + 7, pitchingStart);
+  var battingLines = battingBlock.split(/\n/);
+  var currentTeam = null;
+
+  for (var bi = 0; bi < battingLines.length; bi++) {
+    var line = battingLines[bi].trim();
+    if (!line) continue;
+
+    // Detect team headers
+    if (line.indexOf(result.away_team) >= 0 && line.indexOf('Totals') < 0) currentTeam = 'away';
+    else if (line.indexOf(result.home_team) >= 0 && line.indexOf('Totals') < 0) currentTeam = 'home';
+    else if (line.indexOf('Totals') >= 0) currentTeam = null;
+
+    // Player data: "Name #num (POS) AB R H RBI BB SO"
+    var pMatch = line.match(/^([A-Za-z\s\.]+?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+    if (pMatch && currentTeam) {
+      var player = {
+        name: pMatch[1].trim(),
+        number: pMatch[2],
+        position: pMatch[3],
+        ab: parseInt(pMatch[4]),
+        r: parseInt(pMatch[5]),
+        h: parseInt(pMatch[6]),
+        rbi: parseInt(pMatch[7]),
+        bb: parseInt(pMatch[8]),
+        so: parseInt(pMatch[9])
+      };
+      if (currentTeam === 'away') result.hk_batting.push(player);
+      else if (currentTeam === 'home') result.home_batting.push(player);
+    }
+  }
+
+  // 5. Pitching section
+  var pitchingBlock = text.substring(pitchingStart + 8);
+  var pitchingLines = pitchingBlock.split(/\n/);
+  currentTeam = null;
+
+  for (var pi = 0; pi < pitchingLines.length; pi++) {
+    var line = pitchingLines[pi].trim();
+    if (!line) continue;
+
+    if (line.indexOf(result.away_team) >= 0 && line.indexOf('Totals') < 0) currentTeam = 'away';
+    else if (line.indexOf(result.home_team) >= 0 && line.indexOf('Totals') < 0) currentTeam = 'home';
+    else if (line.indexOf('Totals') >= 0) currentTeam = null;
+
+    // Pitcher: "Name #num IP H R ER BB SO HR"
+    var pMatch = line.match(/^([A-Za-z\s\.]+?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+    if (pMatch && currentTeam) {
+      var pitcher = {
+        name: pMatch[1].trim(),
+        number: pMatch[2],
+        ip: parseFloat(pMatch[3]),
+        h: parseInt(pMatch[4]),
+        r: parseInt(pMatch[5]),
+        er: parseInt(pMatch[6]),
+        bb: parseInt(pMatch[7]),
+        so: parseInt(pMatch[8]),
+        hr: parseInt(pMatch[9])
+      };
+      if (currentTeam === 'away') result.hk_pitching.push(pitcher);
+      else if (currentTeam === 'home') result.home_pitching.push(pitcher);
+    }
+  }
+
+  result.hk_team_key = 'away';
+  result.success = true;
+  return result;
+}
+
 function uploadGCFile(file) {
   if (!file || _gcUploading) return;
   if (file.type && file.type !== 'application/pdf') {
@@ -1554,35 +1666,48 @@ function uploadGCFile(file) {
   }
   _gcUploading = true;
   showToast('正在解析 GC PDF，请稍候...', 'info');
-  var fd = new FormData();
-  fd.append('file', file);
-  fetch('http://localhost:5500/parse', { method:'POST', body:fd })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      _gcUploading = false;
-      _gcResult = data;
-      showToast(data.success ? '✅ PDF 解析成功！' : '⚠️ 解析完成但数据不完整', data.success ? 'success' : 'warning');
-      if (data.success) {
-        _wizardGame.home       = _wizardGame.home || (data.hk_team_key === 'away' ? data.away_team : data.home_team);
-        _wizardGame.away       = _wizardGame.away || (data.hk_team_key === 'away' ? data.home_team : data.away_team);
-        var isHome = data.hk_team_key === 'home';
-        _wizardGame.home_score = _wizardGame.home_score || (isHome ? data.home_score : data.away_score);
-        _wizardGame.away_score = _wizardGame.away_score || (isHome ? data.away_score : data.home_score);
-        if (!_wizardGame.date)  _wizardGame.date  = data.date || '';
-        if (!_wizardGame.venue) _wizardGame.venue = data.location || '';
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var typedarray = new Uint8Array(e.target.result);
+    pdfjsLib.getDocument({ data: typedarray }).promise.then(function(pdf) {
+      var allText = '';
+      var pagePromises = [];
+      for (var i = 1; i <= pdf.numPages; i++) {
+        pagePromises.push(pdf.getPage(i).then(function(page) {
+          return page.getTextContent().then(function(content) {
+            return content.items.map(function(item) { return item.str; }).join(' ');
+          });
+        }));
       }
-      var body = document.getElementById('modal-body-content');
-      if (body) body.innerHTML = renderWizardSteps() + renderWizardContent();
-      rebindDropZone();
-      bindWizardFooter(!!_wizardGame.id);
-    })
-    .catch(function(e){
+      Promise.all(pagePromises).then(function(pages) {
+        allText = pages.join('\n');
+        var data = parseGCText(allText);
+        _gcUploading = false;
+        _gcResult = data;
+        showToast(data.success ? '✅ PDF 解析成功！' : '⚠️ 解析完成但数据不完整', data.success ? 'success' : 'warning');
+        if (data.success) {
+          _wizardGame.home       = _wizardGame.home || (data.hk_team_key === 'away' ? data.away_team : data.home_team);
+          _wizardGame.away       = _wizardGame.away || (data.hk_team_key === 'away' ? data.home_team : data.away_team);
+          var isHome = data.hk_team_key === 'home';
+          _wizardGame.home_score = _wizardGame.home_score || (isHome ? data.home_score : data.away_score);
+          _wizardGame.away_score = _wizardGame.away_score || (isHome ? data.away_score : data.home_score);
+          if (!_wizardGame.date)  _wizardGame.date  = data.date || '';
+          if (!_wizardGame.venue) _wizardGame.venue = data.location || '';
+        }
+        var body = document.getElementById('modal-body-content');
+        if (body) body.innerHTML = renderWizardSteps() + renderWizardContent();
+        rebindDropZone();
+        bindWizardFooter(!!_wizardGame.id);
+      });
+    }).catch(function(err) {
       _gcUploading = false;
-      _gcResult = { success:false, error:'网络错误: '+e.message };
-      showToast('❌ GC 解析失败，请确保 _gc_server.py 正在运行', 'error');
+      showToast('❌ PDF 解析失败: ' + err.message, 'error');
       var body = document.getElementById('modal-body-content');
       if (body) body.innerHTML = renderWizardSteps() + renderWizardContent();
     });
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 /* ── Drop zone event binding ─────────────────────────────── */
@@ -1633,16 +1758,46 @@ function saveGameBasic(game, isEdit) {
     if (src && src.roster && src.roster.length > 0) return src.roster;
     var batting  = gc && gc.success ? (gc.hk_batting||[])  : [];
     var pitching = gc && gc.success ? (gc.hk_pitching||[]) : [];
+
+    // Build name → player_id lookup from allPlayers
+    var nameToId = {};
+    if (typeof allPlayers !== 'undefined' && allPlayers) {
+      allPlayers.forEach(function(p) {
+        if (p && p.id && p.name) {
+          nameToId[p.name.toLowerCase()] = p.id;
+          nameToId[p.name.toLowerCase().split(' ').reverse().join(' ')] = p.id; // "Last First" → "First Last"
+          nameToId[p.name.toLowerCase().split(' ')[0]] = p.id; // first name only
+        }
+      });
+    }
+
+    function findPlayerId(name) {
+      if (!name) return null;
+      var lower = name.toLowerCase();
+      if (nameToId[lower]) return nameToId[lower];
+      // Try reversed
+      var parts = lower.split(' ');
+      if (parts.length === 2) {
+        var reversed = parts[1] + ' ' + parts[0];
+        if (nameToId[reversed]) return nameToId[reversed];
+      }
+      // Try first name only
+      if (parts[0] && nameToId[parts[0]]) return nameToId[parts[0]];
+      return null;
+    }
+
     // Merge batting + pitching into one list per player name
     var nameMap = {};
     batting.forEach(function(p) {
-      if (!p.lib_id || !p.name) return;
-      if (!nameMap[p.name]) nameMap[p.name] = { lib_id: p.lib_id, name: p.name, number: p.number||'', position: p.position||'', batting: p, pitching: null };
+      if (!p.name) return;
+      var pid = findPlayerId(p.name);
+      if (!nameMap[p.name]) nameMap[p.name] = { player_id: pid, name: p.name, number: p.number||'', position: p.position||'', batting: p, pitching: null };
       else Object.assign(nameMap[p.name], { batting: p });
     });
     pitching.forEach(function(p) {
-      if (!p.lib_id || !p.name) return;
-      if (!nameMap[p.name]) nameMap[p.name] = { lib_id: p.lib_id, name: p.name, number: p.number||'', position: p.position||'', batting: null, pitching: p };
+      if (!p.name) return;
+      var pid = findPlayerId(p.name);
+      if (!nameMap[p.name]) nameMap[p.name] = { player_id: pid, name: p.name, number: p.number||'', position: p.position||'', batting: null, pitching: p };
       else Object.assign(nameMap[p.name], { pitching: p });
     });
     var roster = [];
@@ -1650,15 +1805,15 @@ function saveGameBasic(game, isEdit) {
       var m = nameMap[name];
       var b = m.batting, p = m.pitching;
       roster.push({
-        player_id: m.lib_id,
+        player_id: m.player_id,
         name: m.name,
         number: m.number,
         position: m.position,
         // batting stats
         ab:  b ? b.ab  : 0,  r:  b ? b.r  : 0,  h:  b ? b.h  : 0,
         rbi: b ? b.rbi : 0,  bb: b ? b.bb : 0,  so: b ? b.so : 0,
-        // pitching stats
-        ip:   p ? p.ip   : 0,  er:   p ? p.er   : 0,  so_p: p ? p.so_p : 0
+        // pitching stats (p.so = strikeouts from GC parser, stored as so_p for DB)
+        ip:   p ? p.ip   : 0,  er:   p ? p.er   : 0,  so_p: p ? p.so : 0
       });
     });
     return roster;
@@ -1686,7 +1841,7 @@ function saveGameBasic(game, isEdit) {
     if (roster.length === 0) return;
     var pending = 0;
     roster.forEach(function(r) {
-      if (!r.player_id) return;
+      if (!r.player_id) { console.log('[Stats] No player_id for:', r.name); return; }
       var hasBatting = (r.ab||0) > 0 || (r.h||0) > 0 || (r.r||0) > 0 || (r.rbi||0) > 0 || (r.bb||0) > 0 || (r.so||0) > 0;
       var hasPitching = (r.ip||0) > 0 || (r.er||0) > 0 || (r.so_p||0) > 0;
       if (!hasBatting && !hasPitching) return;
