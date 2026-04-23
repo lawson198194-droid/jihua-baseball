@@ -1549,46 +1549,78 @@ function initGCPersistentInput() {
 }
 initGCPersistentInput();
 
-/* ── Client-side GC PDF Parser (no server needed) ─────────── */
+/* ── Client-side GC PDF Parser (pdfplumber-style, robust) ─── */
 function parseGCText(text) {
+  var result = { success: false, hk_batting: [], hk_pitching: [], home_batting: [], home_pitching: [], hk_runs_by_inning: [], home_runs_by_inning: [] };
   var lines = text.trim().split(/\n/);
-  var result = { success: false, hk_batting: [], hk_pitching: [], hk_runs_by_inning: [], away_runs_by_inning: [] };
 
   // 1. Title: "Kaakiro Lions Majors 2 - 9 TTBC Majors Eagles"
-  var titleMatch = text.match(/^(.+?)\s+(\d+)\s*-\s*(\d+)\s+(.+)$/m);
-  if (!titleMatch) return result;
-  result.away_team = titleMatch[1].replace(/\s*#\d+\s*/g, '').trim();
-  result.home_team = titleMatch[4].trim();
-  result.away_score = parseInt(titleMatch[2]);
-  result.home_score = parseInt(titleMatch[3]);
-
-  // 2. Date: "Away Sunday March 08, 2026"
-  var dateMatch = text.match(/(?:Away|Home)\s+(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+(\w+)\s+(\d+),\s+(\d{4})/);
-  if (dateMatch) {
-    var monthMap = { January:1, February:2, March:3, April:4, May:5, June:6, July:7, August:8, September:9, October:10, November:11, December:12 };
-    var month = monthMap[dateMatch[1]] || 1;
-    var day = parseInt(dateMatch[2]);
-    var year = dateMatch[3];
-    result.date = year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+  //    OR: "Away Sunday March 08, 2026" on next line
+  var titleLineIdx = -1;
+  for (var ti = 0; ti < Math.min(3, lines.length); ti++) {
+    if (/[A-Za-z\s]+\s+\d+\s*-\s*\d+\s+[A-Za-z\s]/.test(lines[ti])) { titleLineIdx = ti; break; }
   }
+  if (titleLineIdx < 0) { console.log('[GC Parse] Title not found'); return result; }
+  var titleLine = lines[titleLineIdx];
+  var parts = titleLine.match(/^(.+?)\s+(\d+)\s*-\s*(\d+)\s+(.+)$/);
+  if (!parts) { console.log('[GC Parse] Title regex failed:', titleLine); return result; }
 
-  // 3. Innings scores
-  var awayCode = result.away_team.split(' ')[0].substring(0, 4).toUpperCase();
-  var homeCode = result.home_team.split(' ')[0].substring(0, 4).toUpperCase();
-  var innLines = text.match(/[A-Z]{2,}\s+[\dX\s]+/g) || [];
-  for (var i = 0; i < innLines.length; i++) {
-    var m = innLines[i].match(/([A-Z]{2,})\s+([\dX]+)\s+([\dX]+)\s+([\dX]+)/);
-    if (m) {
-      var scores = m[2].split(/\s+/).map(function(v){ return v === 'X' ? 0 : parseInt(v); });
-      if (i === 0) { result.away_runs_by_inning = scores; }
-      else if (i === 1) { result.home_runs_by_inning = scores; }
+  result.away_team = parts[1].trim();
+  result.home_team = parts[4].trim();
+  result.away_score = parseInt(parts[2]);
+  result.home_score = parseInt(parts[3]);
+
+  // 2. Date: line after title is "Away Sunday March 08, 2026"
+  var dateLineIdx = titleLineIdx + 1;
+  if (dateLineIdx < lines.length) {
+    var dm = lines[dateLineIdx].match(/(?:Away|Home)\s+(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+(\w+)\s+(\d+),\s+(\d{4})/);
+    if (dm) {
+      var monthMap = { January:1, February:2, March:3, April:4, May:5, June:6, July:7, August:8, September:9, October:10, November:11, December:12 };
+      var month = monthMap[dm[2]] || 1;
+      var day = parseInt(dm[3]);
+      var year = dm[4];
+      result.date = year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0');
     }
   }
 
-  // 4. Batting section
+  // 3. Innings: find lines with team code + scores (non-X digits)
+  //    Example: "KKRL  0  0  0  1  0  1  2  8  0"
+  //    The score columns come BEFORE the final R/H/E columns
+  for (var li = 0; li < lines.length; li++) {
+    var line = lines[li];
+    // Match: TEAM_ABBREV followed by multiple number groups (including X)
+    var innMatch = line.match(/^([A-Z]{4,})\s+([\dX\s]+)$/);
+    if (innMatch) {
+      var code = innMatch[1].toUpperCase();
+      var allNums = innMatch[2].trim().split(/\s+/);
+      // Last 3 are R, H, E. Rest are inning scores.
+      // Find the first team: its innings = first half of numbers before R/H/E
+      // Heuristic: innings are numbers before the last 3 numbers
+      if (allNums.length >= 5) {
+        // Try to determine inning count
+        // For 6-inning game: 6 innings + R/H/E = 9 numbers
+        // Find where innings end by looking at the X (f判ended inning marker)
+        var inningNums = allNums.slice(0, allNums.length - 3);
+        // The last inning with a score is the count
+        var inningCount = inningNums.length;
+        if (code === result.away_team.split(' ')[0].substring(0,4).toUpperCase() ||
+            code === result.away_team.toUpperCase().substring(0,4)) {
+          result.away_runs_by_inning = inningNums.map(function(v){ return v === 'X' ? 0 : parseInt(v) || 0; });
+        } else {
+          result.home_runs_by_inning = inningNums.map(function(v){ return v === 'X' ? 0 : parseInt(v) || 0; });
+        }
+      }
+    }
+  }
+
+  // 4. Find BATTING section
   var battingStart = text.indexOf('BATTING');
   var pitchingStart = text.indexOf('PITCHING');
-  if (battingStart < 0 || pitchingStart < 0) { result.success = true; return result; }
+  if (battingStart < 0 || pitchingStart < 0) {
+    console.log('[GC Parse] BATTING or PITCHING section not found');
+    result.success = true; // Still return what we have
+    return result;
+  }
 
   var battingBlock = text.substring(battingStart + 7, pitchingStart);
   var battingLines = battingBlock.split(/\n/);
@@ -1598,18 +1630,21 @@ function parseGCText(text) {
     var line = battingLines[bi].trim();
     if (!line) continue;
 
-    // Detect team headers
-    if (line.indexOf(result.away_team) >= 0 && line.indexOf('Totals') < 0) currentTeam = 'away';
-    else if (line.indexOf(result.home_team) >= 0 && line.indexOf('Totals') < 0) currentTeam = 'home';
+    // Detect team headers (check both abbreviated and full name)
+    var awayCode = result.away_team.split(' ')[0].toUpperCase();
+    var homeCode = result.home_team.split(' ')[0].toUpperCase();
+    if (line.indexOf(awayCode) >= 0 && line.indexOf('Totals') < 0 && line.indexOf('BATTING') < 0) currentTeam = 'away';
+    else if (line.indexOf(homeCode) >= 0 && line.indexOf('Totals') < 0 && line.indexOf('BATTING') < 0) currentTeam = 'home';
     else if (line.indexOf('Totals') >= 0) currentTeam = null;
 
-    // Player data: "Name #num (POS) AB R H RBI BB SO"
-    var pMatch = line.match(/^([A-Za-z\s\.]+?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+    // Player batting: "I Chan #18 (SS)  3  0  1  0  0  1"
+    // Pattern: name #num (POS) ab r h rbi bb so
+    var pMatch = line.match(/^([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
     if (pMatch && currentTeam) {
       var player = {
         name: pMatch[1].trim(),
-        number: pMatch[2],
-        position: pMatch[3],
+        number: parseInt(pMatch[2]),
+        pos: pMatch[3],
         ab: parseInt(pMatch[4]),
         r: parseInt(pMatch[5]),
         h: parseInt(pMatch[6]),
@@ -1618,11 +1653,11 @@ function parseGCText(text) {
         so: parseInt(pMatch[9])
       };
       if (currentTeam === 'away') result.hk_batting.push(player);
-      else if (currentTeam === 'home') result.home_batting.push(player);
+      else result.home_batting.push(player);
     }
   }
 
-  // 5. Pitching section
+  // 5. Find PITCHING section
   var pitchingBlock = text.substring(pitchingStart + 8);
   var pitchingLines = pitchingBlock.split(/\n/);
   currentTeam = null;
@@ -1631,16 +1666,19 @@ function parseGCText(text) {
     var line = pitchingLines[pi].trim();
     if (!line) continue;
 
-    if (line.indexOf(result.away_team) >= 0 && line.indexOf('Totals') < 0) currentTeam = 'away';
-    else if (line.indexOf(result.home_team) >= 0 && line.indexOf('Totals') < 0) currentTeam = 'home';
+    var awayCode = result.away_team.split(' ')[0].toUpperCase();
+    var homeCode = result.home_team.split(' ')[0].toUpperCase();
+    if (line.indexOf(awayCode) >= 0 && line.indexOf('Totals') < 0 && line.indexOf('PITCHING') < 0) currentTeam = 'away';
+    else if (line.indexOf(homeCode) >= 0 && line.indexOf('Totals') < 0 && line.indexOf('PITCHING') < 0) currentTeam = 'home';
     else if (line.indexOf('Totals') >= 0) currentTeam = null;
 
-    // Pitcher: "Name #num IP H R ER BB SO HR"
-    var pMatch = line.match(/^([A-Za-z\s\.]+?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+    // Pitcher: "Bi #50  3.2  9  6  6  0  7  1"
+    // Pattern: name #num ip h r er bb so hr
+    var pMatch = line.match(/^([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
     if (pMatch && currentTeam) {
       var pitcher = {
         name: pMatch[1].trim(),
-        number: pMatch[2],
+        number: parseInt(pMatch[2]),
         ip: parseFloat(pMatch[3]),
         h: parseInt(pMatch[4]),
         r: parseInt(pMatch[5]),
@@ -1650,12 +1688,13 @@ function parseGCText(text) {
         hr: parseInt(pMatch[9])
       };
       if (currentTeam === 'away') result.hk_pitching.push(pitcher);
-      else if (currentTeam === 'home') result.home_pitching.push(pitcher);
+      else result.home_pitching.push(pitcher);
     }
   }
 
   result.hk_team_key = 'away';
   result.success = true;
+  console.log('[GC Parse] Done:', JSON.stringify(result, null, 2).substring(0, 500));
   return result;
 }
 
@@ -1695,7 +1734,10 @@ function uploadGCFile(file) {
         }));
       }
       Promise.all(pagePromises).then(function(pages) {
-        allText = pages.join('\n');
+        // Join pages, then normalize whitespace: multiple spaces/tabs → single space
+        allText = pages.join('\n').replace(/\s+/g, ' ').replace(/\n\s*/g, '\n').trim();
+        console.log('[GC PDF] Raw text length:', allText.length);
+        console.log('[GC PDF] First 300 chars:', allText.substring(0, 300));
         var data = parseGCText(allText);
         _gcUploading = false;
         _gcResult = data;
