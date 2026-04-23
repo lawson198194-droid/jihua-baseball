@@ -451,7 +451,7 @@ function renderNameList(){
   var list=document.getElementById('name-list');
   var filtered=allPlayers.filter(function(p){
     if(q&&!(p.name||'').toLowerCase().includes(q))return false;
-    if(age&&p.age_group!==age)return false;
+    if(age&&(p.age_group||'').toUpperCase()!==age.toUpperCase())return false;
     if(gender&&p.gender!==gender)return false;
     return true;
   });
