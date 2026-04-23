@@ -1,292 +1,267 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#e74c3c">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="description" content="Baseball Pitcher Training Record System">
-    <title>Pitcher Training Tracker</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="icon-192.svg">
-    <link rel="apple-touch-icon" href="icon-192.svg">
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BaseAI · 香港棒垒球管理系统</title>
+<link rel="stylesheet" href="assets/design-system.css">
+<style>
+  body {
+    background: #0a0e1a;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    overflow: auto; padding: 20px;
+  }
+
+  .landing { max-width: 1100px; width: 100%; text-align: center; }
+
+  .brand-logo {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; font-weight: 800; color: white;
+    margin: 0 auto 20px;
+    box-shadow: 0 8px 32px rgba(249,115,22,0.35);
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(-8px);}
+  }
+
+  .brand-title {
+    font-size: 52px; font-weight: 900;
+    background: linear-gradient(135deg, #fff 30%, #f97316);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 4px; margin-bottom: 8px;
+  }
+
+  .brand-subtitle {
+    font-size: 15px; color: #64748b; letter-spacing: 2px;
+  }
+
+  .brand-tagline {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 16px; padding: 8px 20px;
+    background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2);
+    border-radius: 24px; font-size: 13px; color: #f97316; font-weight: 600;
+  }
+
+  .db-banner {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin: 24px auto 40px;
+    padding: 10px 20px;
+    border-radius: 24px; font-size: 13px;
+    width: fit-content;
+    transition: all 0.3s;
+  }
+
+  .db-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #10b981; animation: pulse-dot 2s infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%,100%{opacity:1;transform:scale(1);}
+    50%{opacity:0.5;transform:scale(0.8);}
+  }
+
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px; margin-bottom: 32px;
+  }
+
+  .module-card {
+    background: #1a2235; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 28px 20px;
+    cursor: pointer; transition: all 0.25s;
+    text-decoration: none; color: #f1f5f9;
+    position: relative; overflow: hidden; text-align: center;
+  }
+
+  .module-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #f97316, transparent);
+    opacity: 0; transition: opacity 0.25s;
+  }
+
+  .module-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(249,115,22,0.4);
+    box-shadow: 0 12px 40px rgba(249,115,22,0.15);
+    background: #1f2a42;
+  }
+
+  .module-card:hover::before { opacity: 1; }
+
+  .module-icon { font-size: 40px; margin-bottom: 14px; display: block; }
+
+  .module-num {
+    font-size: 11px; font-weight: 700; color: #64748b;
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px;
+  }
+
+  .module-name { font-size: 15px; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
+
+  .module-desc { font-size: 12px; color: #64748b; line-height: 1.5; }
+
+  .module-arrow {
+    position: absolute; bottom: 16px; right: 16px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; transition: all 0.2s; opacity: 0;
+  }
+
+  .module-card:hover .module-arrow { opacity: 1; background: #f97316; color: white; }
+
+  .module-card.ai-module {
+    grid-column: span 3;
+    background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08));
+    border-color: rgba(59,130,246,0.2);
+    padding: 36px 40px;
+    display: flex; align-items: center; gap: 24px;
+    text-align: left;
+  }
+
+  .module-card.ai-module:hover {
+    border-color: rgba(59,130,246,0.5);
+    box-shadow: 0 12px 40px rgba(59,130,246,0.15);
+  }
+
+  .module-card.ai-module .module-icon { font-size: 56px; margin-bottom: 0; flex-shrink: 0; }
+
+  .module-card.ai-module .module-content { flex: 1; }
+
+  .ai-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white; padding: 5px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; margin-bottom: 10px;
+    animation: glow-badge 2s infinite;
+  }
+
+  @keyframes glow-badge {
+    0%,100%{box-shadow:0 0 8px rgba(59,130,246,0.3);}
+    50%{box-shadow:0 0 20px rgba(59,130,246,0.5);}
+  }
+
+  .module-card.ai-module .module-name { font-size: 20px; }
+
+  .module-features { display: flex; gap: 24px; margin-top: 12px; flex-wrap: wrap; }
+
+  .feature { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; }
+
+  .feature-dot { width: 6px; height: 6px; border-radius: 50%; background: #3b82f6; }
+
+  .footer-note { font-size: 12px; color: #334155; margin-top: 32px; }
+  .footer-note span { color: #f97316; font-weight: 600; }
+
+  .fade-in { animation: fadeIn 0.5s ease forwards; opacity: 0; }
+
+  @keyframes fadeIn {
+    from{opacity:0;transform:translateY(20px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+
+  @media (max-width: 768px) {
+    .modules-grid { grid-template-columns: 1fr; }
+    .module-card.ai-module { grid-column: span 1; flex-direction: column; text-align: center; }
+    .module-card.ai-module .module-features { justify-content: center; }
+    .brand-title { font-size: 36px; }
+  }
+</style>
 </head>
 <body>
-<div class="container">
-    <!-- Header -->
-    <header>
-        <h1>Pitcher Training Tracker</h1>
-        <button id="installBtn" class="btn btn-secondary install-btn">+ Add to Home Screen</button>
-        <div class="install-guide">
-            <strong>iOS 安装:</strong> 点底部分享按钮 → 向下滚动 → 添加到主屏幕
+
+<div class="landing">
+  <div class="brand-logo">⚾</div>
+  <h1 class="brand-title">BaseAI</h1>
+  <p class="brand-subtitle">HONG KONG BASEBALL & SOFTBALL MANAGEMENT SYSTEM</p>
+  <div class="brand-tagline">🚀 AI 驱动 · 数据驱动 · 云端实时</div>
+
+  <div class="db-banner" id="db-banner">
+    <div class="db-dot"></div>
+    <span id="db-status">正在连接数据库...</span>
+  </div>
+
+  <div class="modules-grid">
+    <a href="players.html" class="module-card fade-in" style="animation-delay:0.1s">
+      <span class="module-num">Module 01</span>
+      <span class="module-icon">👥</span>
+      <div class="module-name">球员资料库</div>
+      <div class="module-desc">注册球员信息管理<br>照片、年龄、位置</div>
+      <div class="module-arrow">→</div>
+    </a>
+
+    <a href="teams.html" class="module-card fade-in" style="animation-delay:0.15s">
+      <span class="module-num">Module 02</span>
+      <span class="module-icon">🏆</span>
+      <div class="module-name">球队 & 梯队</div>
+      <div class="module-desc">U10/U12/U15/U18<br>球队管理与梯队建设</div>
+      <div class="module-arrow">→</div>
+    </a>
+
+    <a href="games.html" class="module-card fade-in" style="animation-delay:0.2s">
+      <span class="module-num">Module 03</span>
+      <span class="module-icon">📊</span>
+      <div class="module-name">赛事与记分</div>
+      <div class="module-desc">联赛管理、实时记分<br>每局数据统计</div>
+      <div class="module-arrow">→</div>
+    </a>
+
+    <a href="profiles.html" class="module-card fade-in" style="animation-delay:0.25s">
+      <span class="module-num">Module 04</span>
+      <span class="module-icon">📈</span>
+      <div class="module-name">技术档案</div>
+      <div class="module-desc">雷达评分、成长曲线<br>历史数据分析</div>
+      <div class="module-arrow">→</div>
+    </a>
+
+    <a href="admin.html" class="module-card fade-in" style="animation-delay:0.3s">
+      <span class="module-num">Module 05</span>
+      <span class="module-icon">⚙️</span>
+      <div class="module-name">权限与后台</div>
+      <div class="module-desc">数据导入导出<br>角色权限管理</div>
+      <div class="module-arrow">→</div>
+    </a>
+
+    <a href="ai-coach-v2.html" class="module-card ai-module fade-in" style="animation-delay:0.35s">
+      <span class="module-icon">🤖</span>
+      <div class="module-content">
+        <div class="ai-badge">✨ AI POWERED</div>
+        <span class="module-num">Module 06 · 核心模块</span>
+        <div class="module-name">AI 专属教练</div>
+        <div class="module-desc" style="color:#94a3b8;margin-bottom:8px;">
+          挥棒分析 · 投手分析 · 个性化训练计划
         </div>
-        <div class="header-form">
-            <div class="form-group">
-                <label for="pitcherName">Pitcher Name (Optional)</label>
-                <input type="text" id="pitcherName" placeholder="Enter pitcher name">
-            </div>
-            <div class="form-group">
-                <label for="trainingName">Training Name</label>
-                <input type="text" id="trainingName" placeholder="e.g., 2026-04-22 Fastball Practice">
-            </div>
-            <div class="form-group">
-                <label for="pitchType">Pitch Type</label>
-                <select id="pitchType">
-                    <option value="">Select Type</option>
-                    <option value="Four-seam">Four-seam Fastball</option>
-                    <option value="Two-seam">Two-seam 2-Seam</option>
-                    <option value="Slider">Slider</option>
-                    <option value="Curveball">Curveball</option>
-                    <option value="Changeup">Changeup</option>
-                    <option value="Cutter">Cutter</option>
-                    <option value="Other">Other</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Date</label>
-                <input type="date" id="trainingDate">
-            </div>
+        <div class="module-features">
+          <div class="feature"><div class="feature-dot"></div>AI 挥棒速度分析</div>
+          <div class="feature"><div class="feature-dot"></div>投球轨迹追踪</div>
+          <div class="feature"><div class="feature-dot"></div>智能训练推荐</div>
         </div>
-    </header>
+      </div>
+    </a>
+  </div>
 
-    <!-- Main Content -->
-    <main>
-        <!-- Left: Strike Zone Canvas -->
-        <section class="strike-zone-section">
-            <h2>Strike Zone Map</h2>
-            <p class="hint">Click to mark: Inside red border = Strike (auto+1) | Outside = Ball (manual)</p>
-            <div class="strike-zone-container">
-                <canvas id="strikeZoneCanvas" width="450" height="580"></canvas>
-            </div>
-            <div class="zone-legend">
-                <span class="legend-item"><span class="dot green"></span> Strike (inside red border) → auto +1</span>
-                <span class="legend-item"><span class="dot orange"></span> Ball (outside area) → manual only</span>
-            </div>
-            <button id="clearSpots" class="btn btn-secondary">Clear Marks</button>
-        </section>
-
-        <!-- Right: Data Entry & Stats -->
-        <section class="data-section">
-            <h2>Pitch Statistics</h2>
-
-            <div class="data-form">
-                <div class="input-group">
-                    <label for="goodBalls">Strikes (auto)</label>
-                    <div class="number-input">
-                        <button class="btn-minus" data-target="goodBalls">−</button>
-                        <input type="number" id="goodBalls" value="0" min="0">
-                        <button class="btn-plus" data-target="goodBalls">+</button>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label for="badBalls">Balls (manual)</label>
-                    <div class="number-input">
-                        <button class="btn-minus" data-target="badBalls">−</button>
-                        <input type="number" id="badBalls" value="0" min="0">
-                        <button class="btn-plus" data-target="badBalls">+</button>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label for="totalPitches">Total Pitches (manual)</label>
-                    <div class="number-input">
-                        <button class="btn-minus" data-target="totalPitches">−</button>
-                        <input type="number" id="totalPitches" value="0" min="0">
-                        <button class="btn-plus" data-target="totalPitches">+</button>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label for="strikeouts">Strikeouts K</label>
-                    <div class="number-input">
-                        <button class="btn-minus" data-target="strikeouts">−</button>
-                        <input type="number" id="strikeouts" value="0" min="0">
-                        <button class="btn-plus" data-target="strikeouts">+</button>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label for="walks">Walks BB</label>
-                    <div class="number-input">
-                        <button class="btn-minus" data-target="walks">−</button>
-                        <input type="number" id="walks" value="0" min="0">
-                        <button class="btn-plus" data-target="walks">+</button>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label for="hits">Hits</label>
-                    <div class="number-input">
-                        <button class="btn-minus" data-target="hits">−</button>
-                        <input type="number" id="hits" value="0" min="0">
-                        <button class="btn-plus" data-target="hits">+</button>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label for="runs">Runs Scored</label>
-                    <div class="number-input">
-                        <button class="btn-minus" data-target="runs">−</button>
-                        <input type="number" id="runs" value="0" min="0">
-                        <button class="btn-plus" data-target="runs">+</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="stats-summary">
-                <h3>Summary</h3>
-                <div class="stat-item">
-                    <span class="stat-label">Strike Rate:</span>
-                    <span class="stat-value" id="goodBallRate">0%</span>
-                </div>
-                <div class="stat-item highlight">
-                    <span class="stat-label">Strikeouts:</span>
-                    <span class="stat-value" id="statStrikeouts">0</span>
-                </div>
-                <div class="stat-item highlight">
-                    <span class="stat-label">Walks:</span>
-                    <span class="stat-value" id="statWalks">0</span>
-                </div>
-                <div class="stat-item highlight">
-                    <span class="stat-label">Hits:</span>
-                    <span class="stat-value" id="statHits">0</span>
-                </div>
-                <div class="stat-item highlight">
-                    <span class="stat-label">Runs:</span>
-                    <span class="stat-value" id="statRuns">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">Marked:</span>
-                    <span class="stat-value" id="markedPitches">0</span>
-                </div>
-            </div>
-
-            <!-- Save Training Button -->
-            <div style="margin-top: 20px;">
-                <button id="saveTraining" class="btn btn-primary" style="width: 100%;">
-                    Save Training Record
-                </button>
-            </div>
-
-            <!-- History Section -->
-            <div class="history-section">
-                <h3 id="historyTitle">Training History <span id="historyCount"></span></h3>
-                <button id="toggleHistory" class="btn btn-secondary" style="width: 100%;">
-                    Show History (<span id="recordCount">0</span>)
-                </button>
-                <div id="historyList" class="history-list" style="display: none;"></div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <footer>
-        <button id="resetAll" class="btn btn-danger">Reset All</button>
-        <button id="exportPDF" class="btn btn-primary">Export PDF</button>
-    </footer>
+  <div class="footer-note">
+    BaseAI 香港棒垒球管理系统 · <span>Powered by AI</span> · © 2026
+  </div>
 </div>
 
-<!-- Preview Modal -->
-<div id="previewModal" class="modal">
-    <div class="modal-content">
-        <h2>Training Report Preview</h2>
-        <div id="pdfPreview"></div>
-        <div class="modal-buttons">
-            <button id="cancelPreview" class="btn btn-secondary">Cancel</button>
-            <button id="downloadPDF" class="btn btn-primary">Download PDF</button>
-        </div>
-    </div>
-</div>
-
-<!-- History Modal -->
-<div id="historyModal" class="modal">
-    <div class="modal-content" style="max-width: 900px;">
-        <h2>Training History</h2>
-        <div id="historyDetail" class="history-detail"></div>
-        <div class="modal-buttons">
-            <button id="closeHistory" class="btn btn-secondary">Close</button>
-        </div>
-    </div>
-</div>
-
-<!-- PWA Install Prompt -->
-<div id="installPrompt" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 20px; text-align: center; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.3);">
-    <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">Install App on Home Screen</div>
-    <div style="font-size: 12px; opacity: 0.9; margin-bottom: 12px;">Quick access without browser</div>
-    <div style="display: flex; gap: 10px; justify-content: center;">
-        <button id="installBtnPrompt" style="background: white; color: #e74c3c; border: none; padding: 10px 24px; border-radius: 25px; font-weight: bold; cursor: pointer;">Install Now</button>
-        <button id="dismissBtn" style="background: transparent; color: white; border: 2px solid white; padding: 10px 24px; border-radius: 25px; cursor: pointer;">Later</button>
-    </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="app.js"></script>
 <script>
-// ===== PWA Setup =====
-let deferredPrompt;
-
-function showInstallPrompt() {
-    document.getElementById('installPrompt').style.display = 'block';
-}
-
-// PWA Install Prompt (auto-trigger)
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    setTimeout(showInstallPrompt, 2000);
-});
-
-// Auto-install button click - Show manual instructions
-document.getElementById('installBtn').addEventListener('click', () => {
-    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-
-    if (isIOS) {
-        alert('iOS Safari 安装步骤:\n\n' +
-              '1. 点底部 Safari 菜单栏的 分享按钮 (方形箭头↑)\n' +
-              '2. 向下滚动滚动条\n' +
-              '3. 点击 "添加到主屏幕"\n' +
-              '4. 点右上角 "添加" 按钮');
-    } else if (/MicroMessenger/.test(navigator.userAgent)) {
-        alert('请按以下步骤操作:\n\n1. 长按页面\n2. 选择 "在Safari中打开"\n3. 然后按iOS安装步骤操作');
-    } else {
-        alert('安装步骤:\n\n1. 打开浏览器菜单\n2. 选择 "添加到主屏幕" 或 "安装应用"\n3. 按提示确认');
-    }
-});
-
-// Update button text based on device
-if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-    document.getElementById('installBtn').textContent = '📱 Add to Home Screen (iOS)';
-} else if (/Android/.test(navigator.userAgent)) {
-    document.getElementById('installBtn').textContent = '🤖 Add to Home Screen (Android)';
-}
-
-// Install prompt button
-document.getElementById('installBtnPrompt')?.addEventListener('click', async () => {
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            document.getElementById('installPrompt').style.display = 'none';
-        }
-        deferredPrompt = null;
-    }
-});
-
-document.getElementById('dismissBtn')?.addEventListener('click', () => {
-    document.getElementById('installPrompt').style.display = 'none';
-});
-
-// Register Service Worker
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('PWA Ready'))
-            .catch(err => console.log('SW failed:', err));
-    });
-}
+  setTimeout(() => {
+    const banner = document.getElementById('db-banner');
+    const status = document.getElementById('db-status');
+    banner.style.background = 'rgba(16,185,129,0.08)';
+    banner.style.borderColor = 'rgba(16,185,129,0.2)';
+    banner.style.color = '#10b981';
+    status.textContent = '🟢 内置演示数据已加载 · 完全离线可用';
+  }, 500);
 </script>
+
 </body>
 </html>
