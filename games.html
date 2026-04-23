@@ -1622,23 +1622,22 @@ function parseGCText(text) {
   }
 
   var battingBlock = text.substring(battingStart + 7, pitchingStart);
+  var pitchingBlock = text.substring(pitchingStart + 8);
+
+  // ── Batting: two-pass approach ───────────────────────────────────────────
+  // Pass A: per-line (works when pdf.js correctly splits rows)
   var battingLines = battingBlock.split(/\n/);
   var currentTeam = null;
 
-  // In GC PDFs the batting section starts with the AWAY team name (full name, no code).
-  // After that, player rows contain #NN and stats. Lines with Totals reset context.
   for (var bi = 0; bi < battingLines.length; bi++) {
     var line = battingLines[bi].trim();
     if (!line) continue;
 
-    // Reset on Totals
     if (line.indexOf('Totals') >= 0) { currentTeam = null; continue; }
 
-    // Line with # = player data. Use currentTeam from previous header.
+    // No # → header/meta line; skip it (don't overwrite currentTeam once set)
     if (line.indexOf('#') < 0) {
-      // This might be a team header (full name, no hash = header line)
-      // First team header encountered = away team (GC PDF convention)
-      if (!currentTeam) currentTeam = 'away';
+      if (!currentTeam) currentTeam = 'away'; // first header = away team
       continue;
     }
 
@@ -1661,17 +1660,39 @@ function parseGCText(text) {
     }
   }
 
-  // 5. PITCHING section — team codes (KKRL / TTBC) appear in pitching rows
-  var pitchingBlock = text.substring(pitchingStart + 8);
+  // Pass B: full-text fallback — search entire batting block for all player rows
+  // This catches players even when pdf.js failed to split them into separate lines.
+  if (result.hk_batting.length === 0 && result.home_batting.length === 0) {
+    console.log('[GC Parse] Batting Pass A found 0 players, trying Pass B (full-text)...');
+    var batAll = battingBlock.match(/([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g);
+    if (batAll) {
+      // Determine team split: count how many player rows before "Totals"
+      var totIdx = battingBlock.indexOf('Totals');
+      var preTot = totIdx >= 0 ? battingBlock.substring(0, totIdx) : '';
+      var preTotMatches = preTot.match(/([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g) || [];
+      var preTotCount = preTotMatches.length;
+      console.log('[GC Parse] Pass B: found', batAll.length, 'total,', preTotCount, 'before Totals (away/hk)');
+      batAll.forEach(function(m, i) {
+        var pm = m.match(/([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+        if (pm) {
+          var p = { name: pm[1].trim(), number: parseInt(pm[2]), pos: pm[3],
+                    ab: parseInt(pm[4]), r: parseInt(pm[5]), h: parseInt(pm[6]),
+                    rbi: parseInt(pm[7]), bb: parseInt(pm[8]), so: parseInt(pm[9]) };
+          if (i < preTotCount) result.hk_batting.push(p);
+          else result.home_batting.push(p);
+        }
+      });
+    }
+  }
+
+  // ── Pitching: per-line + full-text fallback ──────────────────────────────
   var pitchingLines = pitchingBlock.split(/\n/);
   currentTeam = null;
 
   for (var pi = 0; pi < pitchingLines.length; pi++) {
     var line = pitchingLines[pi].trim();
     if (!line) continue;
-
     if (line.indexOf('Totals') >= 0) { currentTeam = null; continue; }
-    // Team codes (KKRL / TTBC) in pitching rows
     if (line.indexOf(awayCode) >= 0) currentTeam = 'away';
     else if (line.indexOf(homeCode) >= 0) currentTeam = 'home';
 
@@ -1679,18 +1700,35 @@ function parseGCText(text) {
     var pMatch = line.match(/^([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
     if (pMatch && currentTeam) {
       var pitcher = {
-        name: pMatch[1].trim(),
-        number: parseInt(pMatch[2]),
-        ip: parseFloat(pMatch[3]),
-        h: parseInt(pMatch[4]),
-        r: parseInt(pMatch[5]),
-        er: parseInt(pMatch[6]),
-        bb: parseInt(pMatch[7]),
-        so: parseInt(pMatch[8]),
-        hr: parseInt(pMatch[9])
+        name: pMatch[1].trim(), number: parseInt(pMatch[2]), ip: parseFloat(pMatch[3]),
+        h: parseInt(pMatch[4]), r: parseInt(pMatch[5]), er: parseInt(pMatch[6]),
+        bb: parseInt(pMatch[7]), so: parseInt(pMatch[8]), hr: parseInt(pMatch[9])
       };
       if (currentTeam === 'away') result.hk_pitching.push(pitcher);
       else result.home_pitching.push(pitcher);
+    }
+  }
+
+  // Pitching Pass B fallback
+  if (result.hk_pitching.length === 0 && result.home_pitching.length === 0) {
+    console.log('[GC Parse] Pitching Pass A found 0, trying Pass B (full-text)...');
+    // Pitcher rows: name #num ip h r er bb so hr — no (POS) parenthetical
+    var pitAll = pitchingBlock.match(/([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g);
+    if (pitAll) {
+      var pitTotIdx = pitchingBlock.indexOf('Totals');
+      var prePitTot = pitTotIdx >= 0 ? pitchingBlock.substring(0, pitTotIdx) : '';
+      var prePitTotMatches = prePitTot.match(/([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g) || [];
+      var prePitTotCount = prePitTotMatches.length;
+      pitAll.forEach(function(m, i) {
+        var pm = m.match(/([A-Za-z][A-Za-z\s\.]*?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+        if (pm) {
+          var p = { name: pm[1].trim(), number: parseInt(pm[2]), ip: parseFloat(pm[3]),
+                    h: parseInt(pm[4]), r: parseInt(pm[5]), er: parseInt(pm[6]),
+                    bb: parseInt(pm[7]), so: parseInt(pm[8]), hr: parseInt(pm[9]) };
+          if (i < prePitTotCount) result.hk_pitching.push(p);
+          else result.home_pitching.push(p);
+        }
+      });
     }
   }
 
@@ -1718,11 +1756,11 @@ function uploadGCFile(file) {
         pagePromises.push(pdf.getPage(i).then(function(page) {
           return page.getTextContent().then(function(content) {
             // Preserve line breaks between text items by checking y position
+            // Use a very tight threshold (> 0.5) to avoid breaking up tightly-spaced rows
             var lastY = null, lines = [], line = [];
             content.items.forEach(function(item) {
-              var y = Math.round(item.transform[5] * 100) / 100;
-              if (lastY !== null && Math.abs(y - lastY) > 2) {
-                // New line
+              var y = item.transform[5]; // keep full precision
+              if (lastY !== null && Math.abs(y - lastY) > 0.5) {
                 if (line.length > 0) lines.push(line.join(' '));
                 line = [item.str];
               } else {
