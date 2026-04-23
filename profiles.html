@@ -850,7 +850,21 @@ function parseCSV(text){
   var headers=lines[0].split(',').map(function(h){return h.trim().replace(/^"|"$/g,'');});
   var nameIdx=headers.findIndex(function(h){return h.includes('姓名')||h.includes('名字')||h==='name';});
   var dateIdx=headers.findIndex(function(h){return h.includes('日期')||h==='date';});
-  if(nameIdx<0){showToast('找不到姓名列','error');return;}
+  if(nameIdx<0){showToast('找不到姓名列（需要包含"姓名"字样的列）','error');return;}
+
+  // 字段名映射 - 支持更多变体
+  function getFieldKey(h) {
+    h = h.replace(/[()（）\d\w\/]/g, '').trim(); // 去掉单位符号
+    if (h.includes('立定跳') || h.includes('跳远')) return 'stand_jump_cm';
+    if (h.includes('仰卧')) return 'situp';
+    if (h.includes('一垒') || h.includes('垒跑')) return 'sprint_1b_s';
+    if (h.includes('全垒')) return 'sprint_hb_s';
+    if (h.includes('掷远')) return 'throw_dist_m';
+    if (h.includes('打击') || h.includes('击距')) return 'bat_dist_m';
+    if (h.includes('球速')) return 'pitch_speed_kmh';
+    if (h.includes('棒速')) return 'bat_speed_kmh';
+    return null;
+  }
 
   var rows=[];
   for(var i=1;i<lines.length;i++){
@@ -858,8 +872,7 @@ function parseCSV(text){
     if(!vals[nameIdx])continue;
     var row={name:vals[nameIdx],date:dateIdx>=0?vals[dateIdx]:''};
     headers.forEach(function(h,idx){
-      var map={'立定跳':'stand_jump_cm','仰卧':'situp','一垒跑':'sprint_1b_s','全垒跑':'sprint_hb_s','掷远':'throw_dist_m','打击':'bat_dist_m','球速':'pitch_speed_kmh','棒速':'bat_speed_kmh'};
-      var key=map[h];
+      var key=getFieldKey(h);
       if(key&&vals[idx])row[key]=parseFloat(vals[idx])||0;
     });
     rows.push(row);
@@ -904,7 +917,11 @@ function parseCSV(text){
       if(p)renderProfileDetail(p);
     }
   }else{
-    result.innerHTML='<div class="csv-result error">❌ 未匹配到任何球员，请检查姓名是否正确</div>';
+    if(notFound.length>0){
+      result.innerHTML='<div class="csv-result error">❌ 未匹配到任何球员。CSV中的球员姓名必须与球员库中的姓名完全一致<br><small>未找到：'+esc(notFound.slice(0,10).join(', '))+(notFound.length>10?'...':'')+'</small><br><small>请先在球员库确认姓名，或先添加球员</small></div>';
+    }else{
+      result.innerHTML='<div class="csv-result error">❌ 未匹配到任何球员，请检查姓名是否正确</div>';
+    }
   }
 }
 
