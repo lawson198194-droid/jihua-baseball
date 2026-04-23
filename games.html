@@ -1676,7 +1676,21 @@ function uploadGCFile(file) {
       for (var i = 1; i <= pdf.numPages; i++) {
         pagePromises.push(pdf.getPage(i).then(function(page) {
           return page.getTextContent().then(function(content) {
-            return content.items.map(function(item) { return item.str; }).join(' ');
+            // Preserve line breaks between text items by checking y position
+            var lastY = null, lines = [], line = [];
+            content.items.forEach(function(item) {
+              var y = Math.round(item.transform[5] * 100) / 100;
+              if (lastY !== null && Math.abs(y - lastY) > 2) {
+                // New line
+                if (line.length > 0) lines.push(line.join(' '));
+                line = [item.str];
+              } else {
+                line.push(item.str);
+              }
+              lastY = y;
+            });
+            if (line.length > 0) lines.push(line.join(' '));
+            return lines.join('\n');
           });
         }));
       }
