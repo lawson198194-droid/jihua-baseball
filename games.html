@@ -1612,33 +1612,40 @@ function parseGCText(text) {
 
   // Title line format: "[Away Team Full] [Home Team Full] [Score] Away [Date]"
   // Example: "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9 Away Sunday March 08, 2026"
-  // Logic: find "Away" keyword, look BACKWARD (~30 chars) for score pattern,
-  // then find the LAST uppercase 4+ sequence before the score = home team.
-  // Everything before that = away team, everything between home abbrev and score = home team.
+  // Strategy: split beforeScore into words, find the last purely uppercase 4+ word = home team code,
+  // use it as boundary to split home/away team full names.
   var awayKw = text.indexOf('Away ');
   if (awayKw < 0) awayKw = text.indexOf('Home ');
   var searchStart = Math.max(0, awayKw - 35);
   var headerChunk = text.substring(searchStart, awayKw > 0 ? awayKw : dateAnchorPos);
   var localScoreMatch = headerChunk.match(/(\d+)\s*-\s*(\d+)/);
   if (localScoreMatch) {
-    var localScore = localScoreMatch[0]; // e.g. "2 - 9"
+    var localScore = localScoreMatch[0];
     var scorePosInChunk = headerChunk.indexOf(localScore);
     var scoreAbsPos = searchStart + scorePosInChunk + localScore.length;
     var beforeScore = text.substring(0, scoreAbsPos).trim();
-    // Find the last 4+ uppercase-letter sequence = home team code
-    var homeAbbrevMatch = beforeScore.match(/[A-Z]{4,}(?:\s+[A-Za-z]+)*\s*$/);
-    if (homeAbbrevMatch) {
-      var homeAbbrevStr = homeAbbrevMatch[0].trim();
-      var habStart = beforeScore.lastIndexOf(homeAbbrevStr);
-      var habEnd = habStart + homeAbbrevStr.length;
-      result.home_team = beforeScore.substring(0, habStart).trim();
-      result.away_team = beforeScore.substring(habEnd).trim();
+    // Split into words; the last purely uppercase word (4+ chars) before the score = home team code
+    var words = beforeScore.split(/\s+/);
+    var homeAbbrevIdx = -1;
+    for (var i = words.length - 1; i >= 0; i--) {
+      if (/^[A-Z]{4,}$/.test(words[i])) { homeAbbrevIdx = i; break; }
+    }
+    if (homeAbbrevIdx >= 0) {
+      // Home team: words[0..homeAbbrevIdx-1] (everything before the home abbrev)
+      // Away team: words[homeAbbrevIdx+1..end] (everything after the home abbrev, up to the score)
+      var homeWords = words.slice(0, homeAbbrevIdx);
+      var awayWords = words.slice(homeAbbrevIdx + 1);
+      // Trim score fragments from away team (last word might be "2" from "2 - 9")
+      while (awayWords.length && /^\d/.test(awayWords[awayWords.length - 1])) {
+        awayWords.pop();
+      }
+      result.home_team = homeWords.join(' ');
+      result.away_team = awayWords.join(' ');
     } else {
       result.away_team = beforeScore.replace(/\d.*$/, '').trim();
       result.home_team = '(Unknown)';
     }
   } else {
-    // Fallback
     result.away_team = result.away_team || '(Away)';
     result.home_team = result.home_team || '(Home)';
   }
