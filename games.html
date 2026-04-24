@@ -410,6 +410,7 @@ var allPlayers  = [];
 var _filterTournament = '';
 var _filterCategory   = '';
 var _gcResult   = null;   // parsed GC PDF data
+var _csvResult  = null;   // parsed CSV data
 var _gameStep         = 1;         // 1=basic, 2=roster, 3=bind
 var _rosterIds        = new Set(); // selected player IDs for current game
 var _currentGameCache = null;      // cached game object for roster modal
@@ -449,7 +450,7 @@ function showToast(msg, type) {
   tc.appendChild(t);
   setTimeout(function() { t.style.opacity='0'; setTimeout(function(){ t.remove(); },300); }, 3500);
 }
-function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escHtml(s){ return String(s != null ? s : '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmtDate(d){ if(!d) return '—'; var p=d.split('-'); return p[1]+'/'+p[2]+'/'+p[0]; }
 function getCatLabel(c){ return {u8:'🌱 U8',u10:'🌱 U10',u12:'⚾ U12',u15:'🏆 U15',u18:'🎖️ U18',uw18:'👧 UW18'}[c]||''; }
 function getStatusBadge(s){
@@ -1001,6 +1002,18 @@ function renderStep2() {
       '<div class="pdf-drop-icon">📄</div>'+
       '<div class="pdf-drop-text">点击或拖拽上传 GC PDF</div>'+
       '<div class="pdf-drop-hint">自动解析比分、打击数据、投球数据</div>'+
+    '</div>'+
+
+    // CSV Upload Section
+    '<div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);">'+
+      '<div class="modal-section-title" style="font-size:13px;">📋 或上传 CSV 文件（打击+投球数据）</div>'+
+      '<div class="pdf-drop-zone" id="csv-drop" style="cursor:pointer;background:var(--bg-card);">'+
+        '<div class="pdf-drop-icon">📊</div>'+
+        '<div class="pdf-drop-text">点击或拖拽上传 CSV</div>'+
+        '<div class="pdf-drop-hint">支持手动整理的球员数据</div>'+
+      '</div>'+
+      '<input type="file" id="csv-file-input" accept=".csv" style="display:none;">'+
+      '<div id="csv-status" style="margin-top:8px;font-size:12px;color:var(--text-secondary);"></div>'+
     '</div>'+ teamsHtml +
     '<div id="gc-player-summary"></div>'+
     '<div id="gc-player-list"></div>'+
@@ -1567,11 +1580,28 @@ function parseGCText(text) {
     return n === 'AB' || n === 'R' || n === 'H' || n === 'RBI' || n === 'BB' || n === 'SO' || n === 'IP' || n === 'ER' || n === 'HR' || n === 'E' || n === 'TB' || n === 'SB' || n === 'CS' || n === 'LOB' || n === 'BF';
   }
   function validName(name) {
-    if (!name || name.trim().length < 2) return false;
-    var n = name.trim().toUpperCase();
+    if (!name) return false;
+    var trimmed = name.trim();
+    if (trimmed.length < 2) return false;
+    var parts = trimmed.split(/\s+/);
+    // Reject stat headers: any part that is a pure uppercase abbreviation
+    var statHeaders = ['AB','R','H','RBI','BB','SO','HR','SB','CS','LOB','TB','IP','ER','W','L','PO','A','E','2B','3B','HBP','WP','BK'];
+    for (var si = 0; si < parts.length; si++) {
+      var p = parts[si].toUpperCase();
+      // Reject if this part is entirely a stat header OR looks like a number
+      if (statHeaders.indexOf(p) >= 0 || /^\d+$/.test(p)) return false;
+    }
+    // Allow: normal names (2+ chars first word) OR single initial + surname (e.g. "E Luo", "I Chan")
+    if (parts[0].length >= 2) {
+      /* ok */
+    } else if (/^[A-Z]$/.test(parts[0]) && parts.length >= 2) {
+      /* single initial + surname, e.g. "E Luo", "I Chan" */
+    } else {
+      return false;
+    }
+    var n = trimmed.toUpperCase();
     // Reject pure stat header abbreviations (AB, R, H, RBI, BB, SO, etc.)
     if (isStatHeader(n)) return false;
-    // Accept names with a space (First Last / First M.) or single capital letter (I, M, O, etc.)
     return true;
   }
 
@@ -1623,6 +1653,17 @@ function parseGCText(text) {
   var titleLine = text.substring(0, awayKw2).trim(); // "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9"
   // Remove score: strip "X - Y" (or "X - X") and trailing numbers at the end
   var cleanTitle = titleLine.replace(/[\d]+\s*-\s*[\d]+\s*$/, '').trim();
+
+  // ── Extract innings early (needed for team swap detection) ───────────────
+  var innRegexFast = /([A-Z]{4,})\s+([\dX][\d\sX]{5,})/g;
+  var innMatchFast, foundInnings = [];
+  while ((innMatchFast = innRegexFast.exec(text)) !== null) {
+    var numsFast = innMatchFast[2].trim().split(/\s+/);
+    if (numsFast.length >= 5) {
+      foundInnings.push({ code: innMatchFast[1], nums: numsFast });
+    }
+  }
+
   // "Kaakiro Lions Majors TTBC Majors Eagles"
   // Split by ALL whitespace; find the last purely uppercase 4+ word = home team abbrev
   var words = cleanTitle.split(/\s+/);
@@ -1649,14 +1690,28 @@ function parseGCText(text) {
   if (tmpCodes.length >= 2) {
     var awayCode = tmpCodes[0]; // KKRL = away
     var homeCode = tmpCodes[1]; // TTBC = home
-    // Check if the extracted home_team starts with homeCode or awayCode
+    var needsSwap = false;
+    // Primary check: team name starts with code (KKRL → "KKRL Majors Eagles", TTBC → "TTBC Majors Eagles")
     if (result.home_team.indexOf(awayCode) === 0 && result.away_team.indexOf(homeCode) === 0) {
-      // Swap: away and home got reversed
+      needsSwap = true;
+    } else if (result.home_team.indexOf(homeCode) < 0 && result.away_team.indexOf(awayCode) < 0) {
+      // Neither team name contains the expected code — detect swap from innings totals
+      // First innings = away team's total (KKRL), second = home (TTBC)
+      var innAwayN = foundInnings.length > 0 ? parseInt(foundInnings[0].nums[foundInnings[0].nums.length - 3]) || 0 : 0;
+      var innHomeN = foundInnings.length > 1 ? parseInt(foundInnings[1].nums[foundInnings[1].nums.length - 3]) || 0 : 0;
+      // If parsed home_score matches away innings → swapped
+      if (result.home_score === innAwayN && result.home_score !== innHomeN) {
+        needsSwap = true;
+      }
+    }
+    if (needsSwap) {
       var tmp = result.home_team;
       result.home_team = result.away_team;
       result.away_team = tmp;
+      var ts = result.home_score; result.home_score = result.away_score; result.away_score = ts;
     }
   }
+  console.log('[GC Parse] Innings codes: tmpCodes=', tmpCodes);
   console.log('[GC Parse] Teams:', result.away_team, '(Away', result.away_score, ') vs', result.home_team, '(Home', result.home_score, ')');
 
   // ══ 2. Date ═══════════════════════════════════════════════════════════
@@ -1670,12 +1725,15 @@ function parseGCText(text) {
   // ══ 3. Innings row ══════════════════════════════════════════════════════
   var awayCode = result.away_team.substring(0,4).toUpperCase();
   var homeCode = result.home_team.substring(0,4).toUpperCase();
-  var innRegex = /(?:[A-Z]{4,})\s+([\dX\s]+)/g;
-  var innMatch, foundInnings = [];
-  while ((innMatch = innRegex.exec(text)) !== null) {
-    var nums = innMatch[1].trim().split(/\s+/);
-    if (nums.length >= 5) {
-      foundInnings.push({ code: innMatch[0].substring(0,4).toUpperCase(), nums: nums });
+  // foundInnings already populated early — re-extract only if empty (redundant guard)
+  if (!foundInnings || foundInnings.length === 0) {
+    var innRegex = /(?:[A-Z]{4,})\s+([\dX\s]+)/g;
+    var innMatch;
+    while ((innMatch = innRegex.exec(text)) !== null) {
+      var nums = innMatch[1].trim().split(/\s+/);
+      if (nums.length >= 5) {
+        foundInnings.push({ code: innMatch[0].substring(0,4).toUpperCase(), nums: nums });
+      }
     }
   }
   if (foundInnings.length >= 1) {
@@ -1698,69 +1756,109 @@ function parseGCText(text) {
   var battingBlock = text.substring(battingStart + 7, pitchingStart);
   var pitchingBlock = text.substring(pitchingStart + 8);
 
-  // ── Batting full-text pass (primary) ───────────────────────────────────
-  // Match: FirstName [MiddleInitial] LastName #NN (POS) AB R H RBI BB SO
-  // Player name must: (a) contain a space, OR (b) be a single capital letter
-  // Exclude stat headers (AB, R, H, RBI, BB, SO, etc.)
-  var batAll = battingBlock.match(/([A-Za-z][A-Za-z\s\.]*(?:\s+[A-Za-z])?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g) || [];
-  // Filter out garbage (stat headers leaking through)
-  batAll = batAll.filter(function(m) {
-    var nm = m.match(/([A-Za-z][A-Za-z\s\.]*(?:\s+[A-Za-z])?)\s*#/);
-    return nm && validName(nm[1]);
-  });
-  console.log('[GC Parse] Batting raw matches:', batAll.length);
+  // ── Batting parse: split by '#' to handle concatenated player rows ──────
+  // Split the batting block at each '#' (start of a player row)
+  var batSegments = battingBlock.split('#');
+  // First segment is junk (before first player), skip it
+  var batAll = [];
+  for (var bi = 1; bi < batSegments.length; bi++) {
+    var seg = batSegments[bi];
+    var numMatch = seg.match(/^(\d+)\s*\(([A-Z]+)\)/);
+    if (!numMatch) continue; // skip if no #NN (POS) pattern
+    var number = parseInt(numMatch[1]);
+    var pos = numMatch[2];
+    // Extract name from the text BEFORE '#NN'
+    var beforeHash = batSegments[bi - 1];
+    // The name is the LAST word(s) of beforeHash, before the last space before '#'
+    // e.g. "M Mai" from "...M Mai"
+    var nameTrimmed = beforeHash.trim();
+    if (!nameTrimmed) continue;
+    var parts = nameTrimmed.split(/\s+/);
+    // Find the name: last 1-2 words that look like a valid name
+    // Accept: single initial ("E Luo" → last words: "E", "Luo") or normal name
+    var name = parts.slice(-2).join(' '); // try last 2 words
+    if (!validName(name)) {
+      name = parts.slice(-1).join(' '); // try last 1 word
+      if (!validName(name)) continue; // skip garbage
+    }
+    // Stats: 7 numbers right after (POS) — handle concatenated next player
+    var afterPos = seg.substring(numMatch[0].length);
+    var statNums = afterPos.trim().split(/\s+/);
+    // Collect first 7 numeric tokens
+    var stats = [];
+    for (var si = 0; si < statNums.length && stats.length < 7; si++) {
+      if (/^\d+$/.test(statNums[si])) stats.push(parseInt(statNums[si]));
+    }
+    if (stats.length < 7) continue; // need all 7 stats
+    batAll.push({ name: name.trim(), number: number, pos: pos,
+                  ab: stats[0], r: stats[1], h: stats[2], rbi: stats[3], bb: stats[4], so: stats[5] });
+  }
+  console.log('[GC Parse] batAll (split-by-#, count=' + batAll.length + '):');
+  batAll.forEach(function(p, i){ console.log('  [' + i + '] ' + p.name + ' #' + p.number + ' (' + p.pos + ') ' + p.ab + ' ' + p.r + ' ' + p.h + ' ' + p.rbi + ' ' + p.bb + ' ' + p.so); });
 
   // Determine team split: count player rows before first "Totals"
   var totIdx = battingBlock.indexOf('Totals');
   var preTotBlock = totIdx >= 0 ? battingBlock.substring(0, totIdx) : battingBlock;
-  var preTotMatches = preTotBlock.match(/([A-Za-z][A-Za-z\s\.]*(?:\s+[A-Za-z])?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g) || [];
-  preTotMatches = preTotMatches.filter(function(m) {
-    var nm = m.match(/([A-Za-z][A-Za-z\s\.]*(?:\s+[A-Za-z])?)\s*#/);
-    return nm && validName(nm[1]);
-  });
-  var preTotCount = preTotMatches.length;
+  // Count how many batAll entries have their full text before the first 'Totals'
+  var preTotCount = 0;
+  for (var pi = 0; pi < batAll.length; pi++) {
+    var p = batAll[pi];
+    var searchText = ' ' + p.name + ' #' + p.number + ' (' + p.pos + ')';
+    if (preTotBlock.indexOf(searchText) >= 0) preTotCount++;
+    else break; // past the away team section
+  }
   console.log('[GC Parse] Away (hk) rows before Totals:', preTotCount, '/ total:', batAll.length);
 
-  batAll.forEach(function(m, i) {
-    var pm = m.match(/([A-Za-z][A-Za-z\s\.]*(?:\s+[A-Za-z])?)\s*#(\d+)\s*\(([A-Z]+)\)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
-    if (pm && validName(pm[1])) {
-      var p = { name: pm[1].trim(), number: parseInt(pm[2]), pos: pm[3],
-                ab: parseInt(pm[4]), r: parseInt(pm[5]), h: parseInt(pm[6]),
-                rbi: parseInt(pm[7]), bb: parseInt(pm[8]), so: parseInt(pm[9]) };
-      if (i < preTotCount) result.hk_batting.push(p);
-      else result.home_batting.push(p);
-    }
-  });
+  // Assign to hk_batting / home_batting
+  for (var ji = 0; ji < batAll.length; ji++) {
+    if (ji < preTotCount) result.hk_batting.push(batAll[ji]);
+    else result.home_batting.push(batAll[ji]);
+  }
   console.log('[GC Parse] hk_batting:', result.hk_batting.length, 'home_batting:', result.home_batting.length);
 
-  // ── Pitching full-text pass ─────────────────────────────────────────────
-  // Match: FirstName [MiddleInitial] LastName #NN IP H R ER BB SO HR (no parentheses)
-  var pitAll = pitchingBlock.match(/([A-Za-z][A-Za-z\s\.]*(?:\s+[A-Za-z])?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g) || [];
-  pitAll = pitAll.filter(function(m) {
-    var nm = m.match(/([A-Za-z][A-Za-z\s\.]*(?:\s+[A-Za-z])?)\s*#/);
-    return nm && validName(nm[1]);
-  });
-  console.log('[GC Parse] Pitching raw matches:', pitAll.length);
+  // ── Pitching parse: split by '#' ──────────────────────────────────────────
+  var pitSegments = pitchingBlock.split('#');
+  var pitAll = [];
+  for (var piti = 1; piti < pitSegments.length; piti++) {
+    var pseg = pitSegments[piti];
+    var pnumMatch = pseg.match(/^(\d+)\s+([\d\.]+)\s+/);
+    if (!pnumMatch) continue;
+    var pnumber = parseInt(pnumMatch[1]);
+    var pIP = parseFloat(pnumMatch[2]);
+    var pAfterIP = pseg.substring(pnumMatch[0].length);
+    var pNameBefore = pitSegments[piti - 1].trim();
+    if (!pNameBefore) continue;
+    var pParts = pNameBefore.split(/\s+/);
+    var pName = pParts.slice(-2).join(' ');
+    if (!validName(pName)) {
+      pName = pParts.slice(-1).join(' ');
+      if (!validName(pName)) continue;
+    }
+    var pStatNums = pAfterIP.trim().split(/\s+/);
+    var pStats = [];
+    for (var psi = 0; psi < pStatNums.length && pStats.length < 6; psi++) {
+      if (/^\d+$/.test(pStatNums[psi])) pStats.push(parseInt(pStatNums[psi]));
+    }
+    if (pStats.length < 6) continue;
+    pitAll.push({ name: pName.trim(), number: pnumber, ip: pIP,
+                  h: pStats[0], r: pStats[1], er: pStats[2],
+                  bb: pStats[3], so: pStats[4], hr: pStats[5] });
+  }
+  console.log('[GC Parse] pitAll (split-by-#, count=' + pitAll.length + '):');
+  pitAll.forEach(function(p, i){ console.log('  [' + i + '] ' + p.name + ' #' + p.number + ' IP=' + p.ip + ' H=' + p.h + ' R=' + p.r + ' ER=' + p.er); });
 
   var pitTotIdx = pitchingBlock.indexOf('Totals');
   var prePitBlock = pitTotIdx >= 0 ? pitchingBlock.substring(0, pitTotIdx) : pitchingBlock;
-  var prePitMatches = prePitBlock.match(/([A-Za-z][A-Za-z\s\.]*(?:\s+[A-Za-z])?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g) || [];
-  prePitMatches = prePitMatches.filter(function(m) {
-    var nm = m.match(/([A-Za-z][A-Za-z\s\.]*(?:\s+[A-Za-z])?)\s*#/);
-    return nm && validName(nm[1]);
-  });
-  var prePitCount = prePitMatches.length;
-
-  pitAll.forEach(function(m, i) {
-    var pm = m.match(/([A-Za-z][A-Za-z\s\.]*(?:\s+[A-Za-z])?)\s*#(\d+)\s+([\d\.]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
-    if (pm && validName(pm[1])) {
-      var p = { name: pm[1].trim(), number: parseInt(pm[2]), ip: parseFloat(pm[3]),
-                h: parseInt(pm[4]), r: parseInt(pm[5]), er: parseInt(pm[6]),
-                bb: parseInt(pm[7]), so: parseInt(pm[8]), hr: parseInt(pm[9]) };
-      if (i < prePitCount) result.hk_pitching.push(p);
-      else result.home_pitching.push(p);
-    }
-  });
+  var prePitCount = 0;
+  for (var ppi = 0; ppi < pitAll.length; ppi++) {
+    var psearch = ' ' + pitAll[ppi].name + ' #' + pitAll[ppi].number;
+    if (prePitBlock.indexOf(psearch) >= 0) prePitCount++;
+    else break;
+  }
+  for (var pki = 0; pki < pitAll.length; pki++) {
+    if (pki < prePitCount) result.hk_pitching.push(pitAll[pki]);
+    else result.home_pitching.push(pitAll[pki]);
+  }
   console.log('[GC Parse] hk_pitching:', result.hk_pitching.length, 'home_pitching:', result.home_pitching.length);
 
   result.hk_team_key = 'away';
@@ -1854,6 +1952,249 @@ function rebindDropZone() {
     if (_gcUploading) return;
     ensureGCInput().click();
   });
+
+  // CSV drop zone binding
+  var csvDrop = document.getElementById('csv-drop');
+  var csvInput = document.getElementById('csv-file-input');
+  if (csvDrop) {
+    csvDrop.ondragover = null; csvDrop.ondragleave = null; csvDrop.onclick = null;
+    csvDrop.addEventListener('dragover', function(e){ e.preventDefault(); csvDrop.classList.add('drag-over'); });
+    csvDrop.addEventListener('dragleave', function(){ csvDrop.classList.remove('drag-over'); });
+    csvDrop.addEventListener('drop', function(e){
+      e.preventDefault(); csvDrop.classList.remove('drag-over');
+      var f = e.dataTransfer.files[0];
+      if (f && f.name.endsWith('.csv')) parseCSVFile(f);
+      else showToast('请上传 CSV 文件', 'error');
+    });
+    csvDrop.addEventListener('click', function(){
+      if (csvInput) csvInput.click();
+    });
+  }
+  if (csvInput) {
+    csvInput.onchange = function(){
+      var f = csvInput.files[0];
+      if (f) parseCSVFile(f);
+    };
+  }
+}
+
+/* ── CSV Parser ─────────────────────────────────────────────── */
+function parseCSVFile(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var text = e.target.result;
+      var result = parseCSV(text, file.name);
+      _csvResult = result;
+
+      // Show status
+      var statusEl = document.getElementById('csv-status');
+      if (statusEl) {
+        if (result.success) {
+          var batCount = result.batting ? result.batting.length : 0;
+          var pitCount = result.pitching ? result.pitching.length : 0;
+          statusEl.innerHTML = '<span style="color:#22c55e;">✓ CSV 解析成功</span> — 打击 ' + batCount + ' 人，投球 ' + pitCount + ' 人';
+        } else {
+          statusEl.innerHTML = '<span style="color:#ef4444;">✗ ' + escHtml(result.error || '解析失败') + '</span>';
+        }
+      }
+
+      // Refresh Step 3 if visible
+      if (_gameStep === 3) {
+        refreshWizardContent();
+      }
+
+      // Auto-fill GC result for binding step if no GC PDF
+      if (result.success && !_gcResult) {
+        _gcResult = {
+          success: true,
+          batting: result.batting || [],
+          pitching: result.pitching || [],
+          hk_batting: result.batting || [],
+          hk_pitching: result.pitching || []
+        };
+        showToast('CSV 数据已加载，请在第3步绑定阵容', 'success');
+      }
+    } catch(err) {
+      showToast('CSV 解析失败: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text, filename) {
+  var lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) {
+    return { success: false, error: 'CSV 文件内容不足' };
+  }
+
+  var batting = [];
+  var pitching = [];
+
+  // Detect format by header
+  var header = lines[0].toLowerCase();
+
+  // Try different CSV formats
+  if (header.includes('name') && (header.includes('ab') || header.includes('hits'))) {
+    // Batting CSV format
+    for (var i = 1; i < lines.length; i++) {
+      var row = parseCSVLine(lines[i]);
+      if (row.length < 4) continue;
+
+      // Find column indices
+      var headers = parseCSVLine(lines[0]).map(function(h){ return h.toLowerCase().trim(); });
+      var nameIdx = headers.findIndex(function(h){ return h.includes('name') || h.includes('球员') || h.includes('姓名'); });
+      var numIdx = headers.findIndex(function(h){ return h.includes('num') || h.includes('#') || h.includes('号'); });
+      var posIdx = headers.findIndex(function(h){ return h.includes('pos') || h.includes('位置') || h.includes('位'); });
+      var abIdx = headers.findIndex(function(h){ return h === 'ab' || h.includes('at bats'); });
+      var rIdx = headers.findIndex(function(h){ return h === 'r' || h.includes('runs'); });
+      var hIdx = headers.findIndex(function(h){ return h === 'h' || h.includes('hits'); });
+      var rbiIdx = headers.findIndex(function(h){ return h === 'rbi' || h.includes('rbi'); });
+      var bbIdx = headers.findIndex(function(h){ return h === 'bb' || h.includes('walks'); });
+      var soIdx = headers.findIndex(function(h){ return h === 'so' || h.includes('strikeout'); });
+      var ipIdx = headers.findIndex(function(h){ return h === 'ip' || h.includes('innings'); });
+      var erIdx = headers.findIndex(function(h){ return h === 'er' || h.includes('earned'); });
+      var so_pIdx = headers.findIndex(function(h){ return h.includes('so_p') || h.includes('strikeouts') && h.includes('pitch'); });
+
+      // Parse batting row
+      if (nameIdx >= 0) {
+        var name = (row[nameIdx]||'').trim();
+        if (!name || name.length < 2) continue;
+
+        // If IP column exists, this might be pitching
+        if (ipIdx >= 0 && row[ipIdx]) {
+          var ip = parseFloat(row[ipIdx]) || 0;
+          if (ip > 0) {
+            pitching.push({
+              name: name,
+              number: numIdx >= 0 ? parseInt(row[numIdx]) || null : null,
+              position: posIdx >= 0 ? row[posIdx] : 'P',
+              ip: ip,
+              h: hIdx >= 0 ? parseInt(row[hIdx]) || 0 : 0,
+              r: rIdx >= 0 ? parseInt(row[rIdx]) || 0 : 0,
+              er: erIdx >= 0 ? parseInt(row[erIdx]) || 0 : 0,
+              bb: bbIdx >= 0 ? parseInt(row[bbIdx]) || 0 : 0,
+              so_p: so_pIdx >= 0 ? parseInt(row[so_pIdx]) || 0 : (soIdx >= 0 ? parseInt(row[soIdx]) || 0 : 0)
+            });
+            continue;
+          }
+        }
+
+        batting.push({
+          name: name,
+          number: numIdx >= 0 ? parseInt(row[numIdx]) || null : null,
+          position: posIdx >= 0 ? row[posIdx] : '',
+          ab: abIdx >= 0 ? parseInt(row[abIdx]) || 0 : 0,
+          r: rIdx >= 0 ? parseInt(row[rIdx]) || 0 : 0,
+          h: hIdx >= 0 ? parseInt(row[hIdx]) || 0 : 0,
+          rbi: rbiIdx >= 0 ? parseInt(row[rbiIdx]) || 0 : 0,
+          bb: bbIdx >= 0 ? parseInt(row[bbIdx]) || 0 : 0,
+          so: soIdx >= 0 ? parseInt(row[soIdx]) || 0 : 0
+        });
+      }
+    }
+  } else if (header.includes('pitch') || header.includes('投球')) {
+    // Pitching CSV format
+    for (var i = 1; i < lines.length; i++) {
+      var row = parseCSVLine(lines[i]);
+      if (row.length < 4) continue;
+
+      var headers = parseCSVLine(lines[0]).map(function(h){ return h.toLowerCase().trim(); });
+      var nameIdx = headers.findIndex(function(h){ return h.includes('name') || h.includes('球员') || h.includes('投手'); });
+      var numIdx = headers.findIndex(function(h){ return h.includes('num') || h.includes('#'); });
+      var ipIdx = headers.findIndex(function(h){ return h === 'ip' || h.includes('innings'); });
+      var hIdx = headers.findIndex(function(h){ return h === 'h' || h.includes('hits'); });
+      var rIdx = headers.findIndex(function(h){ return h === 'r' || h.includes('runs'); });
+      var erIdx = headers.findIndex(function(h){ return h === 'er' || h.includes('earned'); });
+      var bbIdx = headers.findIndex(function(h){ return h === 'bb' || h.includes('walks'); });
+      var soIdx = headers.findIndex(function(h){ return h.includes('so') && !h.includes('so_p'); });
+
+      if (nameIdx >= 0) {
+        var name = (row[nameIdx]||'').trim();
+        if (!name || name.length < 2) continue;
+
+        pitching.push({
+          name: name,
+          number: numIdx >= 0 ? parseInt(row[numIdx]) || null : null,
+          position: 'P',
+          ip: ipIdx >= 0 ? parseFloat(row[ipIdx]) || 0 : 0,
+          h: hIdx >= 0 ? parseInt(row[hIdx]) || 0 : 0,
+          r: rIdx >= 0 ? parseInt(row[rIdx]) || 0 : 0,
+          er: erIdx >= 0 ? parseInt(row[erIdx]) || 0 : 0,
+          bb: bbIdx >= 0 ? parseInt(row[bbIdx]) || 0 : 0,
+          so_p: soIdx >= 0 ? parseInt(row[soIdx]) || 0 : 0
+        });
+      }
+    }
+  } else {
+    // Simple format: name, number, position, stats...
+    // Try to auto-detect
+    for (var i = 1; i < lines.length; i++) {
+      var row = parseCSVLine(lines[i]);
+      if (row.length < 2) continue;
+
+      var name = (row[0]||'').trim();
+      if (!name || name.length < 2) continue;
+
+      // Assume first non-empty column is batting
+      var num = row[1] ? parseInt(row[1]) : null;
+      var pos = row[2] ? row[2].trim() : '';
+      var ab = row[3] ? parseInt(row[3]) || 0 : 0;
+
+      // If position is P or IP > 0, treat as pitching
+      if (pos.toUpperCase() === 'P' || (row.length > 6 && parseFloat(row[6]) > 0)) {
+        pitching.push({
+          name: name,
+          number: num,
+          position: pos || 'P',
+          ip: row.length > 6 ? parseFloat(row[6]) || 0 : 0,
+          h: row.length > 4 ? parseInt(row[4]) || 0 : 0,
+          r: row.length > 5 ? parseInt(row[5]) || 0 : 0,
+          er: row.length > 7 ? parseInt(row[7]) || 0 : 0,
+          bb: row.length > 8 ? parseInt(row[8]) || 0 : 0,
+          so_p: row.length > 9 ? parseInt(row[9]) || 0 : 0
+        });
+      } else {
+        batting.push({
+          name: name,
+          number: num,
+          position: pos,
+          ab: ab,
+          r: row[4] ? parseInt(row[4]) || 0 : 0,
+          h: row[5] ? parseInt(row[5]) || 0 : 0,
+          rbi: row[6] ? parseInt(row[6]) || 0 : 0,
+          bb: row[7] ? parseInt(row[7]) || 0 : 0,
+          so: row[8] ? parseInt(row[8]) || 0 : 0
+        });
+      }
+    }
+  }
+
+  if (batting.length === 0 && pitching.length === 0) {
+    return { success: false, error: '未识别到有效数据，请检查CSV格式' };
+  }
+
+  return { success: true, batting: batting, pitching: pitching };
+}
+
+function parseCSVLine(line) {
+  var result = [];
+  var current = '';
+  var inQuotes = false;
+
+  for (var i = 0; i < line.length; i++) {
+    var c = line[i];
+    if (c === '"') {
+      inQuotes = !inQuotes;
+    } else if (c === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += c;
+    }
+  }
+  result.push(current.trim());
+  return result;
 }
 
 function saveGameBasic(game, isEdit) {
@@ -1861,6 +2202,33 @@ function saveGameBasic(game, isEdit) {
   var home = src ? src.home : '';
   var away = src ? src.away : '';
   var gc = _gcResult;
+  var csv = _csvResult;
+
+  // Merge GC and CSV data
+  var batting = [];
+  var pitching = [];
+
+  if (gc && gc.success) {
+    batting = batting.concat(gc.hk_batting || []);
+    pitching = pitching.concat(gc.hk_pitching || []);
+  }
+  if (csv && csv.success) {
+    batting = batting.concat(csv.batting || []);
+    pitching = pitching.concat(csv.pitching || []);
+  }
+
+  // Deduplicate by name
+  function dedup(arr) {
+    var seen = {};
+    return arr.filter(function(v) {
+      if (seen[v.name]) return false;
+      seen[v.name] = true;
+      return true;
+    });
+  }
+  batting = dedup(batting);
+  pitching = dedup(pitching);
+
   var data = {
     home: home, away: away,
     home_score: src ? src.home_score : (parseInt((document.getElementById('gf-hs')||{}).value)||0),
@@ -1872,16 +2240,16 @@ function saveGameBasic(game, isEdit) {
     year: src ? src.year : (document.getElementById('gf-year')||{}).value || new Date().getFullYear(),
     tournament: src ? src.tournament : (document.getElementById('gf-tournament')||{}).value || '',
     hk_team_key: gc&&gc.success ? gc.hk_team_key : null,
-    hk_batting: gc&&gc.success ? gc.hk_batting : [],
-    hk_pitching: gc&&gc.success ? gc.hk_pitching : [],
+    hk_batting: batting,
+    hk_pitching: pitching,
     hk_runs_by_inning: gc&&gc.success ? (gc.hk_runs_by_inning||[]) : [],
     away_runs_by_inning: gc&&gc.success ? (gc.away_runs_by_inning||[]) : [],
     away_hits: gc&&gc.success ? (gc.away_hits||null) : null,
     away_errors: gc&&gc.success ? (gc.away_errors||null) : null,
     home_hits: gc&&gc.success ? (gc.home_hits||null) : null,
     home_errors: gc&&gc.success ? (gc.home_errors||null) : null,
-    hk_pdf_players: gc&&gc.success ? gc.hk_batting.concat(gc.hk_pitching).filter(function(v,i,a){return a.findIndex(function(t){return t.name===v.name;})===i;}).map(function(v){return v.name;}) : [],
-    roster: buildRosterFromGC(src, gc)
+    hk_pdf_players: batting.concat(pitching).filter(function(v,i,a){return a.findIndex(function(t){return t.name===v.name;})===i;}).map(function(v){return v.name;}),
+    roster: buildRosterFromGC(src, { success: true, hk_batting: batting, hk_pitching: pitching })
   };
   function buildRosterFromGC(src, gc) {
     if (src && src.roster && src.roster.length > 0) return src.roster;
@@ -2202,7 +2570,7 @@ function renderStatsBind(game) {
       if (matchedPlayer) matched++; else unmatched++;
       h += '<div class="stat-bind-row">'+
         '<div class="stat-bind-name">'+escHtml(b.name||'')+' #'+escHtml(b.number||'')+'</div>'+
-        '<div class="stat-bind-val">AB:'+b.ab+' H:'+b.h+' R:'+b.r+' BB:'+b.bb+' SO:'+b.so+' RBI:'+b.rbi+'</div>'+
+        '<div class="stat-bind-val">AB:'+String(b.ab||0)+' H:'+String(b.h||0)+' R:'+String(b.r||0)+' BB:'+String(b.bb||0)+' SO:'+String(b.so||0)+' RBI:'+String(b.rbi||0)+'</div>'+
         '<div class="stat-bind-arrow">→</div>'+
         '<div class="stat-bind-target">'+status+'</div>'+
       '</div>';
@@ -2228,7 +2596,7 @@ function renderStatsBind(game) {
       if (matchedPlayer) matched++; else unmatched++;
       h += '<div class="stat-bind-row">'+
         '<div class="stat-bind-name">'+escHtml(b.name||'')+' #'+escHtml(b.number||'')+'</div>'+
-        '<div class="stat-bind-val">IP:'+fmtIP(b.ip)+' H:'+b.h+' R:'+b.r+' ER:'+b.er+' BB:'+b.bb+' SO:'+b.so+'</div>'+
+        '<div class="stat-bind-val">IP:'+fmtIP(b.ip)+' H:'+String(b.h||0)+' R:'+String(b.r||0)+' ER:'+String(b.er||0)+' BB:'+String(b.bb||0)+' SO:'+String(b.so||0)+'</div>'+
         '<div class="stat-bind-arrow">→</div>'+
         '<div class="stat-bind-target">'+status+'</div>'+
       '</div>';
