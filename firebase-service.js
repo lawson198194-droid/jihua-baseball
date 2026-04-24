@@ -638,6 +638,55 @@
         };
         self.updatePlayer(playerId, { stats: ns }, callback);
       });
+    },
+
+    // ── Coach Reviews ─────────────────────────────────────────
+    saveCoachReview: function(review, callback) {
+      var self = this;
+      var reviewId = review.id || 'CR' + Date.now();
+      var data = Object.assign({}, review, { id: reviewId, savedAt: new Date().toISOString() });
+      delete data.id;
+
+      if (!this.isConfigured) {
+        var reviews = JSON.parse(localStorage.getItem('baseai_coach_reviews_fb') || '[]');
+        reviews.unshift(Object.assign({}, data, { id: reviewId }));
+        localStorage.setItem('baseai_coach_reviews_fb', JSON.stringify(reviews));
+        setTimeout(function(){ if(callback) callback({ success: true, id: reviewId }); }, 0);
+        return;
+      }
+      this.db.ref('coach_reviews/' + reviewId).set(data).then(function() {
+        if (callback) callback({ success: true, id: reviewId });
+      }).catch(function(e) {
+        console.error('[Firebase] saveCoachReview error:', e);
+        if (callback) callback({ success: false, error: e });
+      });
+    },
+
+    getCoachReviews: function(callback) {
+      if (!this.isConfigured) {
+        var data = JSON.parse(localStorage.getItem('baseai_coach_reviews_fb') || '[]');
+        setTimeout(function(){ callback({ data: data }); }, 0);
+        return;
+      }
+      this.db.ref('coach_reviews').orderByChild('savedAt').once('value').then(function(snapshot) {
+        var data = [];
+        snapshot.forEach(function(child) {
+          var item = child.val();
+          item.id = child.key;
+          data.unshift(item);
+        });
+        callback({ data: data });
+      }).catch(function(e) {
+        console.error('[Firebase] getCoachReviews error:', e);
+        callback({ data: [] });
+      });
+    },
+
+    getCoachReviewsByPlayer: function(playerId, callback) {
+      this.getCoachReviews(function(result) {
+        var filtered = (result.data||[]).filter(function(r){ return r.playerId === playerId; });
+        callback({ data: filtered });
+      });
     }
   };
 })();
