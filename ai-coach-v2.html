@@ -1130,39 +1130,27 @@ function renderBattingResult(sugs, plans, d) {
     <!-- 已保存的教练点评 -->
     <div id="coach-review-saved" style="display:none;margin-top:16px;"></div>
   </div>
-</div>`;
+`; // 模板字符串到此结束
+
+    // 进度条动画
     ['power','speed','contact','defense','control'].forEach(function(k, i){
       setTimeout(function(){
-        document.getElementById('bar-power').style.width = d.power+'%';
-        document.getElementById('val-power').textContent = d.power;
-      }, 0);
-      setTimeout(function(){
-        document.getElementById('bar-speed').style.width = d.speed+'%';
-        document.getElementById('val-speed').textContent = d.speed;
-      }, 150);
-      setTimeout(function(){
-        document.getElementById('bar-contact').style.width = d.contact+'%';
-        document.getElementById('val-contact').textContent = d.contact;
-      }, 300);
-      setTimeout(function(){
-        document.getElementById('bar-defense').style.width = d.defense+'%';
-        document.getElementById('val-defense').textContent = d.defense;
-      }, 450);
-      setTimeout(function(){
-        document.getElementById('bar-control').style.width = d.control+'%';
-        document.getElementById('val-control').textContent = d.control;
-      }, 600);
+        var barEl = document.getElementById('bar-' + k);
+        var valEl = document.getElementById('val-' + k);
+        if (barEl) barEl.style.width = d[k] + '%';
+        if (valEl) valEl.textContent = d[k];
+      }, i * 150);
     });
 
-    // radar labels
+    // 雷达图标签
     setTimeout(function(){
       var map = { 'power': d.power, 'speed': d.speed, 'contact': d.contact, 'defense': d.defense, 'control': d.control };
       Object.keys(map).forEach(function(k){
         var el = document.getElementById('radar-v-'+k);
         if (el) el.textContent = map[k];
       });
-    }, 200);
-  }, 100);
+    }, 800);
+  });
 }
 
 function renderPitchingResult(sugs, plans, d) {
