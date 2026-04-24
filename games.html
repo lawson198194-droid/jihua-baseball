@@ -1615,55 +1615,47 @@ function parseGCText(text) {
     }
   }
 
-  // Title line format: "[Away Team Full] [Home Team Full] [Score] Away [Date]"
+  // Title line: "[Away Full] [Home Full] [Score] Away [Date]"
   // Example: "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9 Away Sunday March 08, 2026"
-  // Strategy: innings codes (KKRL=away, TTBC=home) are the unambiguous anchor.
-  // We know from the innings that code[0]=away, code[1]=home.
-  // Find each code's position in the TITLE LINE (before "Away"), pick the one with
-  // the LARGER position = comes later in title line = home team.
+  // Strategy: split title by score "X - Y", use innings codes to identify which part is home.
   var awayKw2 = text.indexOf('Away ');
   if (awayKw2 < 0) awayKw2 = text.indexOf('Home ');
-  var titleLine = text.substring(0, awayKw2); // everything before "Away "
-  // Extract codes from innings section (KKRL, TTBC, etc.)
+  var titleLine = text.substring(0, awayKw2).trim(); // "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9"
+  // Remove score: strip "X - Y" (or "X - X") and trailing numbers at the end
+  var cleanTitle = titleLine.replace(/[\d]+\s*-\s*[\d]+\s*$/, '').trim();
+  // "Kaakiro Lions Majors TTBC Majors Eagles"
+  // Split by ALL whitespace; find the last purely uppercase 4+ word = home team abbrev
+  var words = cleanTitle.split(/\s+/);
+  var abbrevIdx = -1;
+  for (var ai = words.length - 1; ai >= 0; ai--) {
+    if (/^[A-Z]{4,}$/.test(words[ai])) { abbrevIdx = ai; break; }
+  }
+  if (abbrevIdx >= 0) {
+    result.home_team = words.slice(0, abbrevIdx).join(' ');
+    result.away_team = words.slice(abbrevIdx + 1).join(' ');
+  } else {
+    result.away_team = '(Away)';
+    result.home_team = '(Home)';
+  }
+  // Use innings codes to verify which team is home/away if codes are found
+  // Extract innings codes: first = away (KKRL), second = home (TTBC)
   var tmpCodes = [];
-  var tmpInnRe = /(?:^|\n)([A-Z]{4,})\s+([\dX\s]+)/gm;
+  var tmpInnRe = /([A-Z]{4,})\s+([\dX][\d\sX]{5,})/g;
   var m3;
   while ((m3 = tmpInnRe.exec(text)) !== null) {
     var n3 = m3[2].trim().split(/\s+/);
     if (n3.length >= 5) tmpCodes.push(m3[1]);
   }
-  var code0 = tmpCodes[0] || ''; // away team code (KKRL)
-  var code1 = tmpCodes[1] || ''; // home team code (TTBC)
-
-  if (code0 && code1) {
-    // Find each code's position in the title line
-    var pos0 = titleLine.lastIndexOf(code0); // last occurrence in title = true occurrence
-    var pos1 = titleLine.lastIndexOf(code1);
-    // The code with the LARGER position comes LATER in the title = home team
-    if (pos1 > pos0) {
-      // code1=TTBC is after code0=KKRL in title → home team follows away team
-      result.home_team = titleLine.substring(pos1).trim();
-      result.away_team = titleLine.substring(0, pos0).trim();
-    } else {
-      // No direct code match in title; try to find TTBC abbreviation alone
-      // Title has "TTBC Majors Eagles" (full abbrev + name)
-      // Find the line's last uppercase 4-char word = home team abbrev anchor
-      var words = titleLine.trim().split(/\s+/);
-      var abbrevIdx = -1;
-      for (var ai = words.length - 1; ai >= 0; ai--) {
-        if (/^[A-Z]{4,}$/.test(words[ai])) { abbrevIdx = ai; break; }
-      }
-      if (abbrevIdx >= 0) {
-        result.home_team = words.slice(0, abbrevIdx).join(' ');
-        result.away_team = words.slice(abbrevIdx + 1).join(' ');
-      } else {
-        result.away_team = '(Away)';
-        result.home_team = '(Home)';
-      }
+  if (tmpCodes.length >= 2) {
+    var awayCode = tmpCodes[0]; // KKRL = away
+    var homeCode = tmpCodes[1]; // TTBC = home
+    // Check if the extracted home_team starts with homeCode or awayCode
+    if (result.home_team.indexOf(awayCode) === 0 && result.away_team.indexOf(homeCode) === 0) {
+      // Swap: away and home got reversed
+      var tmp = result.home_team;
+      result.home_team = result.away_team;
+      result.away_team = tmp;
     }
-  } else {
-    result.away_team = '(Away)';
-    result.home_team = '(Home)';
   }
   console.log('[GC Parse] Teams:', result.away_team, '(Away', result.away_score, ') vs', result.home_team, '(Home', result.home_score, ')');
 
