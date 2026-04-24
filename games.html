@@ -1588,38 +1588,54 @@ function parseGCText(text) {
   }
   var dateAnchorPos = text.indexOf(dateAnchorMatch[0]);
 
-  // Find "X - Y" (score) before date anchor, MUST be followed by "Away" (title row format)
-  // This avoids matching scores embedded in innings rows like "2 8 0" → "2 - 8"
-  var scoreMatch = text.substring(0, dateAnchorPos).match(/(\d+)\s*-\s*(\d+)\s+(?=Away\b|Home\b)/i);
-  if (!scoreMatch) {
-    console.log('[GC Parse] Score "X - Y" not found before date anchor');
-    return result;
-  }
-  result.away_score = parseInt(scoreMatch[1]);
-  result.home_score = parseInt(scoreMatch[2]);
-
-  // Away team: find the "Away" keyword position, take everything before "Away" as away team
-  var awayKeywordPos = text.indexOf('Away ');
-  if (awayKeywordPos < 0) awayKeywordPos = text.indexOf('Home ');
-  result.away_team = (awayKeywordPos >= 0 ? text.substring(0, awayKeywordPos) : text.substring(0, dateAnchorPos)).trim();
-  // Remove the score "X - Y" from the away team text (it's embedded)
-  result.away_team = result.away_team.replace(/\s*\d+\s*-\s*\d+\s*$/, '').trim();
-
-  // Home team: find "Home" keyword (the one after Away), take everything between score and date anchor
-  // In "2 - 9 Away Sunday..." format, the Home team name is between "X - Y" and "Away"
+  // Find "Away" keyword first, then look backwards (~20 chars) for "X - Y" score
+  // This is robust against varying PDF spacing between score and "Away" keyword
   var awayKw = text.indexOf('Away ');
-  var homeKw = text.indexOf('Home ', awayKw + 1); // second occurrence = Home team label
-  if (homeKw >= 0 && homeKw < dateAnchorPos) {
-    // "Away" label appears AFTER the away team name, before date.
-    // Home team is between score end and "Away" keyword.
-    var scoreEndPos = text.indexOf(scoreMatch[0]) + scoreMatch[0].length;
-    result.home_team = text.substring(scoreEndPos, awayKw).trim();
+  if (awayKw < 0) awayKw = text.indexOf('Home ');
+  var scoreSearchStart = awayKw > 0 ? Math.max(0, awayKw - 25) : 0;
+  var scoreSearchText = text.substring(scoreSearchStart, awayKw > 0 ? awayKw : dateAnchorPos);
+  var scoreMatch = scoreSearchText.match(/(\d+)\s*-\s*(\d+)/);
+  if (scoreMatch) {
+    result.away_score = parseInt(scoreMatch[1]);
+    result.home_score = parseInt(scoreMatch[2]);
+    console.log('[GC Parse] Score (via backwards search):', result.away_score, '-', result.home_score);
   } else {
-    // Fallback: everything between score and date anchor is the home team
-    var scoreEndPos = text.indexOf(scoreMatch[0]) + scoreMatch[0].length;
-    result.home_team = text.substring(scoreEndPos, dateAnchorPos).trim();
-    result.home_team = result.home_team.replace(/^(?:Away|Home)\s+/i, '').trim();
+    // Fallback: scan from start to date anchor
+    scoreMatch = text.substring(0, dateAnchorPos).match(/(\d+)\s*-\s*(\d+)/);
+    if (scoreMatch) {
+      result.away_score = parseInt(scoreMatch[1]);
+      result.home_score = parseInt(scoreMatch[2]);
+    } else {
+      console.log('[GC Parse] Score "X - Y" not found');
+    }
   }
+
+  // Title line format: "[Home Team] [Away Team] [Score] Away [Date]"
+  // Example: "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9 Away Sunday March 08, 2026"
+  // Away team = Kaakiro Lions Majors, Home team = TTBC Majors Eagles, Score = 2 - 9 (away - home)
+  // Strategy: find score, work backwards, locate the 4-char home abbrev before score, split teams there
+  var scoreStr = scoreMatch ? scoreMatch[0] : '0 - 0';
+  var awayKw = text.indexOf('Away ');
+  if (awayKw < 0) awayKw = text.indexOf('Home ');
+  var scoreBeforePos = text.lastIndexOf(scoreStr, awayKw > 0 ? awayKw : dateAnchorPos);
+  var beforeScore = text.substring(0, scoreBeforePos).trim();
+  // Find the last 4+ uppercase-letter sequence before the score = home team abbreviation
+  var homeAbbrevMatch = beforeScore.match(/[A-Z]{4,}(?:\s+[A-Za-z]+)*\s*$/);
+  if (homeAbbrevMatch) {
+    var homeAbbrevStr = homeAbbrevMatch[0].trim();
+    var homeAbbrevStart = beforeScore.lastIndexOf(homeAbbrevStr);
+    var homeAbbrevEnd = homeAbbrevStart + homeAbbrevStr.length;
+    result.home_team = beforeScore.substring(0, homeAbbrevStart).trim();
+    // away team = text between home_abbrev and score
+    result.away_team = beforeScore.substring(homeAbbrevEnd, scoreBeforePos).trim();
+  } else {
+    // Fallback: everything before score is the away team
+    result.away_team = beforeScore;
+    result.home_team = '(Unknown)';
+  }
+  // Cleanup: remove score artifacts
+  result.home_team = result.home_team.replace(/\s*\d+\s*-\s*\d+\s*$/, '').trim();
+  result.away_team = result.away_team.replace(/\s*\d+\s*-\s*\d+\s*$/, '').trim();
   console.log('[GC Parse] Teams:', result.away_team, '(Away', result.away_score, ') vs', result.home_team, '(Home', result.home_score, ')');
 
   // ══ 2. Date ═══════════════════════════════════════════════════════════
