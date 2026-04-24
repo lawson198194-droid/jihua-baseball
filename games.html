@@ -1588,8 +1588,9 @@ function parseGCText(text) {
   }
   var dateAnchorPos = text.indexOf(dateAnchorMatch[0]);
 
-  // Find "X - Y" (score) anywhere before the date anchor
-  var scoreMatch = text.substring(0, dateAnchorPos).match(/(\d+)\s*-\s*(\d+)/);
+  // Find "X - Y" (score) before date anchor, MUST be followed by "Away" (title row format)
+  // This avoids matching scores embedded in innings rows like "2 8 0" → "2 - 8"
+  var scoreMatch = text.substring(0, dateAnchorPos).match(/(\d+)\s*-\s*(\d+)\s+(?=Away\b|Home\b)/i);
   if (!scoreMatch) {
     console.log('[GC Parse] Score "X - Y" not found before date anchor');
     return result;
