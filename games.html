@@ -329,6 +329,34 @@ input, select, textarea { font-family: inherit; }
 .gamedata-table tbody tr:hover { background: var(--bg-card-hover); }
 .gamedata-meta { text-align: center; font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
 .gamedata-inning-row.gamedata-inning-head .ginn-team { background: var(--bg-secondary); color: var(--text-muted); font-weight: 700; text-align: center; }
+/* ── Match Badge ────────────────────────────────────────────── */
+.match-badge { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+.match-badge.matched { background: rgba(34,197,94,0.2); color: #22c55e; }
+.match-badge.unmatched { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+/* ── CSV Preview ────────────────────────────────────────────── */
+.csv-preview-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-top: 12px; }
+.csv-preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.csv-preview-title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.csv-preview-count { font-size: 11px; color: var(--text-secondary); }
+.csv-batting-preview, .csv-pitching-preview { margin-bottom: 8px; }
+.csv-section-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.csv-player-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; margin-bottom: 4px; background: var(--bg-primary); border: 1px solid var(--border); font-size: 12px; }
+.csv-player-row .csv-name { flex: 1; font-weight: 600; color: var(--text-primary); }
+.csv-player-row .csv-num { font-size: 11px; color: var(--primary); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.csv-player-row .csv-pos { font-size: 10px; color: var(--text-muted); }
+.csv-player-row .csv-stats { font-size: 11px; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; }
+.csv-player-row.unmatched-row { border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.04); }
+.csv-player-row.unmatched-row .csv-name { color: var(--danger); }
+
+/* ── CSV Import Section ─────────────────────────────────────── */
+.csv-import-section { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
+.csv-import-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.csv-import-title { font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.csv-import-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius); font-size: 12px; font-weight: 600; border: 1px dashed var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+.csv-import-btn:hover { border-color: var(--success); color: var(--success); background: rgba(16,185,129,0.06); }
+.csv-import-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
 </style>
 </head>
 <body>
@@ -1004,17 +1032,23 @@ function renderStep2() {
       '<div class="pdf-drop-hint">自动解析比分、打击数据、投球数据</div>'+
     '</div>'+
 
-    // CSV Upload Section
-    '<div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);">'+
-      '<div class="modal-section-title" style="font-size:13px;">📋 或上传 CSV 文件（打击+投球数据）</div>'+
-      '<div class="pdf-drop-zone" id="csv-drop" style="cursor:pointer;background:var(--bg-card);">'+
-        '<div class="pdf-drop-icon">📊</div>'+
-        '<div class="pdf-drop-text">点击或拖拽上传 CSV</div>'+
-        '<div class="pdf-drop-hint">支持手动整理的球员数据</div>'+
+    // CSV Import Section — clean, prominent
+    '<div class="csv-import-section">'+
+      '<div class="csv-import-header">'+
+        '<div>'+
+          '<div class="csv-import-title">📋 或导入 CSV 文件</div>'+
+          '<div class="csv-import-hint">支持 .csv 格式打击/投球数据，上传后自动匹配资料库球员</div>'+
+        '</div>'+
+        '<button class="csv-import-btn" id="csv-upload-btn">⬆ 上传 CSV</button>'+
       '</div>'+
       '<input type="file" id="csv-file-input" accept=".csv" style="display:none;">'+
       '<div id="csv-status" style="margin-top:8px;font-size:12px;color:var(--text-secondary);"></div>'+
-    '</div>'+ teamsHtml +
+    '</div>'+
+
+    // CSV Preview (shown after upload)
+    '<div id="csv-preview-area"></div>'+
+
+    teamsHtml +
     '<div id="gc-player-summary"></div>'+
     '<div id="gc-player-list"></div>'+
   '</div>';
@@ -1938,43 +1972,39 @@ function uploadGCFile(file) {
 /* ── Drop zone event binding ─────────────────────────────── */
 function rebindDropZone() {
   var dropZone = document.getElementById('pdf-drop');
-  if (!dropZone) return;
-  // Remove old handlers to prevent double-binding on re-render
-  dropZone.ondragover = null; dropZone.ondragleave = null; dropZone.onclick = null;
-  dropZone.addEventListener('dragover',  function(e){ e.preventDefault(); dropZone.classList.add('drag-over'); });
-  dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag-over'); });
-  dropZone.addEventListener('drop',      function(e){
-    e.preventDefault(); dropZone.classList.remove('drag-over');
-    var f = e.dataTransfer.files[0];
-    if (f && !_gcUploading) uploadGCFile(f);
-  });
-  dropZone.addEventListener('click', function() {
-    if (_gcUploading) return;
-    ensureGCInput().click();
-  });
-
-  // CSV drop zone binding
-  var csvDrop = document.getElementById('csv-drop');
-  var csvInput = document.getElementById('csv-file-input');
-  if (csvDrop) {
-    csvDrop.ondragover = null; csvDrop.ondragleave = null; csvDrop.onclick = null;
-    csvDrop.addEventListener('dragover', function(e){ e.preventDefault(); csvDrop.classList.add('drag-over'); });
-    csvDrop.addEventListener('dragleave', function(){ csvDrop.classList.remove('drag-over'); });
-    csvDrop.addEventListener('drop', function(e){
-      e.preventDefault(); csvDrop.classList.remove('drag-over');
+  if (dropZone) {
+    dropZone.ondragover = null; dropZone.ondragleave = null; dropZone.onclick = null;
+    dropZone.addEventListener('dragover',  function(e){ e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag-over'); });
+    dropZone.addEventListener('drop',      function(e){
+      e.preventDefault(); dropZone.classList.remove('drag-over');
       var f = e.dataTransfer.files[0];
-      if (f && f.name.endsWith('.csv')) parseCSVFile(f);
-      else showToast('请上传 CSV 文件', 'error');
+      if (f && !_gcUploading) uploadGCFile(f);
     });
-    csvDrop.addEventListener('click', function(){
+    dropZone.addEventListener('click', function() {
+      if (_gcUploading) return;
+      ensureGCInput().click();
+    });
+  }
+
+  // CSV upload button + input
+  var csvBtn = document.getElementById('csv-upload-btn');
+  var csvInput = document.getElementById('csv-file-input');
+  if (csvBtn) {
+    csvBtn.onclick = null;
+    csvBtn.addEventListener('click', function() {
       if (csvInput) csvInput.click();
     });
   }
   if (csvInput) {
-    csvInput.onchange = function(){
+    csvInput.onchange = null;
+    csvInput.addEventListener('change', function() {
       var f = csvInput.files[0];
       if (f) parseCSVFile(f);
-    };
+      // Reset so same file can be re-selected
+      var ni = csvInput.cloneNode(true);
+      csvInput.parentNode.replaceChild(ni, csvInput);
+    });
   }
 }
 
@@ -1987,25 +2017,20 @@ function parseCSVFile(file) {
       var result = parseCSV(text, file.name);
       _csvResult = result;
 
-      // Show status
       var statusEl = document.getElementById('csv-status');
-      if (statusEl) {
-        if (result.success) {
-          var batCount = result.batting ? result.batting.length : 0;
-          var pitCount = result.pitching ? result.pitching.length : 0;
-          statusEl.innerHTML = '<span style="color:#22c55e;">✓ CSV 解析成功</span> — 打击 ' + batCount + ' 人，投球 ' + pitCount + ' 人';
-        } else {
-          statusEl.innerHTML = '<span style="color:#ef4444;">✗ ' + escHtml(result.error || '解析失败') + '</span>';
-        }
+
+      if (!result.success) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;">✗ ' + escHtml(result.error || '解析失败') + '</span>';
+        showToast('CSV 解析失败: ' + (result.error || ''), 'error');
+        return;
       }
 
-      // Refresh Step 3 if visible
-      if (_gameStep === 3) {
-        refreshWizardContent();
-      }
+      var batCount = result.batting ? result.batting.length : 0;
+      var pitCount = result.pitching ? result.pitching.length : 0;
+      if (statusEl) statusEl.innerHTML = '<span style="color:#22c55e;">✓ CSV 解析成功</span> — 打击 ' + batCount + ' 人，投球 ' + pitCount + ' 人';
 
-      // Auto-fill GC result for binding step if no GC PDF
-      if (result.success && !_gcResult) {
+      // Inject into _gcResult so autoMatchAllGCPlayers can use it
+      if (!_gcResult) {
         _gcResult = {
           success: true,
           batting: result.batting || [],
@@ -2013,8 +2038,107 @@ function parseCSVFile(file) {
           hk_batting: result.batting || [],
           hk_pitching: result.pitching || []
         };
-        showToast('CSV 数据已加载，请在第3步绑定阵容', 'success');
+      } else {
+        // Merge CSV data into existing _gcResult
+        if (result.batting && result.batting.length) {
+          _gcResult.hk_batting = _gcResult.hk_batting || [];
+          _gcResult.batting = _gcResult.batting || [];
+          result.batting.forEach(function(b) {
+            if (!_gcResult.hk_batting.find(function(x){ return x.name === b.name; })) {
+              _gcResult.hk_batting.push(b);
+              _gcResult.batting.push(b);
+            }
+          });
+        }
+        if (result.pitching && result.pitching.length) {
+          _gcResult.hk_pitching = _gcResult.hk_pitching || [];
+          _gcResult.pitching = _gcResult.pitching || [];
+          result.pitching.forEach(function(p) {
+            if (!_gcResult.hk_pitching.find(function(x){ return x.name === p.name; })) {
+              _gcResult.hk_pitching.push(p);
+              _gcResult.pitching.push(p);
+            }
+          });
+        }
       }
+
+      showToast('CSV 数据已加载，正在匹配球员资料库...', 'info');
+
+      // Ensure allPlayers is loaded, then show preview with match status
+      function showCSVPreview() {
+        var batting = result.batting || [];
+        var pitching = result.pitching || [];
+        var allGC = batting.concat(pitching);
+
+        var h = '<div class="csv-preview-section" id="csv-preview-section">';
+
+        // Batting preview
+        if (batting.length) {
+          h += '<div class="csv-batting-preview">';
+          h += '<div class="csv-section-label">⚾ 打击数据（' + batting.length + ' 人）</div>';
+          batting.forEach(function(b) {
+            var match = findBestMatch(b.name || '');
+            var badge = match
+              ? '<span class="match-badge matched">✓</span>'
+              : '<span class="match-badge unmatched">○</span>';
+            var matchedName = match ? escHtml(match.name) : '<span style="color:#ef4444;font-style:italic;">未匹配</span>';
+            var rowClass = match ? '' : ' unmatched-row';
+            h += '<div class="csv-player-row' + rowClass + '">' +
+              badge +
+              '<span class="csv-name">' + escHtml(b.name || '') + '</span>' +
+              '<span class="csv-num">#' + escHtml(b.number || '') + '</span>' +
+              '<span class="csv-pos">' + escHtml(b.position || '') + '</span>' +
+              '<span class="csv-stats">AB:' + b.ab + ' H:' + b.h + ' R:' + b.r + ' RBI:' + b.rbi + ' BB:' + b.bb + ' SO:' + b.so + '</span>' +
+              '<span style="margin-left:auto;font-size:11px;color:#22c55e;">' + matchedName + '</span>' +
+            '</div>';
+          });
+          h += '</div>';
+        }
+
+        // Pitching preview
+        if (pitching.length) {
+          h += '<div class="csv-pitching-preview">';
+          h += '<div class="csv-section-label">🎯 投球数据（' + pitching.length + ' 人）</div>';
+          pitching.forEach(function(p) {
+            var match = findBestMatch(p.name || '');
+            var badge = match
+              ? '<span class="match-badge matched">✓</span>'
+              : '<span class="match-badge unmatched">○</span>';
+            var matchedName = match ? escHtml(match.name) : '<span style="color:#ef4444;font-style:italic;">未匹配</span>';
+            var rowClass = match ? '' : ' unmatched-row';
+            h += '<div class="csv-player-row' + rowClass + '">' +
+              badge +
+              '<span class="csv-name">' + escHtml(p.name || '') + '</span>' +
+              '<span class="csv-num">#' + escHtml(p.number || '') + '</span>' +
+              '<span class="csv-pos">P</span>' +
+              '<span class="csv-stats">IP:' + fmtIP(p.ip) + ' H:' + p.h + ' R:' + p.r + ' ER:' + p.er + ' BB:' + p.bb + ' SO:' + (p.so_p || p.so || 0) + '</span>' +
+              '<span style="margin-left:auto;font-size:11px;color:#22c55e;">' + matchedName + '</span>' +
+            '</div>';
+          });
+          h += '</div>';
+        }
+
+        // Summary
+        var totalMatched = allGC.filter(function(p){ return findBestMatch(p.name || ''); }).length;
+        h += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
+          '<span style="font-size:12px;color:var(--text-secondary);">点击「下一步」完成阵容绑定</span>'+
+          '<span style="font-size:12px;"><span style="color:#22c55e;font-weight:700;">✓ 已匹配 ' + totalMatched + '</span> / ' + allGC.length + ' 人</span>'+
+        '</div></div>';
+
+        var previewArea = document.getElementById('csv-preview-area');
+        if (previewArea) previewArea.innerHTML = h;
+      }
+
+      // Load players if not yet loaded, then show preview
+      if (!allPlayers || allPlayers.length === 0) {
+        DB.getPlayers(function(res) {
+          allPlayers = (res && res.data) || [];
+          showCSVPreview();
+        });
+      } else {
+        showCSVPreview();
+      }
+
     } catch(err) {
       showToast('CSV 解析失败: ' + err.message, 'error');
     }
