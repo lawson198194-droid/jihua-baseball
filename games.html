@@ -1592,22 +1592,22 @@ function parseGCText(text) {
   // This is robust against varying PDF spacing between score and "Away" keyword
   var awayKw = text.indexOf('Away ');
   if (awayKw < 0) awayKw = text.indexOf('Home ');
-  var scoreSearchStart = awayKw > 0 ? Math.max(0, awayKw - 25) : 0;
+  // Primary: locate "Away " keyword, look backward ~40 chars, find "X - Y" immediately before "Away"
+  var awayKw = text.indexOf('Away ');
+  if (awayKw < 0) awayKw = text.indexOf('Home ');
+  var scoreSearchStart = awayKw > 0 ? Math.max(0, awayKw - 40) : 0;
   var scoreSearchText = text.substring(scoreSearchStart, awayKw > 0 ? awayKw : dateAnchorPos);
-  var scoreMatch = scoreSearchText.match(/(\d+)\s*-\s*(\d+)/);
+  var scoreMatch = scoreSearchText.match(/(\d+)\s*-\s*(\d+)\s+(?=Away\b|Home\b)/i);
+  if (!scoreMatch) {
+    // Fallback: find score anywhere before date, must be followed by Away or Home
+    scoreMatch = text.substring(0, dateAnchorPos).match(/(\d+)\s*-\s*(\d+)\s+(?=Away\b|Home\b)/i);
+  }
   if (scoreMatch) {
     result.away_score = parseInt(scoreMatch[1]);
     result.home_score = parseInt(scoreMatch[2]);
-    console.log('[GC Parse] Score (via backwards search):', result.away_score, '-', result.home_score);
+    console.log('[GC Parse] Score:', result.away_score, '-', result.home_score);
   } else {
-    // Fallback: scan from start to date anchor
-    scoreMatch = text.substring(0, dateAnchorPos).match(/(\d+)\s*-\s*(\d+)/);
-    if (scoreMatch) {
-      result.away_score = parseInt(scoreMatch[1]);
-      result.home_score = parseInt(scoreMatch[2]);
-    } else {
-      console.log('[GC Parse] Score "X - Y" not found');
-    }
+    console.log('[GC Parse] Score "X - Y" not found');
   }
 
   // Title line format: "[Away Team Full] [Home Team Full] [Score] Away [Date]"
