@@ -828,6 +828,7 @@ function renderAddModal() {
       content.innerHTML = renderWizardSteps() + renderWizardContent();
       bindWizardFooter(isEdit);
       rebindPDFHandlers();
+      rebindDropZone();
       ensurePlayersThenMatch();
       return;
     }
@@ -843,6 +844,7 @@ function renderAddModal() {
   document.getElementById('modal-body-content').innerHTML = renderWizardSteps() + renderWizardContent();
   bindWizardFooter(isEdit);
   rebindPDFHandlers();
+  rebindDropZone();
   ensurePlayersThenMatch();
 }
 
@@ -1052,7 +1054,6 @@ function renderStep2() {
     '<div id="gc-player-summary"></div>'+
     '<div id="gc-player-list"></div>'+
   '</div>';
-  rebindDropZone();
 }
 
 function renderStep3() {
@@ -1956,6 +1957,7 @@ function uploadGCFile(file) {
         }
         var body = document.getElementById('modal-body-content');
         if (body) body.innerHTML = renderWizardSteps() + renderWizardContent();
+        rebindPDFHandlers();
         rebindDropZone();
         bindWizardFooter(!!_wizardGame.id);
       });
@@ -1964,6 +1966,8 @@ function uploadGCFile(file) {
       showToast('❌ PDF 解析失败: ' + err.message, 'error');
       var body = document.getElementById('modal-body-content');
       if (body) body.innerHTML = renderWizardSteps() + renderWizardContent();
+      rebindPDFHandlers();
+      rebindDropZone();
     });
   };
   reader.readAsArrayBuffer(file);
