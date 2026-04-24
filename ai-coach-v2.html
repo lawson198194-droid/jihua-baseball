@@ -1095,13 +1095,42 @@ function renderBattingResult(sugs, plans, d) {
       <button class="btn btn-primary" onclick="window.print()">🖨️ 打印报告</button>
       <button class="btn btn-secondary" onclick="startNewAnalysis()">+ 新分析</button>
       <button class="btn btn-secondary" onclick="viewHistory()">📊 查看历史</button>
+      <button class="btn btn-secondary" onclick="showCoachReview('batting')" id="btn-coach-review">👨‍🏫 教练点评</button>
     </div>
+
+    <!-- 教练点评区 -->
+    <div id="coach-review-panel" style="display:none;margin-top:20px;">
+      <div style="background:rgba(20,26,46,0.9);border:1px solid rgba(249,115,22,0.3);border-radius:14px;padding:20px;">
+        <div style="font-size:14px;font-weight:800;color:#f97316;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+          👨‍🏫 教练点评 <span style="font-size:11px;color:#64748b;font-weight:400;">（专业意见将补充 AI 分析）</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label style="display:block;font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">教练姓名</label>
+            <input type="text" id="coach-name" placeholder="例如：张教练 / 李教练" style="width:100%;padding:10px 12px;font-size:13px;background:rgba(20,26,46,0.9);border:1px solid rgba(249,115,22,0.3);color:#f1f5f9;border-radius:8px;outline:none;box-sizing:border-box;">
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:4px;">
+            <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">综合评价</div>
+            <div style="display:flex;gap:6px;margin-bottom:6px;">
+              <button class="coach-badge-btn" onclick="setCoachRating('excellent')" id="rate-excellent" style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#10b981;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">优秀 👍</button>
+              <button class="coach-badge-btn" onclick="setCoachRating('good')" id="rate-good" style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);color:#3b82f6;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">良好 👍</button>
+              <button class="coach-badge-btn" onclick="setCoachRating('developing')" id="rate-developing" style="background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);color:#f97316;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">需提升 ⚠️</button>
+            </div>
+          </div>
+        </div>
+        <textarea id="coach-comments" placeholder="请教练填写对该球员的详细点评，包括：技术动作、身体素质、心理状态、改进重点等...（100字以上效果更佳）" style="width:100%;min-height:100px;padding:12px;font-size:13px;background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.1);color:#f1f5f9;border-radius:10px;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit;line-height:1.6;"></textarea>
+        <div id="coach-char-count" style="text-align:right;font-size:11px;color:#475569;margin-top:4px;">0 / 300</div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn btn-primary" onclick="saveCoachReview('batting')" style="flex:1;justify-content:center;">💾 保存教练点评</button>
+          <button class="btn btn-secondary" onclick="hideCoachReview()" style="font-size:12px;">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已保存的教练点评 -->
+    <div id="coach-review-saved" style="display:none;margin-top:16px;"></div>
   </div>
 </div>`;
-
-  // Animate radar + bars
-  setTimeout(function(){
-    drawRadar('result-radar', { power: d.power, speed: d.speed, contact: d.contact, defense: d.defense, control: d.control });
     ['power','speed','contact','defense','control'].forEach(function(k, i){
       setTimeout(function(){
         document.getElementById('bar-power').style.width = d.power+'%';
@@ -1284,7 +1313,40 @@ function renderPitchingResult(sugs, plans, d) {
       <button class="btn btn-primary" onclick="window.print()">🖨️ 打印报告</button>
       <button class="btn btn-secondary" onclick="startNewAnalysis()">+ 新分析</button>
       <button class="btn btn-secondary" onclick="viewHistory()">📊 查看历史</button>
+      <button class="btn btn-secondary" onclick="showCoachReview('pitching')" id="btn-coach-review-p">👨‍🏫 教练点评</button>
     </div>
+
+    <!-- 教练点评区 -->
+    <div id="coach-review-panel-p" style="display:none;margin-top:20px;">
+      <div style="background:rgba(20,26,46,0.9);border:1px solid rgba(59,130,246,0.3);border-radius:14px;padding:20px;">
+        <div style="font-size:14px;font-weight:800;color:#3b82f6;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+          👨‍🏫 教练点评 <span style="font-size:11px;color:#64748b;font-weight:400;">（专业意见将补充 AI 分析）</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div style="margin-bottom:0;">
+            <label style="display:block;font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">教练姓名</label>
+            <input type="text" id="coach-name-p" placeholder="例如：陈教练 / 王教练" style="width:100%;padding:10px 12px;font-size:13px;background:rgba(20,26,46,0.9);border:1px solid rgba(59,130,246,0.3);color:#f1f5f9;border-radius:8px;outline:none;box-sizing:border-box;">
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:4px;">
+            <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">综合评价</div>
+            <div style="display:flex;gap:6px;margin-bottom:6px;">
+              <button class="coach-badge-btn-p" onclick="setCoachRatingP('excellent')" id="rate-p-excellent" style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#10b981;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">优秀 👍</button>
+              <button class="coach-badge-btn-p" onclick="setCoachRatingP('good')" id="rate-p-good" style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);color:#3b82f6;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">良好 👍</button>
+              <button class="coach-badge-btn-p" onclick="setCoachRatingP('developing')" id="rate-p-developing" style="background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);color:#f97316;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">需提升 ⚠️</button>
+            </div>
+          </div>
+        </div>
+        <textarea id="coach-comments-p" placeholder="请教练填写对该球员投球的详细点评，包括：投球动作、出手点、球种质量、体能状态、改进重点等...（100字以上效果更佳）" style="width:100%;min-height:100px;padding:12px;font-size:13px;background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.1);color:#f1f5f9;border-radius:10px;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit;line-height:1.6;"></textarea>
+        <div id="coach-char-count-p" style="text-align:right;font-size:11px;color:#475569;margin-top:4px;">0 / 300</div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn btn-primary" onclick="saveCoachReview('pitching')" style="flex:1;justify-content:center;">💾 保存教练点评</button>
+          <button class="btn btn-secondary" onclick="hideCoachReviewP()" style="font-size:12px;">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已保存的教练点评 -->
+    <div id="coach-review-saved-p" style="display:none;margin-top:16px;"></div>
   </div>
 </div>`;
 
@@ -1445,6 +1507,361 @@ function showToast(msg, type) {
   setTimeout(function(){ toast.style.opacity='0'; toast.style.transition='opacity 0.3s'; setTimeout(function(){ toast.remove(); }, 300); }, 3000);
 }
 
+// ====== COACH REVIEW ======
+var currentCoachRating = null;
+var currentCoachRatingP = null;
+
+// 打击 - 教练点评显示
+function showCoachReview(type) {
+  if (type === 'batting') {
+    var panel = document.getElementById('coach-review-panel');
+    if (!panel) return;
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // 绑定字数统计
+    var ta = document.getElementById('coach-comments');
+    if (ta) {
+      ta.addEventListener('input', function(){
+        document.getElementById('coach-char-count').textContent = ta.value.length + ' / 300';
+      });
+    }
+    // 检查是否已有保存的点评
+    loadSavedCoachReview(type);
+  } else {
+    var panelP = document.getElementById('coach-review-panel-p');
+    if (!panelP) return;
+    panelP.style.display = 'block';
+    panelP.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    var taP = document.getElementById('coach-comments-p');
+    if (taP) {
+      taP.addEventListener('input', function(){
+        document.getElementById('coach-char-count-p').textContent = taP.value.length + ' / 300';
+      });
+    }
+    loadSavedCoachReview(type);
+  }
+}
+
+function hideCoachReview() {
+  var panel = document.getElementById('coach-review-panel');
+  if (panel) panel.style.display = 'none';
+}
+function hideCoachReviewP() {
+  var panel = document.getElementById('coach-review-panel-p');
+  if (panel) panel.style.display = 'none';
+}
+
+function setCoachRating(r) {
+  currentCoachRating = r;
+  document.querySelectorAll('.coach-badge-btn').forEach(function(b){ b.style.opacity='0.5'; b.style.borderColor='rgba(255,255,255,0.1)'; });
+  var btn = document.getElementById('rate-'+r);
+  if (btn) { btn.style.opacity='1'; btn.style.borderColor='currentColor'; }
+}
+function setCoachRatingP(r) {
+  currentCoachRatingP = r;
+  document.querySelectorAll('.coach-badge-btn-p').forEach(function(b){ b.style.opacity='0.5'; b.style.borderColor='rgba(255,255,255,0.1)'; });
+  var btn = document.getElementById('rate-p-'+r);
+  if (btn) { btn.style.opacity='1'; btn.style.borderColor='currentColor'; }
+}
+
+function saveCoachReview(type) {
+  var coachName, comments, rating, panelId, savedId, prefix;
+  if (type === 'batting') {
+    coachName = (document.getElementById('coach-name') || {}).value || '';
+    comments = (document.getElementById('coach-comments') || {}).value || '';
+    rating = currentCoachRating;
+    panelId = 'coach-review-panel';
+    savedId = 'coach-review-saved';
+    prefix = 'bat';
+  } else {
+    coachName = (document.getElementById('coach-name-p') || {}).value || '';
+    comments = (document.getElementById('coach-comments-p') || {}).value || '';
+    rating = currentCoachRatingP;
+    panelId = 'coach-review-panel-p';
+    savedId = 'coach-review-saved-p';
+    prefix = 'pitch';
+  }
+
+  if (!coachName.trim()) { showToast('请填写教练姓名', 'warning'); return; }
+  if (comments.trim().length < 10) { showToast('请填写至少10字的点评内容', 'warning'); return; }
+
+  var ratingLabels = { excellent: '优秀', good: '良好', developing: '需提升' };
+  var ratingColors = { excellent: '#10b981', good: '#3b82f6', developing: '#f97316' };
+  var ratingBadge = rating ? '<span style="display:inline-flex;align-items:center;gap:4px;background:'+ratingColors[rating]+'22;border:1px solid '+ratingColors[rating]+'55;color:'+ratingColors[rating]+';padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;">'+ratingLabels[rating]+'</span>' : '';
+
+  var review = {
+    date: new Date().toLocaleString('zh-CN'),
+    playerName: selectedPlayer.name,
+    playerId: selectedPlayer.id,
+    type: type,
+    coachName: coachName.trim(),
+    comments: comments.trim(),
+    rating: rating,
+    aiScore: analysisResult ? analysisResult.overall : 0,
+    videoName: uploadedVideo ? uploadedVideo.name : ''
+  };
+
+  // 保存到历史
+  var historyKey = 'baseai_coach_reviews';
+  var reviews = JSON.parse(localStorage.getItem(historyKey) || '[]');
+  reviews.unshift(review);
+  if (reviews.length > 30) reviews.pop();
+  localStorage.setItem(historyKey, JSON.stringify(reviews));
+
+  // 保存到当前分析结果
+  var analysisKey = 'baseai_ai_history';
+  var history = JSON.parse(localStorage.getItem(analysisKey) || '[]');
+  if (history[0]) {
+    history[0].coachReview = { coachName: coachName.trim(), comments: comments.trim(), rating: rating };
+    localStorage.setItem(analysisKey, JSON.stringify(history));
+  }
+
+  // 显示已保存的点评
+  var savedEl = document.getElementById(savedId);
+  if (savedEl) {
+    savedEl.style.display = 'block';
+    savedEl.innerHTML = `
+      <div style="background:rgba(20,26,46,0.9);border:1px solid rgba(249,115,22,0.3);border-radius:14px;padding:20px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+          <div style="width:40px;height:40px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:white;flex-shrink:0;">${coachName.charAt(0)}</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#f1f5f9;">${esc(coachName)}</div>
+            <div style="font-size:11px;color:#64748b;">${review.date}</div>
+          </div>
+          ${ratingBadge}
+          <button onclick="deleteCoachReview('${prefix}')" style="margin-left:auto;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;">删除</button>
+        </div>
+        <div style="font-size:13px;color:#94a3b8;line-height:1.7;background:rgba(15,23,42,0.6);border-radius:8px;padding:14px;font-style:italic;">"${esc(comments)}"</div>
+      </div>`;
+  }
+
+  // 隐藏编辑面板
+  var panel = document.getElementById(panelId);
+  if (panel) panel.style.display = 'none';
+
+  showToast('教练点评已保存', 'success');
+
+  // 保存到 Firebase（如果 DB 可用）
+  saveReviewToFirebase(review);
+}
+
+function loadSavedCoachReview(type) {
+  var historyKey = 'baseai_ai_history';
+  var history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+  if (history[0] && history[0].coachReview && history[0].coachReview.coachName) {
+    var cr = history[0].coachReview;
+    var ratingLabels = { excellent: '优秀', good: '良好', developing: '需提升' };
+    var ratingColors = { excellent: '#10b981', good: '#3b82f6', developing: '#f97316' };
+    var ratingBadge = cr.rating ? '<span style="display:inline-flex;align-items:center;gap:4px;background:'+ratingColors[cr.rating]+'22;border:1px solid '+ratingColors[cr.rating]+'55;color:'+ratingColors[cr.rating]+';padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;">'+ratingLabels[cr.rating]+'</span>' : '';
+    var savedId = type === 'batting' ? 'coach-review-saved' : 'coach-review-saved-p';
+    var savedEl = document.getElementById(savedId);
+    if (savedEl) {
+      savedEl.style.display = 'block';
+      savedEl.innerHTML = `
+        <div style="background:rgba(20,26,46,0.9);border:1px solid rgba(249,115,22,0.3);border-radius:14px;padding:20px;">
+          <div style="font-size:12px;font-weight:700;color:#f97316;margin-bottom:10px;">👨‍🏫 已保存的教练点评</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:white;flex-shrink:0;">${cr.coachName.charAt(0)}</div>
+            <div style="font-size:13px;font-weight:700;color:#f1f5f9;">${esc(cr.coachName)}</div>
+            ${ratingBadge}
+            <button onclick="editCoachReview('${type}')" style="margin-left:auto;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);color:#f97316;padding:5px 10px;border-radius:8px;font-size:11px;cursor:pointer;">编辑</button>
+          </div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.7;background:rgba(15,23,42,0.6);border-radius:8px;padding:12px;font-style:italic;">"${esc(cr.comments)}"</div>
+        </div>`;
+    }
+  }
+}
+
+function editCoachReview(type) {
+  // 从历史加载已有点评到编辑框
+  var historyKey = 'baseai_ai_history';
+  var history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+  if (history[0] && history[0].coachReview) {
+    var cr = history[0].coachReview;
+    if (type === 'batting') {
+      var nameEl = document.getElementById('coach-name');
+      var comEl = document.getElementById('coach-comments');
+      if (nameEl) nameEl.value = cr.coachName;
+      if (comEl) comEl.value = cr.comments;
+      if (cr.rating) setCoachRating(cr.rating);
+      var panel = document.getElementById('coach-review-panel');
+      if (panel) { panel.style.display = 'block'; panel.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    } else {
+      var nameElP = document.getElementById('coach-name-p');
+      var comElP = document.getElementById('coach-comments-p');
+      if (nameElP) nameElP.value = cr.coachName;
+      if (comElP) comElP.value = cr.comments;
+      if (cr.rating) setCoachRatingP(cr.rating);
+      var panelP = document.getElementById('coach-review-panel-p');
+      if (panelP) { panelP.style.display = 'block'; panelP.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    }
+  }
+}
+
+function deleteCoachReview(prefix) {
+  var historyKey = 'baseai_ai_history';
+  var history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+  if (history[0]) { history[0].coachReview = null; localStorage.setItem(historyKey, JSON.stringify(history)); }
+  var savedId = prefix === 'bat' ? 'coach-review-saved' : 'coach-review-saved-p';
+  var savedEl = document.getElementById(savedId);
+  if (savedEl) { savedEl.style.display = 'none'; savedEl.innerHTML = ''; }
+  showToast('教练点评已删除', 'info');
+}
+
+async function saveReviewToFirebase(review) {
+  try {
+    if (typeof DB !== 'undefined' && DB.saveCoachReview) {
+      await DB.saveCoachReview(review);
+    }
+  } catch(e) {
+    // Firebase 失败不影响本地保存
+  }
+}
+
+// ====== HISTORY ENHANCED ======
+function viewHistory() {
+  var mc = document.getElementById('main-content');
+  var allReviews = JSON.parse(localStorage.getItem('baseai_coach_reviews') || '[]');
+
+  if (analysisHistory.length === 0 && allReviews.length === 0) {
+    mc.innerHTML = `
+<div class="panel fade-in">
+  <div class="panel-header">
+    <div class="panel-title">📊 分析历史</div>
+    <button class="btn btn-secondary" onclick="startNewAnalysis()" style="margin-left:auto;font-size:12px;">+ 新分析</button>
+  </div>
+  <div class="panel-body">
+    <div class="empty-state">
+      <div class="icon">📊</div>
+      <div class="title">暂无分析记录</div>
+      <div class="sub">上传视频完成分析后，记录将保存在这里</div>
+    </div>
+  </div>
+</div>`;
+    return;
+  }
+
+  var avatarColors = ['#f97316','#3b82f6','#10b981','#8b5cf6','#ec4899','#f59e0b'];
+  var ratingColorsH = { excellent: '#10b981', good: '#3b82f6', developing: '#f97316' };
+  var ratingLabelsH = { excellent: '优秀', good: '良好', developing: '需提升' };
+
+  var historyItems = analysisHistory.map(function(h, i){
+    var color = avatarColors[i % avatarColors.length];
+    var hasReview = h.coachReview;
+    var isPitch = h.type && h.type.includes('投球');
+    var reviewBadge = hasReview
+      ? '<span style="display:inline-flex;align-items:center;gap:4px;background:'+ratingColorsH[h.coachReview.rating]+'22;border:1px solid '+ratingColorsH[h.coachReview.rating]+'55;color:'+ratingColorsH[h.coachReview.rating]+';padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;margin-left:6px;">👨‍🏫 有点评</span>'
+      : '';
+    return `<div class="history-item" onclick="showHistoryDetail(${i})">
+      <div class="hi-avatar" style="background:${color}">${(h.playerName||'?').charAt(0)}</div>
+      <div class="hi-info">
+        <div class="hi-name">${esc(h.playerName)}</div>
+        <div class="hi-meta">${esc(h.type)} · ${esc(h.date)}</div>
+        ${hasReview ? '<div style="font-size:11px;color:#64748b;margin-top:2px;">👨‍🏫 '+esc(h.coachReview.coachName)+'</div>' : ''}
+      </div>
+      <div style="text-align:right;">
+        <div class="hi-score" style="color:${isPitch?'#3b82f6':'#f97316'}">${h.overall}</div>
+        <div class="hi-type">${isPitch?'投球':'打击'}${reviewBadge}</div>
+      </div>
+      <div class="hi-actions">
+        <button class="btn btn-secondary" onclick="event.stopPropagation();showHistoryDetail(${i})">查看</button>
+      </div>
+    </div>`;
+  });
+
+  mc.innerHTML = `
+<div class="panel fade-in">
+  <div class="panel-header">
+    <div class="panel-title">📊 分析历史</div>
+    <span style="margin-left:auto;font-size:12px;color:#64748b;">${analysisHistory.length} 条记录</span>
+    <button class="btn btn-secondary" onclick="startNewAnalysis()" style="font-size:12px;">+ 新分析</button>
+  </div>
+  <div class="panel-body">
+    ${historyItems.length > 0 ? historyItems.join('') : '<div class="empty-state"><div class="icon">📊</div><div class="title">暂无分析记录</div></div>'}
+  </div>
+</div>
+
+<!-- 教练点评汇总 -->
+${allReviews.length > 0 ? `
+<div class="panel fade-in" style="margin-top:20px;">
+  <div class="panel-header">
+    <div class="panel-title">👨‍🏫 教练点评汇总</div>
+    <span style="margin-left:auto;font-size:12px;color:#64748b;">${allReviews.length} 条点评</span>
+  </div>
+  <div class="panel-body">
+    ${allReviews.slice(0,10).map(function(r){
+      var isPitch = r.type === 'pitching';
+      var color = isPitch ? '#3b82f6' : '#f97316';
+      return `<div style="background:rgba(20,26,46,0.8);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="width:32px;height:32px;background:linear-gradient(135deg,${color},${isPitch?'#2563eb':'#ea580c'});border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;">${r.coachName.charAt(0)}</div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:700;color:#f1f5f9;">${esc(r.coachName)} · ${esc(r.playerName)}</div>
+            <div style="font-size:10px;color:#64748b;">${r.type==='pitching'?'🎯':'⚡'} ${r.date}</div>
+          </div>
+          ${r.rating ? '<span style="display:inline-flex;align-items:center;gap:4px;background:'+ratingColorsH[r.rating]+'22;border:1px solid '+ratingColorsH[r.rating]+'55;color:'+ratingColorsH[r.rating]+';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;">'+ratingLabelsH[r.rating]+'</span>' : ''}
+        </div>
+        <div style="font-size:12px;color:#94a3b8;line-height:1.6;font-style:italic;">"${esc(r.comments.length > 120 ? r.comments.substring(0,120)+'...' : r.comments)}"</div>
+      </div>`;
+    }).join('')}
+  </div>
+</div>` : ''}`;
+}
+
+function showHistoryDetail(idx) {
+  var h = analysisHistory[idx];
+  if (!h) return;
+  var isPitch = h.type && h.type.includes('投球');
+  var ratingColorsH = { excellent: '#10b981', good: '#3b82f6', developing: '#f97316' };
+  var ratingLabelsH = { excellent: '优秀', good: '良好', developing: '需提升' };
+
+  var coachSection = '';
+  if (h.coachReview) {
+    var cr = h.coachReview;
+    coachSection = `
+    <div style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:14px;padding:18px;margin-top:16px;">
+      <div style="font-size:13px;font-weight:800;color:#f97316;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+        👨‍🏫 教练点评
+        ${cr.rating ? '<span style="display:inline-flex;align-items:center;gap:4px;background:'+ratingColorsH[cr.rating]+'22;border:1px solid '+ratingColorsH[cr.rating]+'55;color:'+ratingColorsH[cr.rating]+';padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;">'+ratingLabelsH[cr.rating]+'</span>' : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:32px;height:32px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;">${cr.coachName.charAt(0)}</div>
+        <div style="font-size:13px;font-weight:700;color:#f1f5f9;">${esc(cr.coachName)}</div>
+      </div>
+      <div style="font-size:13px;color:#94a3b8;line-height:1.7;background:rgba(15,23,42,0.6);border-radius:8px;padding:14px;font-style:italic;">"${esc(cr.comments)}"</div>
+    </div>`;
+  } else {
+    coachSection = `
+    <div style="text-align:center;padding:20px;color:#475569;font-size:13px;">
+      暂无教练点评 <span style="font-size:20px;display:block;margin-bottom:8px;">📝</span>
+      <button class="btn btn-secondary" onclick="startNewAnalysis()" style="font-size:12px;margin-top:8px;">重新分析后添加</button>
+    </div>`;
+  }
+
+  var mc = document.getElementById('main-content');
+  var color = isPitch ? '#3b82f6' : '#f97316';
+  mc.innerHTML = `
+<div class="panel fade-in">
+  <div class="panel-header">
+    <div class="panel-title">📋 ${esc(h.playerName)} — ${esc(h.type)}详情</div>
+    <button class="btn btn-secondary" onclick="viewHistory()" style="margin-left:auto;font-size:12px;">← 返回历史</button>
+  </div>
+  <div class="panel-body">
+    <div style="background:rgba(20,26,46,0.9);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;margin-bottom:16px;text-align:center;">
+      <div style="font-size:48px;font-weight:900;color:${color};font-family:'Space Grotesk',monospace;">${h.overall}</div>
+      <div style="font-size:13px;color:#64748b;margin-top:4px;">综合评分 · AI分析</div>
+    </div>
+    <div style="font-size:13px;color:#64748b;line-height:2;">
+      <div>👤 球员：${esc(h.playerName)}</div>
+      <div>📅 日期：${esc(h.date)}</div>
+      <div>🎬 视频：${esc(h.videoName)}</div>
+    </div>
+
+    ${coachSection}
+  </div>
+</div>`;
+}
+
 // Make global
 window.startNewAnalysis = startNewAnalysis;
 window.viewHistory = viewHistory;
@@ -1458,6 +1875,15 @@ window.backToStep1 = backToStep1;
 window.goToStep2 = goToStep2;
 window.selectType = selectType;
 window.onPlayerChange = onPlayerChange;
+window.showCoachReview = showCoachReview;
+window.hideCoachReview = hideCoachReview;
+window.hideCoachReviewP = hideCoachReviewP;
+window.setCoachRating = setCoachRating;
+window.setCoachRatingP = setCoachRatingP;
+window.saveCoachReview = saveCoachReview;
+window.editCoachReview = editCoachReview;
+window.deleteCoachReview = deleteCoachReview;
+window.showHistoryDetail = showHistoryDetail;
 </script>
 </body>
 </html>
