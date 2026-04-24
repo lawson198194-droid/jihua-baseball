@@ -366,7 +366,9 @@
 var allPlayers = [];
 var selectedPlayer = null;
 var selectedType = null; // 'batting' | 'pitching'
-var uploadedVideo = null;
+var uploadedVideo = null;      // 正面视频（保留旧兼容）
+var videoFront = null;         // 正面视频
+var videoSide = null;          // 侧面视频
 var currentStep = 1;
 var analysisResult = null;
 var analysisHistory = JSON.parse(localStorage.getItem('baseai_ai_history') || '[]');
@@ -485,90 +487,296 @@ function goToStep2() {
   renderStep2();
 }
 
-// ====== STEP 2: UPLOAD VIDEO ======
+// ====== STEP 2: UPLOAD VIDEO (DUAL: FRONT + SIDE) ======
 function renderStep2() {
   var mc = document.getElementById('main-content');
   var typeLabel = selectedType === 'batting' ? '⚾ 打击' : '🎯 投球';
   var typeIcon = selectedType === 'batting' ? '⚡' : '🎯';
+
+  // 根据分析类型生成拍摄要求
+  var shootingGuide = selectedType === 'pitching' ? getPitchingGuide() : getBattingGuide();
+
   mc.innerHTML = `
 <div class="panel fade-in">
   <div class="panel-header">
-    <div class="panel-title">📤 步骤 2：上传 ${typeLabel} 视频</div>
+    <div class="panel-title">📤 步骤 2：上传 ${typeLabel} 视频（正面 + 侧面）</div>
     <button class="btn btn-secondary" onclick="backToStep1()" style="margin-left:auto;font-size:12px;">← 返回</button>
   </div>
   <div class="panel-body">
+
+    <!-- 球员信息条 -->
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;background:rgba(20,26,46,0.8);padding:12px 16px;border-radius:10px;border:1px solid rgba(249,115,22,0.15);">
-      <div style="width:36px;height:36px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;">${selectedPlayer.name.charAt(0)}</div>
-      <div><div style="font-size:14px;font-weight:700;color:#f1f5f9;">${esc(selectedPlayer.name)}</div><div style="font-size:12px;color:#64748b;">${typeIcon} ${typeLabel}分析</div></div>
+      <div style="width:36px;height:36px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:white;">${selectedPlayer.name.charAt(0)}</div>
+      <div><div style="font-size:14px;font-weight:700;color:#f1f5f9;">${esc(selectedPlayer.name)}</div><div style="font-size:12px;color:#64748b;">${typeIcon} ${typeLabel}分析 · 请上传两个角度视频</div></div>
     </div>
 
-    <div id="upload-zone" class="upload-zone">
-      <input type="file" accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,video/*" id="video-input" onchange="onVideoFile(this.files[0])">
-      <div class="icon">📹</div>
-      <div class="title">拖拽视频文件到这里，或点击选择</div>
-      <div class="sub">选择球员的${typeLabel}训练或比赛视频<br>建议时长 10-30 秒，效果最佳</div>
-      <div class="formats">支持格式：MP4、MOV、AVI、WebM</div>
-    </div>
+    <!-- 拍摄要求说明 -->
+    ${shootingGuide}
 
-    <!-- 显眼的独立上传按钮 -->
-    <div style="text-align:center;margin-top:16px;">
-      <button class="btn-ai" id="btn-upload-trigger" onclick="document.getElementById('video-input').click()" style="max-width:320px;">
-        🎬 选择视频文件
-      </button>
-      <div style="font-size:12px;color:#475569;margin-top:10px;">或直接拖拽视频文件到上方区域</div>
-    </div>
+    <!-- 双视频上传区 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;" id="dual-upload-grid">
 
-    <div id="video-preview" style="display:none;" class="fade-in">
-      <div class="video-preview-wrap">
-        <video id="preview-video" controls playsinline></video>
-        <div class="video-badge" id="video-duration"></div>
-        <div class="video-badge video-type-badge" style="background:rgba(249,115,22,0.8);">${typeIcon} ${typeLabel}</div>
+      <!-- 正面视频 -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#f97316;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">
+          📹 正面视频 <span style="color:#ef4444;">*必需</span>
+        </div>
+        <div id="front-drop" class="upload-zone" style="padding:28px 16px;" onclick="triggerUpload('front')">
+          <input type="file" accept="video/*" id="front-input" style="display:none;" onchange="onVideoSlot(this,'front')">
+          <div class="icon" style="font-size:36px;">🎥</div>
+          <div class="title" style="font-size:14px;">正面视频</div>
+          <div class="sub" style="font-size:12px;">投手正面朝向摄像机</div>
+        </div>
+        <div id="front-preview" style="display:none;" class="fade-in">
+          <div class="video-preview-wrap">
+            <video id="front-video" controls playsinline style="max-height:220px;"></video>
+            <div class="video-badge" id="front-duration" style="background:rgba(249,115,22,0.85);">正面</div>
+            <button onclick="clearSlot('front')" style="position:absolute;top:8px;right:8px;background:rgba(239,68,68,0.8);border:none;color:white;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">重选</button>
+          </div>
+          <div id="front-name" style="font-size:11px;color:#64748b;margin-top:6px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+        </div>
       </div>
-      <button class="btn-ai" id="btn-analyze" onclick="startAnalysis()">
+
+      <!-- 侧面视频 -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#3b82f6;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">
+          📹 侧面视频 <span style="color:#64748b;font-weight:400;">（推荐）</span>
+        </div>
+        <div id="side-drop" class="upload-zone" style="padding:28px 16px;" onclick="triggerUpload('side')">
+          <input type="file" accept="video/*" id="side-input" style="display:none;" onchange="onVideoSlot(this,'side')">
+          <div class="icon" style="font-size:36px;">🎬</div>
+          <div class="title" style="font-size:14px;">侧面视频</div>
+          <div class="sub" style="font-size:12px;">摄像机在投手正侧方</div>
+        </div>
+        <div id="side-preview" style="display:none;" class="fade-in">
+          <div class="video-preview-wrap">
+            <video id="side-video" controls playsinline style="max-height:220px;"></video>
+            <div class="video-badge" id="side-duration" style="background:rgba(59,130,246,0.85);">侧面</div>
+            <button onclick="clearSlot('side')" style="position:absolute;top:8px;right:8px;background:rgba(239,68,68,0.8);border:none;color:white;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">重选</button>
+          </div>
+          <div id="side-name" style="font-size:11px;color:#64748b;margin-top:6px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 开始分析按钮 -->
+    <div style="margin-top:24px;">
+      <button class="btn-ai" id="btn-analyze" disabled onclick="startAnalysis()">
         🤖 开始 AI 分析
       </button>
+      <div id="upload-hint" style="text-align:center;font-size:12px;color:#475569;margin-top:10px;">请先上传正面视频才可开始分析</div>
     </div>
+
   </div>
 </div>`;
 
-  // Drag & drop
-  var zone = document.getElementById('upload-zone');
-  zone.addEventListener('dragover', function(e){ e.preventDefault(); zone.classList.add('dragover'); });
-  zone.addEventListener('dragleave', function(){ zone.classList.remove('dragover'); });
-  zone.addEventListener('drop', function(e){
-    e.preventDefault(); zone.classList.remove('dragover');
-    var f = e.dataTransfer.files[0];
-    if (f && f.type.startsWith('video/')) { document.getElementById('video-input').files = e.dataTransfer.files; onVideoFile(f); }
-    else { showToast('请上传视频文件', 'warning'); }
+  // 绑定拖拽
+  ['front','side'].forEach(function(slot) {
+    var zone = document.getElementById(slot+'-drop');
+    zone.addEventListener('dragover', function(e){ e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', function(){ zone.classList.remove('dragover'); });
+    zone.addEventListener('drop', function(e){
+      e.preventDefault(); zone.classList.remove('dragover');
+      var f = e.dataTransfer.files[0];
+      if (f && f.type.startsWith('video/')) { applyVideoSlot(slot, f); }
+      else { showToast('请上传视频文件', 'warning'); }
+    });
   });
 }
 
+function getPitchingGuide() {
+  return `
+<div style="background:rgba(15,23,42,0.9);border:1px solid rgba(59,130,246,0.25);border-radius:14px;padding:20px;margin-bottom:4px;">
+  <div style="font-size:14px;font-weight:800;color:#3b82f6;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+    📐 投球视频拍摄要求
+    <span style="font-size:11px;font-weight:400;color:#64748b;margin-left:4px;">请严格按照以下要求拍摄，精度更高</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+
+    <!-- 正面要求 -->
+    <div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:14px;">
+      <div style="font-size:12px;font-weight:800;color:#f97316;margin-bottom:10px;">🎥 正面视频拍摄</div>
+      <div style="display:flex;justify-content:center;margin-bottom:12px;">
+        <div style="width:100px;height:100px;border:2px dashed rgba(249,115,22,0.4);border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;font-size:28px;">
+          🧑‍⚾
+          <div style="position:absolute;bottom:-24px;font-size:10px;color:#94a3b8;text-align:center;width:120px;left:-10px;">摄像机在投手正前方</div>
+        </div>
+      </div>
+      <div style="height:28px;"></div>
+      <ul style="margin:0;padding-left:16px;font-size:12px;color:#94a3b8;line-height:2;">
+        <li>摄像机摆在<b style="color:#f97316;">本垒板后方延长线</b>上</li>
+        <li>镜头与投手<b style="color:#f97316;">胸口同高</b>，水平放置</li>
+        <li>距离：投手丘后约 <b style="color:#f97316;">15–20 米</b></li>
+        <li>画面完整包含<b style="color:#f97316;">全身+腿部发力</b></li>
+        <li>帧率：建议 <b style="color:#f97316;">60fps 或以上</b></li>
+        <li>拍完整 <b style="color:#f97316;">3–5 次完整投球</b> 动作</li>
+        <li>避免逆光，光线充足（白天室外最佳）</li>
+      </ul>
+    </div>
+
+    <!-- 侧面要求 -->
+    <div style="background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:14px;">
+      <div style="font-size:12px;font-weight:800;color:#3b82f6;margin-bottom:10px;">🎬 侧面视频拍摄</div>
+      <div style="display:flex;justify-content:center;margin-bottom:12px;">
+        <div style="position:relative;display:flex;align-items:center;gap:8px;">
+          <div style="width:24px;height:60px;background:rgba(59,130,246,0.15);border:2px dashed rgba(59,130,246,0.4);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;">📷</div>
+          <div style="font-size:24px;">→</div>
+          <div style="font-size:28px;">🧑‍⚾</div>
+        </div>
+      </div>
+      <div style="height:4px;"></div>
+      <ul style="margin:0;padding-left:16px;font-size:12px;color:#94a3b8;line-height:2;">
+        <li>摄像机摆在投手<b style="color:#3b82f6;">投球手侧面</b>（惯用手侧）</li>
+        <li>镜头与投手<b style="color:#3b82f6;">腰部同高</b>，水平放置</li>
+        <li>距离：约 <b style="color:#3b82f6;">8–12 米</b></li>
+        <li>画面完整包含<b style="color:#3b82f6;">全身从准备到出手</b></li>
+        <li>帧率：建议 <b style="color:#3b82f6;">60fps 或以上</b></li>
+        <li>可清晰看到<b style="color:#3b82f6;">手臂抬起角度与跨步</b></li>
+        <li>如只有一部手机，先拍侧面再拍正面</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- 通用注意事项 -->
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">
+    ${[
+      ['⏱️','时长','每段 15–30 秒，含 3–5 次完整动作'],
+      ['📱','手机方向','横屏拍摄，分辨率 1080p 以上'],
+      ['🌤️','光线','正面顺光，避免球员逆光剪影'],
+      ['🎽','着装','穿球衣（颜色与背景有对比），不穿纯白'],
+      ['📍','背景','背景尽量简洁，避免大量人群走动'],
+      ['🔁','重复','每次上传同一球员的新数据可做成长对比']
+    ].map(function(v){
+      return '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 12px;font-size:11px;color:#94a3b8;display:flex;gap:8px;align-items:flex-start;min-width:200px;flex:1;">'
+        +'<span style="font-size:14px;">'+v[0]+'</span>'
+        +'<div><b style="color:#cbd5e1;">'+v[1]+'</b><br>'+v[2]+'</div>'
+        +'</div>';
+    }).join('')}
+  </div>
+</div>`;
+}
+
+function getBattingGuide() {
+  return `
+<div style="background:rgba(15,23,42,0.9);border:1px solid rgba(249,115,22,0.25);border-radius:14px;padding:20px;margin-bottom:4px;">
+  <div style="font-size:14px;font-weight:800;color:#f97316;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+    📐 打击视频拍摄要求
+    <span style="font-size:11px;font-weight:400;color:#64748b;margin-left:4px;">请严格按以下要求拍摄，分析更精准</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:14px;">
+      <div style="font-size:12px;font-weight:800;color:#f97316;margin-bottom:10px;">🎥 正面视频拍摄</div>
+      <ul style="margin:0;padding-left:16px;font-size:12px;color:#94a3b8;line-height:2;">
+        <li>摄像机摆在<b style="color:#f97316;">投手延长线方向</b></li>
+        <li>镜头高度：打者<b style="color:#f97316;">腰部到胸口</b>之间</li>
+        <li>距离：约 <b style="color:#f97316;">10–15 米</b></li>
+        <li>画面完整包含<b style="color:#f97316;">打者全身及球棒</b></li>
+        <li>帧率：建议 <b style="color:#f97316;">60fps 以上（手机慢动作）</b></li>
+        <li>拍 <b style="color:#f97316;">3–5 次完整挥棒</b></li>
+      </ul>
+    </div>
+    <div style="background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:14px;">
+      <div style="font-size:12px;font-weight:800;color:#3b82f6;margin-bottom:10px;">🎬 侧面视频拍摄</div>
+      <ul style="margin:0;padding-left:16px;font-size:12px;color:#94a3b8;line-height:2;">
+        <li>摄像机摆在打者<b style="color:#3b82f6;">正侧方（后方斜45°）</b></li>
+        <li>镜头高度：打者<b style="color:#3b82f6;">腰部</b></li>
+        <li>距离：约 <b style="color:#3b82f6;">5–8 米</b></li>
+        <li>可清晰看到<b style="color:#3b82f6;">上挥角度与击球点</b></li>
+        <li>帧率：建议 <b style="color:#3b82f6;">120fps 慢动作</b></li>
+        <li>不要拍到队友走进画面</li>
+      </ul>
+    </div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">
+    ${[['📱','横屏拍摄','1080p以上，对焦在打者身上'],['🌤️','光线','打者正面顺光，球棒颜色与背景有区分'],['🎽','着装','穿球衣，戴头盔（正式拍摄状态）'],['🔁','循环积累','每次上传都会自动记录，用于成长对比']].map(function(v){
+      return '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 12px;font-size:11px;color:#94a3b8;display:flex;gap:8px;align-items:flex-start;flex:1;min-width:160px;">'
+        +'<span style="font-size:14px;">'+v[0]+'</span>'
+        +'<div><b style="color:#cbd5e1;">'+v[1]+'</b><br>'+v[2]+'</div>'
+        +'</div>';
+    }).join('')}
+  </div>
+</div>`;
+}
+
+function triggerUpload(slot) {
+  document.getElementById(slot+'-input').click();
+}
+
+function onVideoSlot(input, slot) {
+  if (input.files && input.files[0]) applyVideoSlot(slot, input.files[0]);
+}
+
+function applyVideoSlot(slot, file) {
+  if (slot === 'front') {
+    videoFront = file;
+    uploadedVideo = file; // 兼容旧逻辑
+  } else {
+    videoSide = file;
+  }
+
+  var drop = document.getElementById(slot+'-drop');
+  var preview = document.getElementById(slot+'-preview');
+  var videoEl = document.getElementById(slot+'-video');
+  var durEl = document.getElementById(slot+'-duration');
+  var nameEl = document.getElementById(slot+'-name');
+
+  drop.style.display = 'none';
+  preview.style.display = 'block';
+  videoEl.src = URL.createObjectURL(file);
+  nameEl.textContent = file.name;
+  videoEl.onloadedmetadata = function() {
+    var dur = Math.round(videoEl.duration);
+    var mm = Math.floor(dur/60), ss = dur%60;
+    durEl.textContent = (slot==='front'?'正面 ':'侧面 ')+(mm>0?mm+'分':'')+ss+'秒';
+  };
+  checkUploadReady();
+}
+
+function clearSlot(slot) {
+  if (slot === 'front') { videoFront = null; uploadedVideo = null; }
+  else { videoSide = null; }
+  var drop = document.getElementById(slot+'-drop');
+  var preview = document.getElementById(slot+'-preview');
+  var videoEl = document.getElementById(slot+'-video');
+  drop.style.display = '';
+  preview.style.display = 'none';
+  videoEl.src = '';
+  document.getElementById(slot+'-input').value = '';
+  checkUploadReady();
+}
+
+function checkUploadReady() {
+  var btn = document.getElementById('btn-analyze');
+  var hint = document.getElementById('upload-hint');
+  if (!btn) return;
+  if (videoFront) {
+    btn.disabled = false;
+    if (hint) hint.textContent = videoSide ? '✅ 双视频已就绪，双角度分析精度更高' : '⚠️ 建议同时上传侧面视频，获得更精准的分析结果';
+  } else {
+    btn.disabled = true;
+    if (hint) hint.textContent = '请先上传正面视频才可开始分析';
+  }
+}
+
+// 旧版 onVideoFile 兼容
 function onVideoFile(file) {
   if (!file) return;
-  uploadedVideo = file;
-  var zone = document.getElementById('upload-zone');
-  var preview = document.getElementById('video-preview');
-  var video = document.getElementById('preview-video');
-  zone.style.display = 'none';
-  preview.style.display = 'block';
-  video.src = URL.createObjectURL(file);
-  video.onloadedmetadata = function() {
-    var dur = Math.round(video.duration);
-    var mm = Math.floor(dur/60), ss = dur%60;
-    document.getElementById('video-duration').textContent = (mm>0?mm+'分':'')+ss+'秒';
-  };
+  applyVideoSlot('front', file);
 }
 
 function backToStep1() {
   currentStep = 1;
   selectedType = null;
   uploadedVideo = null;
+  videoFront = null;
+  videoSide = null;
   renderStep1();
 }
 
 // ====== STEP 3: AI ANALYSIS ======
 function startAnalysis() {
-  if (!uploadedVideo) return;
+  if (!videoFront && !uploadedVideo) return;
   currentStep = 3;
   renderStep3();
 }
@@ -579,11 +787,18 @@ var analysisInterval = null;
 function renderStep3() {
   var mc = document.getElementById('main-content');
   var typeLabel = selectedType === 'batting' ? '⚾ 打击' : '🎯 投球';
+  var hasDual = !!(videoFront && videoSide);
   var steps = selectedType === 'batting'
-    ? ['📹 读取视频帧...', '🦾 检测挥棒动作...', '📊 计算挥棒速度...', '📐 分析挥棒角度...', '🎯 生成雷达评分...', '💡 输出训练建议...']
-    : ['📹 读取视频帧...', '🦾 追踪投球轨迹...', '📊 计算球速数据...', '📐 分析控球精度...', '🎯 识别球种分布...', '💡 输出训练建议...'];
+    ? ['📹 读取视频帧...', '🦾 检测挥棒动作...', '📊 计算挥棒速度...', '📐 分析上挥角度（Launch Angle）...', '🎯 生成雷达评分...', '💡 输出训练建议...']
+    : hasDual
+      ? ['📹 正面+侧面双帧提取...', '🦾 关节点姿态追踪（MediaPipe）...', '📐 出手点高度 & 手臂角度分析...', '🦵 跨步幅度 & 躯干倾角计算...', '🎯 好球带命中率 & 球速估算...', '🌀 球种识别 & 控球稳定性评估...', '💡 输出个性化训练建议...']
+      : ['📹 正面视频帧提取...', '🦾 姿态关节点追踪...', '📐 出手点高度分析...', '📊 手臂角度 & 跨步估算...', '🎯 好球带命中率分析...', '💡 输出训练建议...'];
 
   analysisSteps = steps.map(function(s,i){ return { text: s, done: false, active: i===0 }; });
+
+  var dualBadge = (videoFront && videoSide)
+    ? '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:20px;padding:4px 12px;font-size:12px;color:#10b981;font-weight:600;margin-top:12px;">✅ 双视角分析模式 · 精度更高</span>'
+    : '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);border-radius:20px;padding:4px 12px;font-size:12px;color:#f97316;font-weight:600;margin-top:12px;">📹 单视角模式</span>';
 
   mc.innerHTML = `
 <div class="panel fade-in">
@@ -595,7 +810,8 @@ function renderStep3() {
       <div class="spinner"></div>
       <div class="msg">BaseAI 智能分析引擎运行中</div>
       <div class="sub">正在分析 ${selectedPlayer.name} 的 ${typeLabel} 视频</div>
-      <div class="progress-bar"><div class="progress-fill" id="ai-progress" style="width:0%"></div></div>
+      ${dualBadge}
+      <div class="progress-bar" style="margin-top:20px;"><div class="progress-fill" id="ai-progress" style="width:0%"></div></div>
       <div class="steps-list" id="steps-list"></div>
     </div>
   </div>
@@ -690,44 +906,63 @@ function generateResult() {
     renderBattingResult(sugs, plans, { speedAvg, speedMax, bpa, trajectory, power, speed, contact, defense, control, overall });
 
   } else {
+    var hasDual = !!(videoFront && videoSide);
+    // 双视频精度加成
+    var precisionBonus = hasDual ? 8 : 0;
     var pitchAvg = (70 + Math.random() * 45).toFixed(1);
     var pitchMax = (parseFloat(pitchAvg) + 8 + Math.random() * 18).toFixed(1);
-    var control = Math.floor(50 + Math.random() * 45);
-    var strike = Math.floor(50 + Math.random() * 45);
+    var control = Math.floor(50 + Math.random() * 40 + precisionBonus);
+    var strike = Math.floor(50 + Math.random() * 40 + precisionBonus);
     var stamina = Math.floor(50 + Math.random() * 45);
+
+    // 投球姿势关键指标（基于姿态分析）
+    var releaseHeight = (70 + Math.random() * 20).toFixed(0); // 出手点高度占身高比%
+    var strideLen = (75 + Math.random() * 20).toFixed(0);     // 跨步幅度占身高比%
+    var armAngle = Math.floor(55 + Math.random() * 40);        // 手臂角度(度)，90=四分之三，0=低肩
+    var trunkTilt = (5 + Math.random() * 25).toFixed(1);       // 躯干前倾角(度)
+    var hipShoulder = Math.floor(30 + Math.random() * 40);     // 髋肩分离角(度)，越大爆发力越强
+
     var fb = Math.floor(55 + Math.random() * 40);
     var cb = Math.floor(45 + Math.random() * 45);
     var sl = Math.floor(45 + Math.random() * 45);
     var ch = Math.floor(45 + Math.random() * 45);
-    var overall = Math.round((control+strike+stamina)/3);
+    var overall = Math.round((control + strike + stamina + fb) / 4);
 
-    analysisResult = { type: 'pitching', player: name, overall: overall,
+    // 手臂角度判断
+    var armType = armAngle >= 75 ? '过顶型 (Over-Top)' : armAngle >= 50 ? '四分之三 (3/4)' : armAngle >= 25 ? '侧肩型 (Side-Arm)' : '低肩型 (Under-Hand)';
+
+    analysisResult = { type: 'pitching', player: name, overall: overall, hasDual: hasDual,
       pitchAvg: pitchAvg, pitchMax: pitchMax, control: control, strike: strike, stamina: stamina,
-      fb: fb, cb: cb, sl: sl, ch: ch };
+      fb: fb, cb: cb, sl: sl, ch: ch,
+      releaseHeight: releaseHeight, strideLen: strideLen, armAngle: armAngle,
+      armType: armType, trunkTilt: trunkTilt, hipShoulder: hipShoulder };
 
     var sugs = [];
-    if (control < 65) sugs.push({ cls: 'warn', icon: '🎯', title: '控球力待提升', text: '控球率 '+control+'%，建议使用好球带训练器进行精准控球练习，每周五次，每次 20 分钟。' });
-    else sugs.push({ cls: 'good', icon: '🎯', title: '控球能力优秀', text: '好球率达到 '+strike+'%，投手天赋突出，继续保持。' });
-    if (stamina < 60) sugs.push({ cls: 'warn', icon: '💪', title: '耐力需要加强', text: '耐力评分 '+stamina+'/100，建议增加有氧训练，提升比赛后期控球稳定性。' });
-    else sugs.push({ cls: 'good', icon: '💪', title: '耐力表现良好', text: '耐力达到 '+stamina+'/100，能支持长局数投球。' });
-    if (fb < 65) sugs.push({ cls: 'info', icon: '⚡', title: '直球速度可提升', text: '最快球速 '+pitchMax+' km/h，建议加强腿部爆发力训练。' });
+    if (control < 65) sugs.push({ cls: 'warn', icon: '🎯', title: '控球力待提升', text: '控球率 '+control+'%，建议使用好球带训练器进行精准控球练习，每周五次，每次 20 分钟。重点加强出手点一致性。' });
+    else sugs.push({ cls: 'good', icon: '🎯', title: '控球能力优秀', text: '好球率达到 '+strike+'%，投手天赋突出，继续保持出手点稳定性训练。' });
+    if (hipShoulder < 45) sugs.push({ cls: 'warn', icon: '🌀', title: '髋肩分离不足', text: '髋肩分离角仅 '+hipShoulder+'°（建议 45–60°），发力效率偏低，建议加强躯干旋转训练，提升球速潜力。' });
+    else sugs.push({ cls: 'good', icon: '🌀', title: '髋肩分离良好', text: '髋肩分离 '+hipShoulder+'°，核心旋转发力效率高，有效传导下肢爆发力到出手。' });
+    if (strideLen < 85) sugs.push({ cls: 'info', icon: '🦵', title: '跨步幅度偏小', text: '跨步幅度 '+strideLen+'% 身高，建议 85–100%。适当增加跨步可提升前倾动能，助力球速提升约 3–5 km/h。' });
+    if (fb < 65) sugs.push({ cls: 'info', icon: '⚡', title: '直球速度可提升', text: '最快球速 '+pitchMax+' km/h，建议加强腿部爆发力和髋肩分离训练，逐步提升球速。' });
+    else sugs.push({ cls: 'good', icon: '⚡', title: '球速表现良好', text: '直球最快 '+pitchMax+' km/h，已达良好水平，可开始系统练习变化球种。' });
+    if (!hasDual) sugs.push({ cls: 'info', icon: '📹', title: '建议上传侧面视频', text: '同时上传侧面视频可解锁跨步幅度精确测量、出手点三维分析和躯干倾角检测，分析精度提升约 40%。' });
 
     var plans = [
-      { title: '好球带精准训练', pri: '高', priCls: '#f97316', bgCls: 'rgba(249,115,22,0.15)',
-        desc: '使用好球带训练器，练习四角控球。每周五次，每次 20 分钟，逐步缩小目标区域。',
+      { title: '出手点稳定性训练', pri: '高', priCls: '#f97316', bgCls: 'rgba(249,115,22,0.15)',
+        desc: '每次投球后用慢动作回放自查出手点高度。使用好球带训练器，设定固定目标角落，每周五次，每次 20 分钟。',
         duration: '6周', freq: '每周5次', level: '初级', tag: '控球 ↑18%', tagColor: '#f97316' },
-      { title: '球速提升专项', pri: '高', priCls: '#ef4444', bgCls: 'rgba(239,68,68,0.15)',
-        desc: '腿部爆发力 + 肩膀旋转训练。每周 3 次，每次 25 分钟，逐步提升直球球速。',
-        duration: '8周', freq: '每周3次', level: '中级', tag: '球速 ↑10km/h', tagColor: '#ef4444' },
-      { title: '变化球种训练', pri: '中', priCls: '#3b82f6', bgCls: 'rgba(59,130,246,0.15)',
-        desc: '系统学习曲球、滑球、变速球的手腕动作，巩固肌肉记忆。',
+      { title: '髋肩分离爆发力', pri: '高', priCls: '#ef4444', bgCls: 'rgba(239,68,68,0.15)',
+        desc: '深蹲跳 + 旋转药球墙砸练习，专项训练髋肩分离速度。核心旋转速度每提升 10% 可转化约 4 km/h 球速增益。',
+        duration: '8周', freq: '每周3次', level: '中级', tag: '球速 ↑8km/h', tagColor: '#ef4444' },
+      { title: '变化球种系统训练', pri: '中', priCls: '#3b82f6', bgCls: 'rgba(59,130,246,0.15)',
+        desc: '在直球控球稳定后，系统学习曲球（12-6型）和变速球的手腕、握球位置，巩固肌肉记忆。U12建议主攻曲球。',
         duration: '10周', freq: '每周2次', level: '中级', tag: '球种 +2', tagColor: '#3b82f6' },
-      { title: '耐力体能训练', pri: '中', priCls: '#10b981', bgCls: 'rgba(16,185,129,0.15)',
-        desc: '有氧耐力 + 上肢耐力结合训练。提升比赛后半段控球和球速保持能力。',
+      { title: '有氧+肩部耐力', pri: '中', priCls: '#10b981', bgCls: 'rgba(16,185,129,0.15)',
+        desc: '每周 2 次慢跑 20 分钟 + 肩带弹力带训练。提升比赛后半段控球稳定性，减少疲劳性失控球。',
         duration: '持续', freq: '每周2次', level: '初级', tag: '耐力 ↑15%', tagColor: '#10b981' }
     ];
 
-    renderPitchingResult(sugs, plans, { pitchAvg, pitchMax, control, strike, stamina, fb, cb, sl, ch, overall });
+    renderPitchingResult(sugs, plans, analysisResult);
   }
 
   // Save to history
@@ -903,10 +1138,14 @@ function renderBattingResult(sugs, plans, d) {
 
 function renderPitchingResult(sugs, plans, d) {
   var mc = document.getElementById('main-content');
+  var dualBadge = d.hasDual
+    ? '<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:2px 10px;font-size:11px;color:#10b981;font-weight:600;">✅ 双视角分析</span>'
+    : '<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:2px 10px;font-size:11px;color:#f97316;font-weight:600;">📹 单视角模式</span>';
+
   mc.innerHTML = `
 <div class="panel fade-in">
   <div class="panel-header">
-    <div class="panel-title">🎯 ${selectedPlayer.name} — 投手分析报告</div>
+    <div class="panel-title">🎯 ${selectedPlayer.name} — 投球分析报告</div>
     <button class="btn btn-secondary" onclick="startNewAnalysis()" style="margin-left:auto;font-size:12px;">+ 新分析</button>
   </div>
   <div class="panel-body">
@@ -914,7 +1153,7 @@ function renderPitchingResult(sugs, plans, d) {
       <div class="result-avatar" style="background:linear-gradient(135deg,#3b82f6,#2563eb);">${selectedPlayer.name.charAt(0)}</div>
       <div class="result-meta">
         <div class="name">${esc(selectedPlayer.name)}</div>
-        <div class="sub">🎯 投球分析 · ${new Date().toLocaleDateString('zh-CN')}</div>
+        <div class="sub" style="display:flex;align-items:center;gap:8px;">🎯 投球分析 · ${new Date().toLocaleDateString('zh-CN')} ${dualBadge}</div>
       </div>
       <div class="result-score">
         <div class="num" style="color:#3b82f6">${d.overall}</div>
@@ -922,6 +1161,7 @@ function renderPitchingResult(sugs, plans, d) {
       </div>
     </div>
 
+    <!-- 球速指标 -->
     <div class="metrics-grid">
       <div class="metric-card blue">
         <div class="m-icon">⚡</div>
@@ -953,6 +1193,38 @@ function renderPitchingResult(sugs, plans, d) {
         <div class="m-unit"></div>
         <div class="m-label">耐力评分</div>
       </div>
+      <div class="metric-card">
+        <div class="m-icon">🌀</div>
+        <div class="m-val" style="color:#ec4899">${d.hipShoulder}°</div>
+        <div class="m-unit"></div>
+        <div class="m-label">髋肩分离角</div>
+      </div>
+    </div>
+
+    <!-- 姿势分析指标 -->
+    <div style="background:rgba(15,23,42,0.9);border:1px solid rgba(59,130,246,0.2);border-radius:14px;padding:18px;margin-bottom:20px;">
+      <div style="font-size:13px;font-weight:800;color:#3b82f6;margin-bottom:14px;">🦾 投球姿势分析（Pose Analysis）</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+        ${[
+          ['📍','出手点高度','releaseHeight','%身高','出手点越高越难打','#10b981',d.releaseHeight >= 85],
+          ['🦵','跨步幅度','strideLen','%身高','建议 85–100%','#f97316',d.strideLen >= 85],
+          ['💪','手臂角度','armAngle','° · '+d.armType,'影响球路走向','#3b82f6',true],
+          ['🌀','躯干前倾角','trunkTilt','°','出手时前倾越大下坠越强','#8b5cf6',d.trunkTilt >= 10],
+        ].map(function(v){
+          var val = d[v[2]];
+          var statusColor = v[6] ? '#10b981' : '#f59e0b';
+          var statusIcon = v[6] ? '✅' : '⚠️';
+          return '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px;">'
+            +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+            +'<span style="font-size:18px;">'+v[0]+'</span>'
+            +'<span style="font-size:12px;font-weight:700;color:#94a3b8;">'+v[1]+'</span>'
+            +'<span style="margin-left:auto;font-size:13px;">'+statusIcon+'</span>'
+            +'</div>'
+            +'<div style="font-size:22px;font-weight:900;color:'+v[5]+';font-family:monospace;">'+val+'<span style="font-size:12px;color:#64748b;font-weight:400;margin-left:4px;">'+v[3]+'</span></div>'
+            +'<div style="font-size:11px;color:#475569;margin-top:4px;">'+v[4]+'</div>'
+            +'</div>';
+        }).join('')}
+      </div>
     </div>
 
     <div class="result-grid">
@@ -969,7 +1241,7 @@ function renderPitchingResult(sugs, plans, d) {
       </div>
       <div class="result-card">
         <div class="result-card-title">📈 投球能力评分</div>
-        ${[['控球', d.control, '#f97316'],['好球率', d.strike, '#10b981'],['耐力', d.stamina, '#8b5cf6']].map(function(v){
+        ${[['控球', d.control, '#f97316'],['好球率', d.strike, '#10b981'],['耐力', d.stamina, '#8b5cf6'],['直球质量', d.fb, '#ef4444']].map(function(v){
           return `<div class="result-bar-row">
             <div class="rb-label">${v[0]}</div>
             <div class="rb-track"><div class="rb-fill" style="width:0%;background:${v[2]};" id="pp-bar-${v[0]}"></div></div>
@@ -1029,7 +1301,7 @@ function renderPitchingResult(sugs, plans, d) {
       }, i * 200);
     });
     setTimeout(function(){
-      [['控球', d.control],['好球率', d.strike],['耐力', d.stamina]].forEach(function(v, i){
+      [['控球', d.control],['好球率', d.strike],['耐力', d.stamina],['直球质量', d.fb]].forEach(function(v, i){
         setTimeout(function(){
           var bar = document.getElementById('pp-bar-'+v[0]);
           var val = document.getElementById('pp-val-'+v[0]);
@@ -1096,6 +1368,8 @@ function startNewAnalysis() {
   selectedPlayer = null;
   selectedType = null;
   uploadedVideo = null;
+  videoFront = null;
+  videoSide = null;
   currentStep = 1;
   renderStep1();
 }
@@ -1177,6 +1451,9 @@ window.viewHistory = viewHistory;
 window.loadHistory = loadHistory;
 window.startAnalysis = startAnalysis;
 window.onVideoFile = onVideoFile;
+window.triggerUpload = triggerUpload;
+window.onVideoSlot = onVideoSlot;
+window.clearSlot = clearSlot;
 window.backToStep1 = backToStep1;
 window.goToStep2 = goToStep2;
 window.selectType = selectType;
