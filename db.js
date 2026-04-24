@@ -136,5 +136,19 @@ var DB = {
 
   updatePlayerGameStats: function(playerId, gameStats, callback) {
     FirebaseService.updatePlayerGameStats(playerId, gameStats, callback);
+  },
+
+  // ── Coach Reviews ─────────────────────────────────────────
+
+  saveCoachReview: function(review, callback) {
+    FirebaseService.saveCoachReview(review, callback);
+  },
+
+  getCoachReviews: function(callback) {
+    FirebaseService.getCoachReviews(callback);
+  },
+
+  getCoachReviewsByPlayer: function(playerId, callback) {
+    FirebaseService.getCoachReviewsByPlayer(playerId, callback);
   }
 };
