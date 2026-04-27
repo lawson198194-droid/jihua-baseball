@@ -1689,9 +1689,8 @@ function parseGCText(text) {
     }
   }
 
-  // "Kaakiro Lions Majors TTBC Majors Eagles"
-  // Use innings codes directly to identify which team is home/away
-  // foundInnings[0] = first team in scoreboard (away), foundInnings[1] = second (home)
+  // Use innings codes (KKRL, TTBC) to split the full title
+  // "Kaakiro Lions Majors TTBC Majors Eagles" → "Kaakiro Lions Majors" / "TTBC Majors Eagles"
   var tmpCodes = [];
   var tmpInnRe = /([A-Z]{4,})\s+([\dX][\d\sX]{5,})/g;
   var m3;
@@ -1699,52 +1698,28 @@ function parseGCText(text) {
     var n3 = m3[2].trim().split(/\s+/);
     if (n3.length >= 5) tmpCodes.push(m3[1]);
   }
-  // Find each team's full name in title by matching the 4-letter codes (KKRL, TTBC)
-  // Skip generic words like "MAJO" (from "Majors")
-  var skipWords = { MAJO: true, MAJOR: true, MINOR: true, EAGLE: true, LIONS: true, TIGER: true };
-  var words = cleanTitle.split(/\s+/);
-  var homeIdx = -1, awayIdx = -1;
-  for (var wi = words.length - 1; wi >= 0; wi--) {
-    var w = words[wi];
-    if (skipWords[w]) continue;
-    if (homeIdx < 0 && w.length >= 4 && !isNaN(parseInt(w))) continue; // skip pure numbers
-    if (homeIdx < 0 && /^[A-Z]{4,}$/.test(w)) { homeIdx = wi; }
-    else if (homeIdx >= 0 && awayIdx < 0 && /^[A-Z]{4,}$/.test(w)) { awayIdx = wi; }
-    if (homeIdx >= 0 && awayIdx >= 0) break;
-  }
-  // Build team names
-  if (homeIdx >= 0 && awayIdx >= 0) {
-    result.home_team = words.slice(0, homeIdx).join(' ').replace(/^(Away|Home)\s+/, '').trim() || '(Home)';
-    result.away_team = words.slice(homeIdx + 1).join(' ').replace(/^(Away|Home)\s+/, '').trim() || '(Away)';
-  } else if (homeIdx >= 0) {
-    result.home_team = words.slice(0, homeIdx).join(' ');
-    result.away_team = words.slice(homeIdx + 1).join(' ');
+  // Build team names by splitting full text at the FIRST occurrence of away code (KKRL)
+  // Note: awayCode lives in innings section, NOT in cleanTitle — must search 'text'
+  var awayCode = tmpCodes.length >= 1 ? tmpCodes[0] : '';
+  var homeCode = tmpCodes.length >= 2 ? tmpCodes[1] : '';
+  var awayIdx = text.indexOf(awayCode); // search full text, not just title
+  if (awayIdx >= 0) {
+    // home team = everything before awayCode in title; away team = after
+    var titleBeforeCode = cleanTitle.substring(0, cleanTitle.indexOf(awayCode.substring(0,4)));
+    result.home_team = titleBeforeCode.trim().replace(/^(Away|Home)\s+/, '') || '(Home)';
+    result.away_team = cleanTitle.substring(cleanTitle.indexOf(awayCode.substring(0,4)) + awayCode.length).trim().replace(/^(Away|Home)\s+/, '') || '(Away)';
   } else {
     result.away_team = '(Away)';
     result.home_team = '(Home)';
   }
-  // Detect if away/home are swapped vs innings codes
-  // away team abbrev = tmpCodes[0], home team abbrev = tmpCodes[1]
+  // Swap if away_team contains homeCode (i.e., codes were in wrong order)
   if (tmpCodes.length >= 2) {
-    var awayCode = tmpCodes[0]; // e.g. "KKRL"
-    var homeCode = tmpCodes[1]; // e.g. "TTBC"
-    var needsSwap = false;
-    // Check: does away team contain the home code (TTBC)?
-    // e.g. away_team = "TTBC Majors Eagles" contains "TTBC" → swapped
     if (result.away_team.indexOf(homeCode) >= 0) {
-      needsSwap = true;
-    }
-    // Also check the positive case (shouldn't trigger with "MAJO" bug, but defensive)
-    if (result.home_team.indexOf(awayCode) >= 0 && result.away_team.indexOf(homeCode) < 0) {
-      needsSwap = false; // already correct
-    }
-    if (needsSwap) {
-      // Swap team names and scores
+      // Away contains home code → swap
       var tmp = result.home_team;
       result.home_team = result.away_team;
       result.away_team = tmp;
       var ts = result.home_score; result.home_score = result.away_score; result.away_score = ts;
-      // Swap innings arrays to match
       if (foundInnings.length >= 2) {
         var tInn = foundInnings[0];
         foundInnings[0] = foundInnings[1];
@@ -1798,60 +1773,69 @@ function parseGCText(text) {
   var battingBlock = text.substring(battingStart + 7, pitchingStart);
   var pitchingBlock = text.substring(pitchingStart + 8);
 
-  // ── Batting parse: split by '#NN' to handle concatenated player rows ────────
-  // Pattern: "Name #Num (POS) AB R H RBI BB SO" — name is BEFORE '#', rest is AFTER
-  // Split by '#' → each segment = "Name " (before) + each segment = "NN (POS) stats" (after)
-  var batSegments = battingBlock.split('#');
-  // First segment is junk (before first '#'), skip it
+  // ── Batting parse: scan battingBlock line-by-line to find player rows ──────
+  // Each player row: "Name #NN (POS) AB R H RBI BB SO"
+  // "Totals" lines mark the end of each team's batting section
+  var batLines = battingBlock.split('\n');
+  var playerRowRe = /#(\d+)\s*\(([A-Z0-9]+)\)/; // finds "#NN (POS)" pattern
   var batAll = [];
-  for (var bi = 1; bi < batSegments.length; bi++) {
-    var seg = batSegments[bi];
-    var numMatch = seg.match(/^(\d+)\s*\(([A-Z0-9]+)\)/);
-    if (!numMatch) continue; // skip if seg doesn't start with "#NN (POS)" → it's a name-only segment
-    var number = parseInt(numMatch[1]);
-    var pos = numMatch[2];
-    // Name lives in batSegments[bi-1] (text before the '#')
-    var nameBefore = batSegments[bi - 1].trim();
-    if (!nameBefore) continue;
-    // Stats: 6 numbers after (POS) — might span into next segment if concatenated
-    var afterPos = seg.substring(numMatch[0].length);
-    var statNums = afterPos.trim().split(/\s+/);
-    // If we have fewer than 6 stats, peek into batSegments[bi+1] for remaining numbers
-    var nextSeg = batSegments[bi + 1] || '';
-    var extraNums = nextSeg.trim().split(/\s+/);
-    var allNums = statNums.concat(extraNums);
-    var stats = [];
-    for (var si = 0; si < allNums.length && stats.length < 6; si++) {
-      if (/^\d+$/.test(allNums[si])) stats.push(parseInt(allNums[si]));
-    }
-    if (stats.length < 6) continue; // need all 6 stats (AB R H RBI BB SO)
-    // Extract name from the last 1-2 words of nameBefore
-    var parts = nameBefore.split(/\s+/);
-    var name = parts.slice(-2).join(' ');
-    if (!validName(name)) {
-      name = parts.slice(-1).join(' ');
-      if (!validName(name)) {
-        console.log('[GC Bat] SKIP name="' + nameBefore + '" (validName rejected)');
-        continue;
+  for (var li = 0; li < batLines.length; li++) {
+    var line = batLines[li];
+    // Find all player row patterns in this line (handles 1-2 players per line)
+    var matches = line.match(/#(\d+)\s*\(([A-Z0-9]+)\)/g) || [];
+    for (var mi = 0; mi < matches.length; mi++) {
+      // Extract number and pos from match
+      var m2 = matches[mi].match(/#(\d+)\s*\(([A-Z0-9]+)\)/);
+      if (!m2) continue;
+      var number = parseInt(m2[1]);
+      var pos = m2[2];
+      // Extract name: everything before the match in this line
+      var matchIdx = line.indexOf(matches[mi]);
+      var beforeMatch = line.substring(0, matchIdx).trim();
+      if (!beforeMatch) continue;
+      // Extract stats: everything after the match in this line (or next line)
+      var afterMatch = line.substring(matchIdx + matches[mi].length).trim();
+      // If not enough stats in this line, grab from the next line
+      var statStr = afterMatch + ' ' + (batLines[li + 1] || '');
+      var statNums = statStr.split(/\s+/);
+      var stats = [];
+      for (var si = 0; si < statNums.length && stats.length < 6; si++) {
+        if (/^\d+$/.test(statNums[si])) stats.push(parseInt(statNums[si]));
       }
+      if (stats.length < 6) continue;
+      // Extract name (last 1-2 words)
+      var parts = beforeMatch.split(/\s+/);
+      var name = parts.slice(-2).join(' ');
+      if (!validName(name)) {
+        name = parts.slice(-1).join(' ');
+        if (!validName(name)) continue;
+      }
+      batAll.push({ name: name.trim(), number: number, pos: pos,
+                    ab: stats[0], r: stats[1], h: stats[2], rbi: stats[3], bb: stats[4], so: stats[5] });
     }
-    batAll.push({ name: name.trim(), number: number, pos: pos,
-                  ab: stats[0], r: stats[1], h: stats[2], rbi: stats[3], bb: stats[4], so: stats[5] });
   }
-  console.log('[GC Parse] batAll (split-by-#, count=' + batAll.length + '):');
+  console.log('[GC Parse] batAll (line-scan, count=' + batAll.length + '):');
   batAll.forEach(function(p, i){ console.log('  [' + i + '] ' + p.name + ' #' + p.number + ' (' + p.pos + ') ' + p.ab + ' ' + p.r + ' ' + p.h + ' ' + p.rbi + ' ' + p.bb + ' ' + p.so); });
 
-  // Determine team split: first "Totals" marks end of away team batting
-  var totIdx = battingBlock.indexOf('Totals');
-  var preTotBlock = totIdx >= 0 ? battingBlock.substring(0, totIdx) : battingBlock;
+  // ── Determine team split: first "Totals" line marks end of away team batting ─
+  // Find first "Totals" in battingBlock (case-insensitive, may have spaces before it)
+  var totIdx = battingBlock.toUpperCase().indexOf('TOTALS');
   var preTotCount = 0;
-  for (var pi = 0; pi < batAll.length; pi++) {
-    var p = batAll[pi];
-    var searchText = ' ' + p.name + ' #' + p.number + ' (' + p.pos + ')';
-    if (preTotBlock.indexOf(searchText) >= 0) preTotCount++;
-    else break;
+  if (totIdx >= 0) {
+    var preTotBlock = battingBlock.substring(0, totIdx);
+    // Count batAll entries that appear before "Totals"
+    for (var pi = 0; pi < batAll.length; pi++) {
+      var p = batAll[pi];
+      var searchText = ' ' + p.name + ' #' + p.number + ' (' + p.pos + ')';
+      if (preTotBlock.indexOf(searchText) >= 0) preTotCount++;
+      else break;
+    }
+  } else {
+    // No "Totals" found — use half split
+    preTotCount = Math.ceil(batAll.length / 2);
+    console.log('[GC Parse] No "Totals" in battingBlock — using half split:', preTotCount, '/', batAll.length);
   }
-  console.log('[GC Parse] Away (hk) rows before Totals:', preTotCount, '/ total:', batAll.length);
+  console.log('[GC Parse] Away (hk) rows before Totals:', preTotCount, '/ total:', batAll.length, '| Totals found:', totIdx >= 0);
 
   // Assign to hk_batting / home_batting
   for (var ji = 0; ji < batAll.length; ji++) {
