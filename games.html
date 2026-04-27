@@ -1947,16 +1947,51 @@ function parseGCText(text) {
       pName = pParts.slice(-1).join(' ');
       if (!validName(pName)) continue;
     }
-    // GC Pitching stats order: IP H R ER BB SO HR（共7个整数）
-    var pStatNums = pAfterIP.trim().split(/\s+/);
-    var pStats = [];
-    for (var psi = 0; psi < pStatNums.length && pStats.length < 7; psi++) {
-      if (/^\d+$/.test(pStatNums[psi])) pStats.push(parseInt(pStatNums[psi]));
+    // GC Pitching stats format: "H=X R=X ER=X BB=X SO=X HR=X" (等号格式)
+    // Also accept bare integers for backwards compatibility
+    pAfterIP = pseg.substring(pnumMatch[0].length);
+    pNameBefore = pitSegments[piti - 1].trim();
+    if (!pNameBefore) continue;
+    pParts = pNameBefore.split(/\s+/);
+    pName = pParts.slice(-2).join(' ');
+    if (!validName(pName)) {
+      pName = pParts.slice(-1).join(' ');
+      if (!validName(pName)) continue;
     }
-    if (pStats.length < 7) continue;
+    var pH = null, pR = null, pER = null, pBB = null, pSO = null, pHR = null;
+    var pStatPairs = pAfterIP.match(/([A-Z]+)=(\d+)/g) || [];
+    pStatPairs.forEach(function(pair) {
+      var m = pair.match(/^([A-Z]+)=(\d+)$/);
+      if (!m) return;
+      var k = m[1], v = parseInt(m[2]);
+      if (k === 'H')   pH  = v;
+      if (k === 'R')   pR  = v;
+      if (k === 'ER')  pER = v;
+      if (k === 'BB')  pBB = v;
+      if (k === 'SO')  pSO = v;
+      if (k === 'HR')  pHR = v;
+    });
+    // Fallback: bare integers (IP后面紧跟的纯数字序列)
+    if (pH === null) {
+      var pBareNums = pAfterIP.trim().split(/\s+/);
+      var bareCount = 0;
+      for (var psi = 0; psi < pBareNums.length && bareCount < 6; psi++) {
+        if (/^\d+$/.test(pBareNums[psi])) {
+          if (bareCount === 0) pH  = parseInt(pBareNums[psi]);
+          if (bareCount === 1) pR  = parseInt(pBareNums[psi]);
+          if (bareCount === 2) pER = parseInt(pBareNums[psi]);
+          if (bareCount === 3) pBB = parseInt(pBareNums[psi]);
+          if (bareCount === 4) pSO = parseInt(pBareNums[psi]);
+          if (bareCount === 5) pHR = parseInt(pBareNums[psi]);
+          bareCount++;
+        }
+      }
+    }
+    // Require at least IP, H, R, ER, BB, SO (HR can be missing)
+    if (pH === null || pR === null || pER === null || pBB === null || pSO === null) continue;
     pitAll.push({ name: pName.trim(), number: pnumber, ip: pIP,
-                  h: pStats[0], r: pStats[1], er: pStats[2],
-                  bb: pStats[3], so: pStats[4], hr: pStats[5] });
+                  h: pH, r: pR, er: pER,
+                  bb: pBB, so: pSO, hr: (pHR !== null ? pHR : 0) });
   }
   console.log('[GC Parse] pitAll (split-by-#, count=' + pitAll.length + '):');
   pitAll.forEach(function(p, i){ console.log('  [' + i + '] ' + p.name + ' #' + p.number + ' IP=' + p.ip + ' H=' + p.h + ' R=' + p.r + ' ER=' + p.er); });
@@ -2419,8 +2454,9 @@ function saveGameBasic(game, isEdit) {
   var pitching = [];
 
   if (gc && gc.success) {
-    batting = batting.concat(gc.hk_batting || []);
-    pitching = pitching.concat(gc.hk_pitching || []);
+    // Only include batting/pitching players that have been matched to a library player_id
+    batting = batting.concat((gc.hk_batting||[]).filter(function(p){ return p.lib_id; }));
+    pitching = pitching.concat((gc.hk_pitching||[]).filter(function(p){ return p.lib_id; }));
   }
   if (csv && csv.success) {
     batting = batting.concat(csv.batting || []);
@@ -2450,20 +2486,16 @@ function saveGameBasic(game, isEdit) {
     status: src ? src.status : (document.getElementById('gf-status')||{}).value,
     year: src ? src.year : (document.getElementById('gf-year')||{}).value || new Date().getFullYear(),
     tournament: src ? src.tournament : (document.getElementById('gf-tournament')||{}).value || '',
-    // ── Dynamic HK team determination: which side has more matched library players ──
-    // Falls back to batting row count if counts are equal
+    // ── Dynamic HK team determination: batting row count comparison ──
+    // hk_batting = pre-Totals rows (Away side), home_batting = post-Totals rows (Home side)
+    // If hk_batting has MORE rows → HK team = Away → key = 'away'
+    // If hk_batting has FEWER rows → HK team = Home → key = 'home'
     hk_team_key: (function(){
       if (!(gc&&gc.success)) return null;
-      // Build name lookup from allPlayers
-      var nameToId = {};
-      if (typeof allPlayers !== 'undefined' && allPlayers) {
-        allPlayers.forEach(function(p){ if(p&&p.id&&p.name){ nameToId[p.name.toLowerCase()]=p.id; } });
-      }
-      var hkBatNames = ((gc.hk_batting||[]).concat(gc.home_batting||[]).map(function(x){return x.name||'';}).filter(Boolean)).reduce(function(m,n){m[n]=true;return m;},{});
-      var awayMatches = (gc.away_batting||[]).filter(function(p){ return hkBatNames[p.name.toLowerCase()]||nameToId[p.name.toLowerCase()]; }).length;
-      var homeMatches = (gc.home_batting||[]).filter(function(p){ return hkBatNames[p.name.toLowerCase()]||nameToId[p.name.toLowerCase()]; }).length;
-      var key = awayMatches >= homeMatches ? 'away' : 'home';
-      console.log('[HK Team] awayMatches='+awayMatches+' homeMatches='+homeMatches+' → hk_team_key='+key+' (hk_batting rows='+(gc.hk_batting||[]).length+' home_batting rows='+(gc.home_batting||[]).length+')');
+      var hkRows = (gc.hk_batting||[]).length;
+      var oppRows = (gc.home_batting||[]).length;
+      var key = hkRows >= oppRows ? 'away' : 'home';
+      console.log('[HK Team] hk_batting rows='+hkRows+' home_batting rows='+oppRows+' → hk_team_key='+key);
       return key;
     })(),
     hk_batting: batting,
@@ -2472,9 +2504,10 @@ function saveGameBasic(game, isEdit) {
     home_batting: gc&&gc.success ? (gc.home_batting||[]) : [],
     home_pitching: gc&&gc.success ? (gc.home_pitching||[]) : [],
     away_batting: gc&&gc.success ? (gc.away_batting||[]) : [],
-    // Innings: always store homeHK = home team runs, awayOPP = opponent (away) runs — display needs NO swap
-    hk_runs_by_inning: (gc&&gc.success&&gc.hk_team_key==='home') ? (gc.away_runs_by_inning||[]) : (gc.hk_runs_by_inning||[]),
-    away_runs_by_inning: (gc&&gc.success&&gc.hk_team_key==='home') ? (gc.home_runs_by_inning||[]) : (gc.away_runs_by_inning||[]),
+    // Innings: PDF convention — away_runs_by_inning = Away team (KKRL), home_runs_by_inning = Home team (TTBC)
+    // Save swap: when HK team is Away (hk_team_key='away'), swap so HK data goes into hk_runs_by_inning
+    hk_runs_by_inning: (gc&&gc.success&&gc.hk_team_key==='away') ? (gc.away_runs_by_inning||[]) : (gc.home_runs_by_inning||[]),
+    away_runs_by_inning: (gc&&gc.success&&gc.hk_team_key==='away') ? (gc.home_runs_by_inning||[]) : (gc.away_runs_by_inning||[]),
     // Hits/errors: always store home = home team, away = away team (away=KKRL, home=TTBC from PDF)
     away_hits:    gc&&gc.success ? (gc.away_hits||null) : null,
     away_errors:  gc&&gc.success ? (gc.away_errors||null) : null,
