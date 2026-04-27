@@ -1730,10 +1730,11 @@ function parseGCText(text) {
   if (homeCode && homeCode.length >= 4) {
     var hIdx = cleanTitle.indexOf(homeCode);
     if (hIdx > 0) {
-      // left of homeCode = away team, right = home team
+      // left of homeCode = away team
       awayTeam = cleanTitle.substring(0, hIdx).trim()
                    .replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim();
-      homeTeam = cleanTitle.substring(hIdx + homeCode.length).trim()
+      // right of homeCode = home team (keep homeCode prefix, strip MAJORS suffix)
+      homeTeam = cleanTitle.substring(hIdx).trim()
                    .replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim();
     }
   }
