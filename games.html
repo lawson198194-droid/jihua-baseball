@@ -1705,41 +1705,32 @@ function parseGCText(text) {
   //   Example: "Kaakiro Lions Majors 2 - 9 TTBC Majors Eagles"
   //     → Kaakiro Lions Majors = Away (score 2), TTBC Majors Eagles = Home (score 9)
   //
-  // Strategy: Extract team names from the batting block section header lines.
-  // Batting block structure:
-  //   "BATTING\nTeamA_MultiWordName AB R H RBI BB SO\n[player rows]\nTOTALS\n...\nTeamB_MultiWordName AB R H RBI BB SO\n[player rows]\nTOTALS"
-  // Each team's name is the last line before "AB R H RBI BB SO".
-  // We then map each team name to its innings code to determine away/home.
+  // Strategy: split cleanTitle at homeCode (TTBC — never embedded in team name).
+  // "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9"
+  //                 ^^^^^  split here
+  //   → left of TTBC = Away team name (strip "MAJORS", clean spaces)
+  //   → right of TTBC = Home team name (keep "TTBC" prefix, strip "MAJORS", clean spaces)
   //
-  // Step A: extract raw team names from batting block
-  var battingHeaderPat = /([A-Za-z][A-Za-z\s]*?)\s+AB\s+R\s+H\s+RBI\s+BB\s+SO/i;
-  var batHdrMatches = battingBlock.match(new RegExp(battingHeaderPat.source, 'gi')) || [];
-  // batHdrMatches[0] = first team's header line, batHdrMatches[1] = second team's
-  var rawTeamA = batHdrMatches[0] ? batHdrMatches[0].replace(/\s+AB\s+R\s+H\s+RBI\s+BB\s+SO$/i, '').trim() : '';
-  var rawTeamB = batHdrMatches[1] ? batHdrMatches[1].replace(/\s+AB\s+R\s+H\s+RBI\s+BB\s+SO$/i, '').trim() : '';
-
-  // Step B: determine which raw team matches which innings code
-  // tmpCodes[0] = Away code (KKRL), tmpCodes[1] = Home code (TTBC)
+  // homeCode "TTBC" is safe: unlike "KKRL" (embedded in "Kaakiro"), TTBC never appears
+  // inside any team name, so a plain indexOf is sufficient.
+  //
   var awayCode = tmpCodes.length >= 1 ? tmpCodes[0] : '';
   var homeCode = tmpCodes.length >= 2 ? tmpCodes[1] : '';
   var awayTeam = '';
   var homeTeam = '';
-  // Strategy: split the title at homeCode (never in a team name) → awayName | homeName
-  // "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9" → split at "TTBC" → "Kaakiro Lions Majors " | " Majors Eagles 2 - 9"
-  // Note: homeCode "TTBC" is never embedded in a team name (unlike "KKRL" in "Kaakiro")
   if (homeCode && homeCode.length >= 4) {
     var hIdx = cleanTitle.indexOf(homeCode);
     if (hIdx > 0) {
       // left of homeCode = away team
       awayTeam = cleanTitle.substring(0, hIdx).trim()
                    .replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim();
-      // right of homeCode = home team (keep homeCode prefix, strip MAJORS suffix)
+      // right of homeCode = home team (keep homeCode itself, strip MAJORS suffix)
       homeTeam = cleanTitle.substring(hIdx).trim()
                    .replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim();
     }
   }
-  result.away_team = awayTeam || rawTeamA.replace(/(^|\s)MAJORS($|\s)/gi,' ').replace(/\s+/g,' ').trim() || '(Away)';
-  result.home_team = homeTeam || rawTeamB.replace(/(^|\s)MAJORS($|\s)/gi,' ').replace(/\s+/g,' ').trim() || '(Home)';
+  result.away_team = awayTeam || '(Away)';
+  result.home_team = homeTeam || '(Home)';
 
   // ══ 2. Date ═══════════════════════════════════════════════════════════
   var monthMap = { January:1, February:2, March:3, April:4, May:5, June:6, July:7, August:8, September:9, October:10, November:11, December:12 };
