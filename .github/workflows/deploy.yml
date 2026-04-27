@@ -1,0 +1,17 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cloudflare Pages will automatically detect this push
+# and trigger a deployment. This workflow file ensures
+# the .github/workflows directory exists.
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Site files ready for Cloudflare Pages deployment"
