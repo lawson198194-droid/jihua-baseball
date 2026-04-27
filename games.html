@@ -1731,8 +1731,8 @@ function parseGCText(text) {
   }
   result.away_team = awayTeam || '(Away)';
   result.home_team = homeTeam || '(Home)';
-
-  // ══ 2. Date ═══════════════════════════════════════════════════════════
+  // NO swap needed: homeCode "TTBC" is never embedded in any team name,
+  // so cleanTitle.indexOf(homeCode) always gives a clean split → order is always correct.
   var monthMap = { January:1, February:2, March:3, April:4, May:5, June:6, July:7, August:8, September:9, October:10, November:11, December:12 };
   var month = monthMap[dateAnchorMatch[3]] || 1;
   var day = parseInt(dateAnchorMatch[4]);
