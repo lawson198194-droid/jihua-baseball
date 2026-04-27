@@ -1698,24 +1698,73 @@ function parseGCText(text) {
     var n3 = m3[2].trim().split(/\s+/);
     if (n3.length >= 5) tmpCodes.push(m3[1]);
   }
-  // Build team names by splitting full text at the FIRST occurrence of away code (KKRL)
-  // Note: awayCode lives in innings section, NOT in cleanTitle — must search 'text'
+  // ══ 1. Team names ═════════════════════════════════════════════════════════
+  // Strategy: find awayCode's position in text (within title section), compute
+  // offset into cleanTitle, then split cleanly at that boundary.
+  //
+  // Text layout: "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9 Away ..."
+  //   - awayCode (KKRL) is found in innings section, NOT in cleanTitle directly
+  //   - BUT "Kaakiro" CONTAINS "KKRL" → naive text.indexOf(awayCode) hits the
+  //     wrong position and destroys the team name
+  //   - Fix: only search for awayCode within the title segment (before "Away"),
+  //     then map that position into cleanTitle via the known offset
+  var awayKwPos = text.indexOf('Away ');
+  var homeKwPos = awayKwPos < 0 ? text.indexOf('Home ') : -1;
+  var kwPos = awayKwPos >= 0 ? awayKwPos : homeKwPos;
+  var titleSegment = text.substring(0, kwPos); // everything before "Away/Home"
+
   var awayCode = tmpCodes.length >= 1 ? tmpCodes[0] : '';
   var homeCode = tmpCodes.length >= 2 ? tmpCodes[1] : '';
-  var awayIdx = text.indexOf(awayCode); // search full text, not just title
-  if (awayIdx >= 0) {
-    // home team = everything before awayCode in title; away team = after
-    var titleBeforeCode = cleanTitle.substring(0, cleanTitle.indexOf(awayCode.substring(0,4)));
-    result.home_team = titleBeforeCode.trim().replace(/^(Away|Home)\s+/, '') || '(Home)';
-    result.away_team = cleanTitle.substring(cleanTitle.indexOf(awayCode.substring(0,4)) + awayCode.length).trim().replace(/^(Away|Home)\s+/, '') || '(Away)';
+
+  // Find awayCode in titleSegment (not full text — avoids "Kaakiro" false match)
+  var awayCodeInTitle = -1;
+  if (awayCode && awayCode.length >= 4) {
+    var searchPos = 0;
+    while (true) {
+      var idx = titleSegment.indexOf(awayCode, searchPos);
+      if (idx < 0) break;
+      // Confirm it's a real word boundary: space/line-start before, space after
+      var beforeOK = (idx === 0) || (/\s/.test(titleSegment.charAt(idx - 1)));
+      var afterOK  = (idx + awayCode.length >= titleSegment.length) ||
+                     (/\s/.test(titleSegment.charAt(idx + awayCode.length)));
+      if (beforeOK && afterOK) { awayCodeInTitle = idx; break; }
+      searchPos = idx + 1; // keep searching
+    }
+  }
+
+  if (awayCodeInTitle >= 0) {
+    // Map awayCode position in titleSegment → position in cleanTitle
+    // cleanTitle = text.substring(0, kwPos).replace(scorePat, '').trim()
+    // titleSegment = text.substring(0, kwPos)
+    // offset between titleSegment and cleanTitle = just the score suffix strip
+    var scorePat = /[\d]+\s*-\s*[\d]+\s*$/;
+    var scoreM = titleSegment.match(scorePat);
+    var scoreSuffixLen = scoreM ? scoreM[0].length : 0;
+    var awayCodeInClean = awayCodeInTitle; // cleanTitle == titleSegment minus score suffix
+
+    var homePart  = cleanTitle.substring(0, awayCodeInClean).trim()
+                      .replace(/(^|\s)MAJORS($|\s)/i, ' ').replace(/\s+/g, ' ').trim();
+    var awayPart2 = cleanTitle.substring(awayCodeInClean + awayCode.length).trim()
+                      .replace(/(^|\s)MAJORS($|\s)/i, ' ').replace(/\s+/g, ' ').trim();
+
+    // Determine home/away by which part contains homeCode
+    if (homePart.indexOf(homeCode) >= 0) {
+      // homeCode in first part → first part is actually AWAY team (codes in title-order = away first)
+      result.home_team = awayPart2;
+      result.away_team = homePart;
+    } else {
+      // Normal: first part is HOME team
+      result.home_team = homePart;
+      result.away_team = awayPart2;
+    }
   } else {
     result.away_team = '(Away)';
     result.home_team = '(Home)';
   }
-  // Swap if away_team contains homeCode (i.e., codes were in wrong order)
+
+  // Swap if away_team contains homeCode (i.e., codes were in title in wrong order)
   if (tmpCodes.length >= 2) {
     if (result.away_team.indexOf(homeCode) >= 0) {
-      // Away contains home code → swap
       var tmp = result.home_team;
       result.home_team = result.away_team;
       result.away_team = tmp;
@@ -1727,6 +1776,10 @@ function parseGCText(text) {
       }
     }
   }
+  // Final cleanup: strip residual "MAJORS" from team names
+  result.home_team = (' ' + result.home_team + ' ').replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim() || '(Home)';
+  result.away_team = (' ' + result.away_team + ' ').replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim() || '(Away)';
+
   console.log('[GC Parse] Innings codes: tmpCodes=', tmpCodes);
   console.log('[GC Parse] Teams:', result.away_team, '(Away', result.away_score, ') vs', result.home_team, '(Home', result.home_score, ')');
 
