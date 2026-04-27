@@ -1755,11 +1755,6 @@ function parseGCText(text) {
 
   result.away_team = awayTeam || '(Away)';
   result.home_team = homeTeam || '(Home)';
-  // Scores are already correctly extracted earlier from the innings section.
-  // Convention: title "AwayTeam X - Y HomeTeam" → Away=X, Home=Y (no swap needed).
-
-  console.log('[GC Parse] Innings codes: tmpCodes=', tmpCodes);
-  console.log('[GC Parse] Teams:', result.away_team, '(Away', result.away_score, ') vs', result.home_team, '(Home', result.home_score, ')');
 
   // ══ 2. Date ═══════════════════════════════════════════════════════════
   var monthMap = { January:1, February:2, March:3, April:4, May:5, June:6, July:7, August:8, September:9, October:10, November:11, December:12 };
@@ -1769,29 +1764,28 @@ function parseGCText(text) {
   result.date = year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0');
   console.log('[GC Parse] Date:', result.date);
 
-  // ══ 3. Innings row ══════════════════════════════════════════════════════
-  var awayCode = result.away_team.substring(0,4).toUpperCase();
-  var homeCode = result.home_team.substring(0,4).toUpperCase();
-  // foundInnings already populated early — re-extract only if empty (redundant guard)
-  if (!foundInnings || foundInnings.length === 0) {
-    var innRegex = /(?:[A-Z]{4,})\s+([\dX\s]+)/g;
-    var innMatch;
-    while ((innMatch = innRegex.exec(text)) !== null) {
-      var nums = innMatch[1].trim().split(/\s+/);
-      if (nums.length >= 5) {
-        foundInnings.push({ code: innMatch[0].substring(0,4).toUpperCase(), nums: nums });
-      }
-    }
-  }
+  // ══ 3. Scores & Innings ═════════════════════════════════════════════════
+  // FIXED (2026-04-27): Keep tmpCodes as-is. NEVER overwrite awayCode/homeCode
+  // from team name substrings. Title convention is fixed and unambiguous:
+  //   "AwayTeam  X - Y  HomeTeam"
+  //   → Left = Away (score X), Right = Home (score Y) — no swap needed.
+  // foundInnings[0] = code at innings row 0 = tmpCodes[0] = Away team's code
+  // foundInnings[1] = code at innings row 1 = tmpCodes[1] = Home team's code
+  var _awayCode = tmpCodes.length >= 1 ? tmpCodes[0] : '';
+  var _homeCode = tmpCodes.length >= 2 ? tmpCodes[1] : '';
+
   if (foundInnings.length >= 1) {
     result.away_runs_by_inning = foundInnings[0].nums.slice(0, foundInnings[0].nums.length - 3).map(function(v){ return v === 'X' ? 0 : parseInt(v) || 0; });
-    result.hk_runs_by_inning = result.away_runs_by_inning; // 同 Python 服务器字段
-    console.log('[GC Parse] Innings[0]:', foundInnings[0].code, '->', result.away_runs_by_inning);
+    result.hk_runs_by_inning = result.away_runs_by_inning;
   }
   if (foundInnings.length >= 2) {
     result.home_runs_by_inning = foundInnings[1].nums.slice(0, foundInnings[1].nums.length - 3).map(function(v){ return v === 'X' ? 0 : parseInt(v) || 0; });
-    console.log('[GC Parse] Innings[1]:', foundInnings[1].code, '->', result.home_runs_by_inning);
   }
+
+  // Verify innings codes match tmpCodes (sanity log)
+  if (foundInnings.length >= 1) console.log('[GC Parse] Innings[0]:', foundInnings[0].code, '-> away_runs =', result.away_runs_by_inning, '  (expect code='+_awayCode+')');
+  if (foundInnings.length >= 2) console.log('[GC Parse] Innings[1]:', foundInnings[1].code, '-> home_runs =', result.home_runs_by_inning, '  (expect code='+_homeCode+')');
+  console.log('[GC Parse] Teams:', result.away_team, '(Away', result.away_score, ') vs', result.home_team, '(Home', result.home_score, ')');
 
   // ══ 4. Batting / Pitching sections ══════════════════════════════════════
   var battingStart = text.indexOf('BATTING');
