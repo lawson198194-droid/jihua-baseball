@@ -512,8 +512,9 @@ function viewGameData(gameId) {
 
 function renderGameDataModal(game) {
   closeModal('gamedata-modal');
+  // Innings: saved as homeHK (home team runs) and awayOPP (opponent/away team runs) — no swap needed
   var homeR = game.hk_runs_by_inning||[];
-  var awayR = game.away_runs_by_inning||game.home_runs_by_inning||[];
+  var awayR = game.away_runs_by_inning||[];
 
   var h = '<div class="modal-overlay" id="gamedata-modal">'+
     '<div class="modal" style="max-width:900px;">'+
@@ -556,6 +557,15 @@ function renderGameDataModal(game) {
     var maxInnings = Math.max(homeReal.length, awayReal.length);
     if (maxInnings === 0) maxInnings = 1;
 
+    // H/E: HK team might be home or away — determine based on saved hk_team_key
+    // If saved hk_team_key='home': HK hits=home_hits, HK errors=home_errors
+    // If saved hk_team_key='away': HK hits=away_hits, HK errors=away_errors
+    var hkKey = game.hk_team_key || 'away';
+    var hkH = hkKey === 'home' ? (game.home_hits!=null?game.home_hits:'—') : (game.away_hits!=null?game.away_hits:'—');
+    var hkE = hkKey === 'home' ? (game.home_errors!=null?game.home_errors:'—') : (game.away_errors!=null?game.away_errors:'—');
+    var oppH = hkKey === 'home' ? (game.away_hits!=null?game.away_hits:'—') : (game.home_hits!=null?game.home_hits:'—');
+    var oppE = hkKey === 'home' ? (game.away_errors!=null?game.away_errors:'—') : (game.home_errors!=null?game.home_errors:'—');
+
     h += '<div class="gamedata-section">'+
       '<div class="gamedata-section-title">📊 逐局比分</div>'+
       '<div style="overflow-x:auto;padding:0 4px;">'+
@@ -578,8 +588,8 @@ function renderGameDataModal(game) {
       h += '<div class="ginn-inn'+(hv===null?' ginn-x':'')+'">'+(hv===null?'—':hv)+'</div>';
     }
     h += '<div class="ginn-inn ginn-total">'+homeTotal+'</div>'+
-         '<div class="ginn-inn">'+(game.home_hits!==null&&game.home_hits!==undefined?game.home_hits:'—')+'</div>'+
-         '<div class="ginn-inn">'+(game.home_errors!==null&&game.home_errors!==undefined?game.home_errors:'—')+'</div></div>';
+         '<div class="ginn-inn">'+hkH+'</div>'+
+         '<div class="ginn-inn">'+hkE+'</div></div>';
 
     // Away row
     var awayTotal = 0; awayReal.forEach(function(v){ awayTotal += (v||0); });
@@ -590,8 +600,8 @@ function renderGameDataModal(game) {
       h += '<div class="ginn-inn'+(av===null?' ginn-x':'')+'">'+(av===null?'—':av)+'</div>';
     }
     h += '<div class="ginn-inn ginn-total">'+awayTotal+'</div>'+
-         '<div class="ginn-inn">'+(game.away_hits!==null&&game.away_hits!==undefined?game.away_hits:'—')+'</div>'+
-         '<div class="ginn-inn">'+(game.away_errors!==null&&game.away_errors!==undefined?game.away_errors:'—')+'</div></div>';
+         '<div class="ginn-inn">'+oppH+'</div>'+
+         '<div class="ginn-inn">'+oppE+'</div></div>';
 
     h += '</div></div></div>';
   } else {
@@ -602,54 +612,129 @@ function renderGameDataModal(game) {
   }
 
   // ── Section 3: 打击数据 ──
-  var batting = game.hk_batting||[];
-  if (batting.length) {
-    h += '<div class="gamedata-section">'+
-      '<div class="gamedata-section-title">⚾ 打击数据</div>'+
-      '<div class="gamedata-table-wrap">'+
-        '<table class="gamedata-table"><thead><tr>'+
-          '<th>球员</th><th>#</th><th>AB</th><th>H</th><th>R</th><th>RBI</th><th>BB</th><th>SO</th>'+
-        '</tr></thead><tbody>';
-    batting.forEach(function(b){
-      h += '<tr>'+
-        '<td>'+escHtml(b.name||'')+'</td>'+
-        '<td>'+escHtml(b.number||'')+'</td>'+
-        '<td>'+(b.ab||0)+'</td>'+
-        '<td>'+(b.h||0)+'</td>'+
-        '<td>'+(b.r||0)+'</td>'+
-        '<td>'+(b.rbi||0)+'</td>'+
-        '<td>'+(b.bb||0)+'</td>'+
-        '<td>'+(b.so||0)+'</td>'+
-      '</tr>';
-    });
-    h += '</tbody></table></div></div>';
+  var hkBatting = game.hk_batting||[];
+  var awayBatting = game.away_batting||[];
+  var homeBatting = game.home_batting||[];
+  var anyBatting = hkBatting.length || awayBatting.length || homeBatting.length;
+  if (anyBatting) {
+    // HK team's batting
+    if (hkBatting.length) {
+      h += '<div class="gamedata-section">'+
+        '<div class="gamedata-section-title">⚾ HK队 打击数据</div>'+
+        '<div class="gamedata-table-wrap">'+
+          '<table class="gamedata-table"><thead><tr>'+
+            '<th>球员</th><th>#</th><th>AB</th><th>H</th><th>R</th><th>RBI</th><th>BB</th><th>SO</th>'+
+          '</tr></thead><tbody>';
+      hkBatting.forEach(function(b){
+        h += '<tr>'+
+          '<td>'+escHtml(b.name||'')+'</td>'+
+          '<td>'+escHtml(b.number||'')+'</td>'+
+          '<td>'+(b.ab||0)+'</td>'+
+          '<td>'+(b.h||0)+'</td>'+
+          '<td>'+(b.r||0)+'</td>'+
+          '<td>'+(b.rbi||0)+'</td>'+
+          '<td>'+(b.bb||0)+'</td>'+
+          '<td>'+(b.so||0)+'</td>'+
+        '</tr>';
+      });
+      h += '</tbody></table></div></div>';
+    }
+    // Home team batting
+    if (homeBatting.length) {
+      h += '<div class="gamedata-section">'+
+        '<div class="gamedata-section-title">⚾ '+escHtml(game.home||'Home')+' 打击数据</div>'+
+        '<div class="gamedata-table-wrap">'+
+          '<table class="gamedata-table"><thead><tr>'+
+            '<th>球员</th><th>#</th><th>AB</th><th>H</th><th>R</th><th>RBI</th><th>BB</th><th>SO</th>'+
+          '</tr></thead><tbody>';
+      homeBatting.forEach(function(b){
+        h += '<tr>'+
+          '<td>'+escHtml(b.name||'')+'</td>'+
+          '<td>'+escHtml(b.number||'')+'</td>'+
+          '<td>'+(b.ab||0)+'</td>'+
+          '<td>'+(b.h||0)+'</td>'+
+          '<td>'+(b.r||0)+'</td>'+
+          '<td>'+(b.rbi||0)+'</td>'+
+          '<td>'+(b.bb||0)+'</td>'+
+          '<td>'+(b.so||0)+'</td>'+
+        '</tr>';
+      });
+      h += '</tbody></table></div></div>';
+    }
+    // Away team batting
+    if (awayBatting.length) {
+      h += '<div class="gamedata-section">'+
+        '<div class="gamedata-section-title">⚾ '+escHtml(game.away||'Away')+' 打击数据</div>'+
+        '<div class="gamedata-table-wrap">'+
+          '<table class="gamedata-table"><thead><tr>'+
+            '<th>球员</th><th>#</th><th>AB</th><th>H</th><th>R</th><th>RBI</th><th>BB</th><th>SO</th>'+
+          '</tr></thead><tbody>';
+      awayBatting.forEach(function(b){
+        h += '<tr>'+
+          '<td>'+escHtml(b.name||'')+'</td>'+
+          '<td>'+escHtml(b.number||'')+'</td>'+
+          '<td>'+(b.ab||0)+'</td>'+
+          '<td>'+(b.h||0)+'</td>'+
+          '<td>'+(b.r||0)+'</td>'+
+          '<td>'+(b.rbi||0)+'</td>'+
+          '<td>'+(b.bb||0)+'</td>'+
+          '<td>'+(b.so||0)+'</td>'+
+        '</tr>';
+      });
+      h += '</tbody></table></div></div>';
+    }
   }
 
   // ── Section 4: 投手数据 ──
-  var pitching = game.hk_pitching||[];
-  if (pitching.length) {
-    h += '<div class="gamedata-section">'+
-      '<div class="gamedata-section-title">🎯 投手数据</div>'+
-      '<div class="gamedata-table-wrap">'+
-        '<table class="gamedata-table"><thead><tr>'+
-          '<th>球员</th><th>#</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>SO</th>'+
-        '</tr></thead><tbody>';
-    pitching.forEach(function(b){
-      h += '<tr>'+
-        '<td>'+escHtml(b.name||'')+'</td>'+
-        '<td>'+escHtml(b.number||'')+'</td>'+
-        '<td>'+fmtIP(b.ip)+'</td>'+
-        '<td>'+(b.h||0)+'</td>'+
-        '<td>'+(b.r||0)+'</td>'+
-        '<td>'+(b.er||0)+'</td>'+
-        '<td>'+(b.bb||0)+'</td>'+
-        '<td>'+(b.so||0)+'</td>'+
-      '</tr>';
-    });
-    h += '</tbody></table></div></div>';
+  var hkPitching = game.hk_pitching||[];
+  var homePitching = game.home_pitching||[];
+  var anyPitching = hkPitching.length || homePitching.length;
+  if (anyPitching) {
+    if (hkPitching.length) {
+      h += '<div class="gamedata-section">'+
+        '<div class="gamedata-section-title">🎯 HK队 投手数据</div>'+
+        '<div class="gamedata-table-wrap">'+
+          '<table class="gamedata-table"><thead><tr>'+
+            '<th>球员</th><th>#</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>SO</th>'+
+          '</tr></thead><tbody>';
+      hkPitching.forEach(function(b){
+        h += '<tr>'+
+          '<td>'+escHtml(b.name||'')+'</td>'+
+          '<td>'+escHtml(b.number||'')+'</td>'+
+          '<td>'+fmtIP(b.ip)+'</td>'+
+          '<td>'+(b.h||0)+'</td>'+
+          '<td>'+(b.r||0)+'</td>'+
+          '<td>'+(b.er||0)+'</td>'+
+          '<td>'+(b.bb||0)+'</td>'+
+          '<td>'+(b.so||0)+'</td>'+
+        '</tr>';
+      });
+      h += '</tbody></table></div></div>';
+    }
+    if (homePitching.length) {
+      h += '<div class="gamedata-section">'+
+        '<div class="gamedata-section-title">🎯 '+escHtml(game.home||'Home')+' 投手数据</div>'+
+        '<div class="gamedata-table-wrap">'+
+          '<table class="gamedata-table"><thead><tr>'+
+            '<th>球员</th><th>#</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>SO</th>'+
+          '</tr></thead><tbody>';
+      homePitching.forEach(function(b){
+        h += '<tr>'+
+          '<td>'+escHtml(b.name||'')+'</td>'+
+          '<td>'+escHtml(b.number||'')+'</td>'+
+          '<td>'+fmtIP(b.ip)+'</td>'+
+          '<td>'+(b.h||0)+'</td>'+
+          '<td>'+(b.r||0)+'</td>'+
+          '<td>'+(b.er||0)+'</td>'+
+          '<td>'+(b.bb||0)+'</td>'+
+          '<td>'+(b.so||0)+'</td>'+
+        '</tr>';
+      });
+      h += '</tbody></table></div></div>';
+    }
   }
 
-  if (!batting.length && !pitching.length) {
+  if (!anyBatting && !anyPitching) {
     h += '<div class="gamedata-section">'+
       '<div style="text-align:center;padding:32px;color:var(--text-muted);">'+
         '📄 暂无 PDF 解析数据<br><span style="font-size:12px;">请通过 GC PDF 导入或手动编辑添加数据</span>'+
@@ -1221,8 +1306,12 @@ function doAddTournament() {
 function autoMatchAllGCPlayers() {
   var gc = _gcResult;
   if (!gc || !gc.success) return;
-  var allGC = (gc.hk_batting||[]).concat(gc.hk_pitching||[]);
-  console.log('[AutoMatch] Starting for', allGC.length, 'GC players,', allPlayers.length, 'library players');
+  // 合并 batting + pitching，去重（大小写不敏感，按名字）
+  var allGCRaw = (gc.hk_batting||[]).concat(gc.hk_pitching||[]);
+  // Case-insensitive dedup by name
+  var seenNames = {};
+  var allGC = allGCRaw.filter(function(p){ var k=(p.name||'').toLowerCase().trim(); if(seenNames[k]) return false; seenNames[k]=true; return true; });
+  console.log('[AutoMatch] Starting for', allGC.length, 'unique GC players (from', allGCRaw.length, 'raw),', allPlayers.length, 'library players');
   _wizardGame.roster = _wizardGame.roster || [];
   var existingIds = new Set(_wizardGame.roster.map(function(p){ return String(p.player_id||p.id); }));
 
@@ -1307,7 +1396,8 @@ function bindGCPlayer(gcName, playerId) {
   var gc = _gcResult;
   if (!gc) return;
   var allGC = (gc.hk_batting||[]).concat(gc.hk_pitching||[]);
-  var gcp = allGC.find(function(p){ return p.name === gcName; });
+  var lowerName = (gcName||'').toLowerCase().trim();
+  var gcp = allGC.find(function(p){ return (p.name||'').toLowerCase().trim() === lowerName; });
   var libP = allPlayers.find(function(p){ return String(p.id||p.player_id||'') === String(playerId); });
   if (!gcp || !libP) return;
   gcp.lib_id = playerId;
@@ -2337,12 +2427,13 @@ function saveGameBasic(game, isEdit) {
     pitching = pitching.concat(csv.pitching || []);
   }
 
-  // Deduplicate by name
+  // Deduplicate by name (case-insensitive)
   function dedup(arr) {
     var seen = {};
     return arr.filter(function(v) {
-      if (seen[v.name]) return false;
-      seen[v.name] = true;
+      var k = (v.name||'').toLowerCase().trim();
+      if (seen[k]) return false;
+      seen[k] = true;
       return true;
     });
   }
@@ -2359,16 +2450,37 @@ function saveGameBasic(game, isEdit) {
     status: src ? src.status : (document.getElementById('gf-status')||{}).value,
     year: src ? src.year : (document.getElementById('gf-year')||{}).value || new Date().getFullYear(),
     tournament: src ? src.tournament : (document.getElementById('gf-tournament')||{}).value || '',
-    hk_team_key: gc&&gc.success ? gc.hk_team_key : null,
+    // ── Dynamic HK team determination: which side has more matched library players ──
+    // Falls back to batting row count if counts are equal
+    hk_team_key: (function(){
+      if (!(gc&&gc.success)) return null;
+      // Build name lookup from allPlayers
+      var nameToId = {};
+      if (typeof allPlayers !== 'undefined' && allPlayers) {
+        allPlayers.forEach(function(p){ if(p&&p.id&&p.name){ nameToId[p.name.toLowerCase()]=p.id; } });
+      }
+      var hkBatNames = ((gc.hk_batting||[]).concat(gc.home_batting||[]).map(function(x){return x.name||'';}).filter(Boolean)).reduce(function(m,n){m[n]=true;return m;},{});
+      var awayMatches = (gc.away_batting||[]).filter(function(p){ return hkBatNames[p.name.toLowerCase()]||nameToId[p.name.toLowerCase()]; }).length;
+      var homeMatches = (gc.home_batting||[]).filter(function(p){ return hkBatNames[p.name.toLowerCase()]||nameToId[p.name.toLowerCase()]; }).length;
+      var key = awayMatches >= homeMatches ? 'away' : 'home';
+      console.log('[HK Team] awayMatches='+awayMatches+' homeMatches='+homeMatches+' → hk_team_key='+key+' (hk_batting rows='+(gc.hk_batting||[]).length+' home_batting rows='+(gc.home_batting||[]).length+')');
+      return key;
+    })(),
     hk_batting: batting,
     hk_pitching: pitching,
-    hk_runs_by_inning: gc&&gc.success ? (gc.hk_runs_by_inning||[]) : [],
-    away_runs_by_inning: gc&&gc.success ? (gc.away_runs_by_inning||[]) : [],
-    away_hits: gc&&gc.success ? (gc.away_hits||null) : null,
-    away_errors: gc&&gc.success ? (gc.away_errors||null) : null,
-    home_hits: gc&&gc.success ? (gc.home_hits||null) : null,
-    home_errors: gc&&gc.success ? (gc.home_errors||null) : null,
-    hk_pdf_players: batting.concat(pitching).filter(function(v,i,a){return a.findIndex(function(t){return t.name===v.name;})===i;}).map(function(v){return v.name;}),
+    // Also save opponent (home/away non-HK) batting/pitching from GC if available
+    home_batting: gc&&gc.success ? (gc.home_batting||[]) : [],
+    home_pitching: gc&&gc.success ? (gc.home_pitching||[]) : [],
+    away_batting: gc&&gc.success ? (gc.away_batting||[]) : [],
+    // Innings: always store homeHK = home team runs, awayOPP = opponent (away) runs — display needs NO swap
+    hk_runs_by_inning: (gc&&gc.success&&gc.hk_team_key==='home') ? (gc.away_runs_by_inning||[]) : (gc.hk_runs_by_inning||[]),
+    away_runs_by_inning: (gc&&gc.success&&gc.hk_team_key==='home') ? (gc.home_runs_by_inning||[]) : (gc.away_runs_by_inning||[]),
+    // Hits/errors: always store home = home team, away = away team (away=KKRL, home=TTBC from PDF)
+    away_hits:    gc&&gc.success ? (gc.away_hits||null) : null,
+    away_errors:  gc&&gc.success ? (gc.away_errors||null) : null,
+    home_hits:    gc&&gc.success ? (gc.home_hits||null) : null,
+    home_errors:  gc&&gc.success ? (gc.home_errors||null) : null,
+    hk_pdf_players: batting.concat(pitching).filter(function(v,i,a){var k=(v.name||'').toLowerCase().trim();return a.findIndex(function(t){return (t.name||'').toLowerCase().trim()===k;})===i;}).map(function(v){return v.name;}),
     roster: buildRosterFromGC(src, { success: true, hk_batting: batting, hk_pitching: pitching })
   };
   function buildRosterFromGC(src, gc) {
