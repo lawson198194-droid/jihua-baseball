@@ -1619,25 +1619,15 @@ function parseGCText(text) {
     var trimmed = name.trim();
     if (trimmed.length < 2) return false;
     var parts = trimmed.split(/\s+/);
-    // Reject stat headers: any part that is a pure uppercase abbreviation
+    // Reject stat headers and pure numbers
     var statHeaders = ['AB','R','H','RBI','BB','SO','HR','SB','CS','LOB','TB','IP','ER','W','L','PO','A','E','2B','3B','HBP','WP','BK'];
     for (var si = 0; si < parts.length; si++) {
       var p = parts[si].toUpperCase();
-      // Reject if this part is entirely a stat header OR looks like a number
       if (statHeaders.indexOf(p) >= 0 || /^\d+$/.test(p)) return false;
     }
-    // Allow: normal names (2+ chars first word) OR single initial + surname (e.g. "E Luo", "I Chan")
-    if (parts[0].length >= 2) {
-      /* ok */
-    } else if (/^[A-Z]$/.test(parts[0]) && parts.length >= 2) {
-      /* single initial + surname, e.g. "E Luo", "I Chan" */
-    } else {
-      return false;
-    }
-    var n = trimmed.toUpperCase();
-    // Reject pure stat header abbreviations (AB, R, H, RBI, BB, SO, etc.)
-    if (isStatHeader(n)) return false;
-    return true;
+    // Reject if entire name is a stat header (e.g. "AB")
+    if (isStatHeader(trimmed.toUpperCase())) return false;
+    return true; // 放开大小写限制，任何看起来像人名的都通过
   }
 
   // ══ 1. Team names + Score (from full text) ══════════════════════════════
@@ -1700,21 +1690,8 @@ function parseGCText(text) {
   }
 
   // "Kaakiro Lions Majors TTBC Majors Eagles"
-  // Split by ALL whitespace; find the last purely uppercase 4+ word = home team abbrev
-  var words = cleanTitle.split(/\s+/);
-  var abbrevIdx = -1;
-  for (var ai = words.length - 1; ai >= 0; ai--) {
-    if (/^[A-Z]{4,}$/.test(words[ai])) { abbrevIdx = ai; break; }
-  }
-  if (abbrevIdx >= 0) {
-    result.home_team = words.slice(0, abbrevIdx).join(' ');
-    result.away_team = words.slice(abbrevIdx + 1).join(' ');
-  } else {
-    result.away_team = '(Away)';
-    result.home_team = '(Home)';
-  }
-  // Use innings codes to verify which team is home/away if codes are found
-  // Extract innings codes: first = away (KKRL), second = home (TTBC)
+  // Use innings codes directly to identify which team is home/away
+  // foundInnings[0] = first team in scoreboard (away), foundInnings[1] = second (home)
   var tmpCodes = [];
   var tmpInnRe = /([A-Z]{4,})\s+([\dX][\d\sX]{5,})/g;
   var m3;
@@ -1722,28 +1699,57 @@ function parseGCText(text) {
     var n3 = m3[2].trim().split(/\s+/);
     if (n3.length >= 5) tmpCodes.push(m3[1]);
   }
+  // Find each team's full name in title by matching the 4-letter codes (KKRL, TTBC)
+  // Skip generic words like "MAJO" (from "Majors")
+  var skipWords = { MAJO: true, MAJOR: true, MINOR: true, EAGLE: true, LIONS: true, TIGER: true };
+  var words = cleanTitle.split(/\s+/);
+  var homeIdx = -1, awayIdx = -1;
+  for (var wi = words.length - 1; wi >= 0; wi--) {
+    var w = words[wi];
+    if (skipWords[w]) continue;
+    if (homeIdx < 0 && w.length >= 4 && !isNaN(parseInt(w))) continue; // skip pure numbers
+    if (homeIdx < 0 && /^[A-Z]{4,}$/.test(w)) { homeIdx = wi; }
+    else if (homeIdx >= 0 && awayIdx < 0 && /^[A-Z]{4,}$/.test(w)) { awayIdx = wi; }
+    if (homeIdx >= 0 && awayIdx >= 0) break;
+  }
+  // Build team names
+  if (homeIdx >= 0 && awayIdx >= 0) {
+    result.home_team = words.slice(0, homeIdx).join(' ').replace(/^(Away|Home)\s+/, '').trim() || '(Home)';
+    result.away_team = words.slice(homeIdx + 1).join(' ').replace(/^(Away|Home)\s+/, '').trim() || '(Away)';
+  } else if (homeIdx >= 0) {
+    result.home_team = words.slice(0, homeIdx).join(' ');
+    result.away_team = words.slice(homeIdx + 1).join(' ');
+  } else {
+    result.away_team = '(Away)';
+    result.home_team = '(Home)';
+  }
+  // Detect if away/home are swapped vs innings codes
+  // away team abbrev = tmpCodes[0], home team abbrev = tmpCodes[1]
   if (tmpCodes.length >= 2) {
-    var awayCode = tmpCodes[0]; // KKRL = away
-    var homeCode = tmpCodes[1]; // TTBC = home
+    var awayCode = tmpCodes[0]; // e.g. "KKRL"
+    var homeCode = tmpCodes[1]; // e.g. "TTBC"
     var needsSwap = false;
-    // Primary check: team name starts with code (KKRL → "KKRL Majors Eagles", TTBC → "TTBC Majors Eagles")
-    if (result.home_team.indexOf(awayCode) === 0 && result.away_team.indexOf(homeCode) === 0) {
+    // Check: does away team contain the home code (TTBC)?
+    // e.g. away_team = "TTBC Majors Eagles" contains "TTBC" → swapped
+    if (result.away_team.indexOf(homeCode) >= 0) {
       needsSwap = true;
-    } else if (result.home_team.indexOf(homeCode) < 0 && result.away_team.indexOf(awayCode) < 0) {
-      // Neither team name contains the expected code — detect swap from innings totals
-      // First innings = away team's total (KKRL), second = home (TTBC)
-      var innAwayN = foundInnings.length > 0 ? parseInt(foundInnings[0].nums[foundInnings[0].nums.length - 3]) || 0 : 0;
-      var innHomeN = foundInnings.length > 1 ? parseInt(foundInnings[1].nums[foundInnings[1].nums.length - 3]) || 0 : 0;
-      // If parsed home_score matches away innings → swapped
-      if (result.home_score === innAwayN && result.home_score !== innHomeN) {
-        needsSwap = true;
-      }
+    }
+    // Also check the positive case (shouldn't trigger with "MAJO" bug, but defensive)
+    if (result.home_team.indexOf(awayCode) >= 0 && result.away_team.indexOf(homeCode) < 0) {
+      needsSwap = false; // already correct
     }
     if (needsSwap) {
+      // Swap team names and scores
       var tmp = result.home_team;
       result.home_team = result.away_team;
       result.away_team = tmp;
       var ts = result.home_score; result.home_score = result.away_score; result.away_score = ts;
+      // Swap innings arrays to match
+      if (foundInnings.length >= 2) {
+        var tInn = foundInnings[0];
+        foundInnings[0] = foundInnings[1];
+        foundInnings[1] = tInn;
+      }
     }
   }
   console.log('[GC Parse] Innings codes: tmpCodes=', tmpCodes);
@@ -1773,6 +1779,7 @@ function parseGCText(text) {
   }
   if (foundInnings.length >= 1) {
     result.away_runs_by_inning = foundInnings[0].nums.slice(0, foundInnings[0].nums.length - 3).map(function(v){ return v === 'X' ? 0 : parseInt(v) || 0; });
+    result.hk_runs_by_inning = result.away_runs_by_inning; // 同 Python 服务器字段
     console.log('[GC Parse] Innings[0]:', foundInnings[0].code, '->', result.away_runs_by_inning);
   }
   if (foundInnings.length >= 2) {
@@ -1791,56 +1798,58 @@ function parseGCText(text) {
   var battingBlock = text.substring(battingStart + 7, pitchingStart);
   var pitchingBlock = text.substring(pitchingStart + 8);
 
-  // ── Batting parse: split by '#' to handle concatenated player rows ──────
-  // Split the batting block at each '#' (start of a player row)
+  // ── Batting parse: split by '#NN' to handle concatenated player rows ────────
+  // Pattern: "Name #Num (POS) AB R H RBI BB SO" — name is BEFORE '#', rest is AFTER
+  // Split by '#' → each segment = "Name " (before) + each segment = "NN (POS) stats" (after)
   var batSegments = battingBlock.split('#');
-  // First segment is junk (before first player), skip it
+  // First segment is junk (before first '#'), skip it
   var batAll = [];
   for (var bi = 1; bi < batSegments.length; bi++) {
     var seg = batSegments[bi];
-    var numMatch = seg.match(/^(\d+)\s*\(([A-Z]+)\)/);
-    if (!numMatch) continue; // skip if no #NN (POS) pattern
+    var numMatch = seg.match(/^(\d+)\s*\(([A-Z0-9]+)\)/);
+    if (!numMatch) continue; // skip if seg doesn't start with "#NN (POS)" → it's a name-only segment
     var number = parseInt(numMatch[1]);
     var pos = numMatch[2];
-    // Extract name from the text BEFORE '#NN'
-    var beforeHash = batSegments[bi - 1];
-    // The name is the LAST word(s) of beforeHash, before the last space before '#'
-    // e.g. "M Mai" from "...M Mai"
-    var nameTrimmed = beforeHash.trim();
-    if (!nameTrimmed) continue;
-    var parts = nameTrimmed.split(/\s+/);
-    // Find the name: last 1-2 words that look like a valid name
-    // Accept: single initial ("E Luo" → last words: "E", "Luo") or normal name
-    var name = parts.slice(-2).join(' '); // try last 2 words
-    if (!validName(name)) {
-      name = parts.slice(-1).join(' '); // try last 1 word
-      if (!validName(name)) continue; // skip garbage
-    }
-    // Stats: 7 numbers right after (POS) — handle concatenated next player
+    // Name lives in batSegments[bi-1] (text before the '#')
+    var nameBefore = batSegments[bi - 1].trim();
+    if (!nameBefore) continue;
+    // Stats: 6 numbers after (POS) — might span into next segment if concatenated
     var afterPos = seg.substring(numMatch[0].length);
     var statNums = afterPos.trim().split(/\s+/);
-    // Collect first 7 numeric tokens
+    // If we have fewer than 6 stats, peek into batSegments[bi+1] for remaining numbers
+    var nextSeg = batSegments[bi + 1] || '';
+    var extraNums = nextSeg.trim().split(/\s+/);
+    var allNums = statNums.concat(extraNums);
     var stats = [];
-    for (var si = 0; si < statNums.length && stats.length < 7; si++) {
-      if (/^\d+$/.test(statNums[si])) stats.push(parseInt(statNums[si]));
+    for (var si = 0; si < allNums.length && stats.length < 6; si++) {
+      if (/^\d+$/.test(allNums[si])) stats.push(parseInt(allNums[si]));
     }
-    if (stats.length < 7) continue; // need all 7 stats
+    if (stats.length < 6) continue; // need all 6 stats (AB R H RBI BB SO)
+    // Extract name from the last 1-2 words of nameBefore
+    var parts = nameBefore.split(/\s+/);
+    var name = parts.slice(-2).join(' ');
+    if (!validName(name)) {
+      name = parts.slice(-1).join(' ');
+      if (!validName(name)) {
+        console.log('[GC Bat] SKIP name="' + nameBefore + '" (validName rejected)');
+        continue;
+      }
+    }
     batAll.push({ name: name.trim(), number: number, pos: pos,
                   ab: stats[0], r: stats[1], h: stats[2], rbi: stats[3], bb: stats[4], so: stats[5] });
   }
   console.log('[GC Parse] batAll (split-by-#, count=' + batAll.length + '):');
   batAll.forEach(function(p, i){ console.log('  [' + i + '] ' + p.name + ' #' + p.number + ' (' + p.pos + ') ' + p.ab + ' ' + p.r + ' ' + p.h + ' ' + p.rbi + ' ' + p.bb + ' ' + p.so); });
 
-  // Determine team split: count player rows before first "Totals"
+  // Determine team split: first "Totals" marks end of away team batting
   var totIdx = battingBlock.indexOf('Totals');
   var preTotBlock = totIdx >= 0 ? battingBlock.substring(0, totIdx) : battingBlock;
-  // Count how many batAll entries have their full text before the first 'Totals'
   var preTotCount = 0;
   for (var pi = 0; pi < batAll.length; pi++) {
     var p = batAll[pi];
     var searchText = ' ' + p.name + ' #' + p.number + ' (' + p.pos + ')';
     if (preTotBlock.indexOf(searchText) >= 0) preTotCount++;
-    else break; // past the away team section
+    else break;
   }
   console.log('[GC Parse] Away (hk) rows before Totals:', preTotCount, '/ total:', batAll.length);
 
@@ -1856,6 +1865,7 @@ function parseGCText(text) {
   var pitAll = [];
   for (var piti = 1; piti < pitSegments.length; piti++) {
     var pseg = pitSegments[piti];
+    // Match: jersey + IP (支持 .1 .2 .0 等小数格式，如 "50 3.2" / "6 3.0")
     var pnumMatch = pseg.match(/^(\d+)\s+([\d\.]+)\s+/);
     if (!pnumMatch) continue;
     var pnumber = parseInt(pnumMatch[1]);
@@ -1869,12 +1879,13 @@ function parseGCText(text) {
       pName = pParts.slice(-1).join(' ');
       if (!validName(pName)) continue;
     }
+    // GC Pitching stats order: IP H R ER BB SO HR（共7个整数）
     var pStatNums = pAfterIP.trim().split(/\s+/);
     var pStats = [];
-    for (var psi = 0; psi < pStatNums.length && pStats.length < 6; psi++) {
+    for (var psi = 0; psi < pStatNums.length && pStats.length < 7; psi++) {
       if (/^\d+$/.test(pStatNums[psi])) pStats.push(parseInt(pStatNums[psi]));
     }
-    if (pStats.length < 6) continue;
+    if (pStats.length < 7) continue;
     pitAll.push({ name: pName.trim(), number: pnumber, ip: pIP,
                   h: pStats[0], r: pStats[1], er: pStats[2],
                   bb: pStats[3], so: pStats[4], hr: pStats[5] });
@@ -2438,7 +2449,7 @@ function saveGameBasic(game, isEdit) {
         ab:  b ? b.ab  : 0,  r:  b ? b.r  : 0,  h:  b ? b.h  : 0,
         rbi: b ? b.rbi : 0,  bb: b ? b.bb : 0,  so: b ? b.so : 0,
         // pitching stats (p.so = strikeouts from GC parser, stored as so_p for DB)
-        ip:   p ? p.ip   : 0,  er:   p ? p.er   : 0,  so_p: p ? p.so : 0
+        ip:   p ? p.ip   : 0,  er:   p ? p.er   : 0,  so_p: p ? p.so : 0,  hr: p ? p.hr : 0
       });
     });
     return roster;
@@ -2474,7 +2485,7 @@ function saveGameBasic(game, isEdit) {
       // Merge batting + pitching into ONE call per player to avoid race conditions
       DB.updatePlayerGameStats(r.player_id, {
         ab: r.ab||0, r: r.r||0, h: r.h||0, rbi: r.rbi||0, bb: r.bb||0, so: r.so||0,
-        ip: r.ip||0, er: r.er||0, pso: r.so_p||0
+        ip: r.ip||0, er: r.er||0, pso: r.so_p||0, phr: r.hr||0
       }, function(){
         console.log('[Stats] saved for player', r.player_id, r.name);
         pending--; if (pending <= 0) console.log('[Stats] All player stats updated');
