@@ -1699,86 +1699,64 @@ function parseGCText(text) {
     if (n3.length >= 5) tmpCodes.push(m3[1]);
   }
   // ══ 1. Team names ═════════════════════════════════════════════════════════
-  // Strategy: find awayCode's position in text (within title section), compute
-  // offset into cleanTitle, then split cleanly at that boundary.
+  // CONVENTION (confirmed by user):
+  //   Title format: "AwayTeamName SCORE_AWAY - SCORE_HOME HomeTeamName"
+  //   → Left of "-" = Away team, Right of "-" = Home team
+  //   → tmpCodes[0] = Away team's code (appears before "-"), tmpCodes[1] = Home team's code
+  //   Example: "Kaakiro Lions Majors 2 - 9 TTBC Majors Eagles"
+  //     → Kaakiro Lions = Away (score 2), TTBC Eagles = Home (score 9)
   //
-  // Text layout: "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9 Away ..."
-  //   - awayCode (KKRL) is found in innings section, NOT in cleanTitle directly
-  //   - BUT "Kaakiro" CONTAINS "KKRL" → naive text.indexOf(awayCode) hits the
-  //     wrong position and destroys the team name
-  //   - Fix: only search for awayCode within the title segment (before "Away"),
-  //     then map that position into cleanTitle via the known offset
-  var awayKwPos = text.indexOf('Away ');
-  var homeKwPos = awayKwPos < 0 ? text.indexOf('Home ') : -1;
-  var kwPos = awayKwPos >= 0 ? awayKwPos : homeKwPos;
-  var titleSegment = text.substring(0, kwPos); // everything before "Away/Home"
-
+  // Strategy:
+  //   1. Split cleanTitle at awayCode → [left, right]
+  //   2. left  = Away team name  (strip "MAJORS", clean spaces)
+  //   3. right = Home team name  (strip "MAJORS", clean spaces)
+  //   4. away_score  = parseInt of left side of "X - Y"
+  //   5. home_score  = parseInt of right side of "X - Y"
+  //
+  // Note: awayCode (e.g. "KKRL") may be embedded in team name (e.g. "Kaakiro" CONTAINS "KKRL").
+  // We search for the code WITH word-boundary check: space before, space/end after.
+  //
   var awayCode = tmpCodes.length >= 1 ? tmpCodes[0] : '';
   var homeCode = tmpCodes.length >= 2 ? tmpCodes[1] : '';
+  var awayTeam = '';
+  var homeTeam = '';
 
-  // Find awayCode in titleSegment (not full text — avoids "Kaakiro" false match)
-  var awayCodeInTitle = -1;
+  // Find first occurrence of awayCode in cleanTitle with word-boundary check
+  var awayIdx = -1;
   if (awayCode && awayCode.length >= 4) {
     var searchPos = 0;
     while (true) {
-      var idx = titleSegment.indexOf(awayCode, searchPos);
+      var idx = cleanTitle.indexOf(awayCode, searchPos);
       if (idx < 0) break;
-      // Confirm it's a real word boundary: space/line-start before, space after
-      var beforeOK = (idx === 0) || (/\s/.test(titleSegment.charAt(idx - 1)));
-      var afterOK  = (idx + awayCode.length >= titleSegment.length) ||
-                     (/\s/.test(titleSegment.charAt(idx + awayCode.length)));
-      if (beforeOK && afterOK) { awayCodeInTitle = idx; break; }
-      searchPos = idx + 1; // keep searching
+      var beforeOK = (idx === 0) || (/\s/.test(cleanTitle.charAt(idx - 1)));
+      // afterOK: space after, OR end of string (code is at very end)
+      var afterOK  = (idx + awayCode.length >= cleanTitle.length) ||
+                     (/\s/.test(cleanTitle.charAt(idx + awayCode.length)));
+      if (beforeOK && afterOK) { awayIdx = idx; break; }
+      searchPos = idx + 1;
     }
   }
 
-  if (awayCodeInTitle >= 0) {
-    // Map awayCode position in titleSegment → position in cleanTitle
-    // cleanTitle = text.substring(0, kwPos).replace(scorePat, '').trim()
-    // titleSegment = text.substring(0, kwPos)
-    // offset between titleSegment and cleanTitle = just the score suffix strip
-    var scorePat = /[\d]+\s*-\s*[\d]+\s*$/;
-    var scoreM = titleSegment.match(scorePat);
-    var scoreSuffixLen = scoreM ? scoreM[0].length : 0;
-    var awayCodeInClean = awayCodeInTitle; // cleanTitle == titleSegment minus score suffix
-
-    var homePart  = cleanTitle.substring(0, awayCodeInClean).trim()
-                      .replace(/(^|\s)MAJORS($|\s)/i, ' ').replace(/\s+/g, ' ').trim();
-    var awayPart2 = cleanTitle.substring(awayCodeInClean + awayCode.length).trim()
-                      .replace(/(^|\s)MAJORS($|\s)/i, ' ').replace(/\s+/g, ' ').trim();
-
-    // Determine home/away by which part contains homeCode
-    if (homePart.indexOf(homeCode) >= 0) {
-      // homeCode in first part → first part is actually AWAY team (codes in title-order = away first)
-      result.home_team = awayPart2;
-      result.away_team = homePart;
-    } else {
-      // Normal: first part is HOME team
-      result.home_team = homePart;
-      result.away_team = awayPart2;
-    }
-  } else {
-    result.away_team = '(Away)';
-    result.home_team = '(Home)';
-  }
-
-  // Swap if away_team contains homeCode (i.e., codes were in title in wrong order)
-  if (tmpCodes.length >= 2) {
-    if (result.away_team.indexOf(homeCode) >= 0) {
-      var tmp = result.home_team;
-      result.home_team = result.away_team;
-      result.away_team = tmp;
-      var ts = result.home_score; result.home_score = result.away_score; result.away_score = ts;
-      if (foundInnings.length >= 2) {
-        var tInn = foundInnings[0];
-        foundInnings[0] = foundInnings[1];
-        foundInnings[1] = tInn;
-      }
+  if (awayIdx >= 0) {
+    awayTeam = cleanTitle.substring(0, awayIdx).trim()
+                 .replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim();
+    homeTeam = cleanTitle.substring(awayIdx + awayCode.length).trim()
+                 .replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim();
+  } else if (homeCode && homeCode.length >= 4) {
+    // Fallback: split at homeCode instead
+    var homeIdx = cleanTitle.indexOf(homeCode);
+    if (homeIdx >= 0) {
+      homeTeam = cleanTitle.substring(0, homeIdx).trim()
+                   .replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim();
+      awayTeam = cleanTitle.substring(homeIdx + homeCode.length).trim()
+                   .replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim();
     }
   }
-  // Final cleanup: strip residual "MAJORS" from team names
-  result.home_team = (' ' + result.home_team + ' ').replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim() || '(Home)';
-  result.away_team = (' ' + result.away_team + ' ').replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim() || '(Away)';
+
+  result.away_team = awayTeam || '(Away)';
+  result.home_team = homeTeam || '(Home)';
+  // Scores are already correctly extracted earlier from the innings section.
+  // Convention: title "AwayTeam X - Y HomeTeam" → Away=X, Home=Y (no swap needed).
 
   console.log('[GC Parse] Innings codes: tmpCodes=', tmpCodes);
   console.log('[GC Parse] Teams:', result.away_team, '(Away', result.away_score, ') vs', result.home_team, '(Home', result.home_score, ')');
