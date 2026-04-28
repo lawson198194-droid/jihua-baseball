@@ -785,6 +785,7 @@ function closeModal(id){ var m=document.getElementById(id); if(m) m.remove(); }
 // Global event delegation: click drop zone → trigger hidden file input
 document.addEventListener('click', function(e) {
   if (e.target.closest('.pdf-drop-zone')) {
+    console.log('[DEBUG globalDelegation] triggered, calling inp.click()');
     var inp = document.getElementById('_gc-pdf-input');
     if (inp) inp.click();
   }
@@ -1178,8 +1179,8 @@ function bindWizardFooter(isEdit) {
         if (f) uploadGCFile(f);
       });
       dropZone.addEventListener('click', function(){
-        var inp = document.getElementById('_gc-pdf-input');
-        if (inp) inp.click();
+        // inp.click() 由全局委托统一处理（line 786），这里只做调试日志
+        console.log('[DEBUG dropZone click] triggered');
       });
 
       // Hidden file input for click trigger
@@ -2118,7 +2119,8 @@ function rebindDropZone() {
     });
     dropZone.addEventListener('click', function() {
       if (_gcUploading) return;
-      ensureGCInput().click();
+      // inp.click() 由全局委托统一处理（line 786）
+      console.log('[DEBUG rebindDropZone click] triggered');
     });
   }
 
