@@ -511,6 +511,7 @@ function viewGameData(gameId) {
 
 function renderGameDataModal(game) {
   closeModal('gamedata-modal');
+  console.log('[Modal] game.hk_pitching count:', (game.hk_pitching||[]).length, 'hk_batting:', (game.hk_batting||[]).length);
   // Innings: away_runs_by_inning = Away team (PDF row 1), home_runs_by_inning = Home team (PDF row 2)
   var awayR = game.away_runs_by_inning||[];
   var homeR = game.home_runs_by_inning||[];
