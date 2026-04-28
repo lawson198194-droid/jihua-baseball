@@ -1823,7 +1823,10 @@ function parseGCText(text) {
   // "ABC Dodgers Majors Kaakiro Lions Majors"  → away=ABC Dodgers, home=Kaikiro Lions
   var awayTeam = '';
   var homeTeam = '';
-  var parts = cleanTitle.split(/\s+MAJORS\s+MAJORS\s+/i);
+  // "Majors Majors" is always surrounded by spaces. The trailing \s+ of our pattern
+  // would consume the space before "4 - 0", breaking the match. Fix: use MAJORS\b
+  // (word boundary) instead of \s+ after each MAJORS, so no trailing space is eaten.
+  var parts = cleanTitle.split(/\s+MAJORS\b\s+MAJORS\b\s*/i);
   if (parts.length >= 2) {
     awayTeam = parts[0].trim();
     homeTeam = parts[1].trim();
