@@ -967,11 +967,10 @@ function renderStep1() {
   // GC auto-fill
   var gc = _gcResult;
   if (gc && gc.success && !_wizardGame.id) {
-    // No swap: away_team = 客队 (left), home_team = 主队 (right)
-    if (!_wizardGame.away)  _wizardGame.away  = gc.away_team || '';
-    if (!_wizardGame.home)  _wizardGame.home  = gc.home_team || '';
-    if (!_wizardGame.away_score) _wizardGame.away_score = gc.away_score || 0;
-    if (!_wizardGame.home_score) _wizardGame.home_score = gc.home_score || 0;
+    // FIX (2026-04-28): Do NOT auto-fill home/away here.
+    // hk_team_key is determined by autoMatch in Step 2.
+    // Auto-fill will be done in Step 2 → Step 3 flow (which has correct swap).
+    // This avoids wrong swap when HK team is "home" and PDF parser set teams without knowing hk_team_key.
     if (!_wizardGame.date)  _wizardGame.date  = gc.date || '';
     if (!_wizardGame.venue) _wizardGame.venue = gc.venue || '';
   }
@@ -1598,12 +1597,13 @@ function renderAddModalLegacy(game, isEdit) {
     renderGCTables();
     // Auto-fill fields
     if (!game.home && _gcResult.home_team) {
-      var ht = _gcResult.hk_team_key==='away' ? _gcResult.home_team : _gcResult.away_team;
-      var at = _gcResult.hk_team_key==='away' ? _gcResult.away_team : _gcResult.home_team;
+      var isHKHome = _gcResult.hk_team_key !== 'away'; // HK is home unless explicitly 'away'
+      var ht = isHKHome ? _gcResult.home_team : _gcResult.away_team;
+      var at = isHKHome ? _gcResult.away_team : _gcResult.home_team;
       document.getElementById('gf-home').value = ht||'';
       document.getElementById('gf-away').value = at||'';
-      document.getElementById('gf-hs').value = _gcResult.hk_team_key==='away' ? _gcResult.away_score : _gcResult.home_score;
-      document.getElementById('gf-as').value = _gcResult.hk_team_key==='away' ? _gcResult.home_score : _gcResult.away_score;
+      document.getElementById('gf-hs').value = isHKHome ? _gcResult.home_score : _gcResult.away_score;
+      document.getElementById('gf-as').value = isHKHome ? _gcResult.away_score : _gcResult.home_score;
       if (_gcResult.date) document.getElementById('gf-date').value = _gcResult.date;
       document.getElementById('gf-status').value = 'completed';
     }
