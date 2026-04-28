@@ -988,8 +988,8 @@ function renderStep1() {
     gcBanner = '<div class="gc-info-banner">'+
       '<div class="gc-teams">'+
         '<div class="gc-team"><div class="gc-team-label">客队</div><div class="gc-team-name">'+escHtml(gc.away_team||'')+'</div></div>'+
-        '<div class="gc-vs">'+escHtml(gc.away_score||'')+' : '+escHtml(gc.home_score||'')+'</div>'+
-        '<div class="gc-team"><div class="gc-team-label">主队</div><div class="gc-team-name">'+escHtml(gc.home_team||'')+'</div></div>'+
+        '<div class="gc-vs">'+escHtml(g.away_score||gc.away_score||'')+' : '+escHtml(g.home_score||gc.home_score||'')+'</div>'+
+        '<div class="gc-team"><div class="gc-team-label">主队</div><div class="gc-team-name">'+escHtml(g.home||gc.home_team||'')+'</div></div>'+
       '</div>'+
       '<div class="gc-meta">'+(gc.date?'📅 '+escHtml(gc.date):'')+' '+(g.venue?'📍 '+escHtml(g.venue):'')+'</div>'+
       '<div class="gc-hint">以上信息已从 GC PDF 自动提取，无需手动填写</div>'+
@@ -1215,11 +1215,25 @@ function wizardNext(isEdit) {
     autoMatchAllGCPlayers();
     var gc = _gcResult;
     if (gc && gc.hk_team_key) {
-      // hk_team_key only known after autoMatch: update fields so Step 3 form is correct
-      _wizardGame.home       = (gc.hk_team_key === 'away') ? gc.home_team : gc.away_team;
-      _wizardGame.away       = (gc.hk_team_key === 'away') ? gc.away_team : gc.home_team;
-      _wizardGame.home_score = (gc.hk_team_key === 'home') ? gc.home_score : gc.away_score;
-      _wizardGame.away_score = (gc.hk_team_key === 'home') ? gc.away_score : gc.home_score;
+      // After batting split: hk_team_key tells which PDF side has HK team's batting.
+      // HK team is ALWAYS on the right in PDF (confirmed by user: "PDF右边=主队").
+      // If hk_team_key='away' → HK team batting is in "away_batting" → swap batting so home_batting=HK batting.
+      // If hk_team_key='home' → HK team batting is in "home_batting" → no swap needed.
+      // Home = PDF right team, Away = PDF left team.
+      _wizardGame.home       = gc.home_team;  // PDF right = 主队 (TTBC)
+      _wizardGame.away       = gc.away_team;  // PDF left = 客队 (KKRL)
+      _wizardGame.home_score = gc.home_score; // 9
+      _wizardGame.away_score = gc.away_score; // 2
+      // Swap batting/pitching so hk_batting points to HK team's batting (always in home_batting after swap)
+      if (gc.hk_team_key === 'away') {
+        var tmpBat = gc.away_batting;
+        gc.away_batting = gc.home_batting;
+        gc.home_batting = tmpBat;
+        var tmpPit = gc.away_pitching;
+        gc.away_pitching = gc.home_pitching;
+        gc.home_pitching = tmpPit;
+        console.log('[Step3] hk_team_key=away: swapped batting/pitching → home_batting now has HK team');
+      }
     }
     _wizardStep = 3;
     renderAddModal();
@@ -1286,9 +1300,10 @@ function autoMatchAllGCPlayers() {
   var hkKey = homeMatches > awayMatches ? 'home' : 'away';
   gc.hk_team_key = hkKey;
 
-  // HK batting/pitching = the side (away or home) where the most players matched
-  gc.hk_batting  = hkKey === 'away' ? (gc.away_batting||[])  : (gc.home_batting||[]);
-  gc.hk_pitching = hkKey === 'away' ? (gc.away_pitching||[]) : (gc.home_pitching||[]);
+  // HK batting/pitching = always in home_batting/home_pitching after Step 3 swap
+  // (Step 3 swap ensures HK team's batting is in home_batting regardless of hk_team_key)
+  gc.hk_batting  = gc.home_batting || [];
+  gc.hk_pitching = gc.home_pitching || [];
   console.log('[AutoMatch HK] hk_team_key='+hkKey+' → hk_batting='+gc.hk_batting.length+' hk_pitching='+gc.hk_pitching.length);
 
   // ── Build roster from matched HK players ────────────────────────────────
