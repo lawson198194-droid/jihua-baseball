@@ -311,8 +311,7 @@ input, select, textarea { font-family: inherit; }
 .gamedata-total-score { font-size: 52px; font-weight: 900; font-family: 'JetBrains Mono', monospace; line-height: 1; color: var(--primary); }
 .gamedata-vs { font-size: 20px; font-weight: 700; color: var(--text-muted); }
 .gamedata-inning-table { overflow-x: auto; }
-.gamedata-inning-row { display: flex; gap: 3px; align-items: center; margin-bottom: 4px; }
-.gamedata-inning-row:first-child { margin-bottom: 6px; }
+.gamedata-inning-row { display: flex; gap: 3px; align-items: center; }
 .ginn-team { min-width: 88px; max-width: 88px; font-size: 12px; font-weight: 600; padding: 4px 6px; border-radius: 4px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ginn-home { color: var(--success); }
 .ginn-away { color: var(--accent); }
@@ -564,7 +563,7 @@ function renderGameDataModal(game) {
     h += '<div class="gamedata-section">'+
       '<div class="gamedata-section-title">📊 逐局比分</div>'+
       '<div style="overflow-x:auto;padding:0 4px;">'+
-      '<div style="display:inline-flex;gap:3px;align-items:center;min-width:fit-content;">';
+      '<div style="display:flex;flex-direction:column;gap:4px;width:fit-content;">';
 
     // Header row
     h += '<div class="gamedata-inning-row">';
@@ -923,6 +922,20 @@ function ensurePlayersThenMatch() {
   } else if (_wizardStep === 3 && _gcResult && _gcResult.success) {
     console.log('[Match] running autoMatchAllGCPlayers with', allPlayers.length, 'players');
     autoMatchAllGCPlayers();
+
+    // Sync lib_id from batting → pitching so save picks up the right pitchers
+    var batting = _gcResult.hk_batting || [];
+    var pitching = _gcResult.hk_pitching || [];
+    batting.forEach(function(b){
+      if (b.lib_id) {
+        pitching.forEach(function(p){
+          if (!p.lib_id && p.name === b.name && p.number === b.number) {
+            p.lib_id = b.lib_id;
+          }
+        });
+      }
+    });
+
     var content = document.getElementById('modal-body-content');
     if (content) content.innerHTML = renderWizardSteps() + renderWizardContent();
     bindWizardFooter(!!_wizardGame.id);
@@ -2449,10 +2462,6 @@ function saveGameBasic(game, isEdit) {
   var away = src ? src.away : '';
   var gc = _gcResult;
   var csv = _csvResult;
-  console.log('[Save] _gcResult keys:', gc ? Object.keys(gc).join(',') : 'null');
-  console.log('[Save] gc.away_pitching:', gc&&gc.away_pitching ? gc.away_pitching.length : 'N/A');
-  console.log('[Save] gc.home_pitching:', gc&&gc.home_pitching ? gc.home_pitching.length : 'N/A');
-  console.log('[Save] gc.hk_pitching:', gc&&gc.hk_pitching ? gc.hk_pitching.length : 'N/A');
 
   // Merge GC and CSV data
   var batting = [];
@@ -2462,7 +2471,6 @@ function saveGameBasic(game, isEdit) {
     // Only include batting/pitching players that have been matched to a library player_id
     batting = batting.concat((gc.hk_batting||[]).filter(function(p){ return p.lib_id; }));
     pitching = pitching.concat((gc.hk_pitching||[]).filter(function(p){ return p.lib_id; }));
-    console.log('[Save] batting to save:', batting.length, 'pitching to save:', pitching.length);
   }
   if (csv && csv.success) {
     batting = batting.concat(csv.batting || []);
