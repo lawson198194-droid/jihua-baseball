@@ -1855,9 +1855,39 @@ function parseGCText(text) {
     result.home_errors = parseInt(homeNums[homeNums.length - 1]);
   }
 
-  // Verify innings codes match tmpCodes (sanity log)
-  if (foundInnings.length >= 1) console.log('[GC Parse] Innings[0]:', foundInnings[0].code, '-> away_runs =', result.away_runs_by_inning, '  (expect code='+_awayCode+')');
-  if (foundInnings.length >= 2) console.log('[GC Parse] Innings[1]:', foundInnings[1].code, '-> home_runs =', result.home_runs_by_inning, '  (expect code='+_homeCode+')');
+  // ══ 3b. Determine innings home/away by score match ══════════════════════════
+  // The bottom row of the innings table is ALWAYS the home team.
+  // We determine which row is bottom by comparing each row's total to away_score/home_score.
+  var tmpAwayRuns = result.away_runs_by_inning;
+  var tmpHomeRuns = result.home_runs_by_inning;
+  var row0Total = tmpAwayRuns.reduce ? tmpAwayRuns.reduce(function(a,b){return a+(b==='X'||b=='x'?0:+(b||0));},0) : 0;
+  var row1Total = tmpHomeRuns.reduce ? tmpHomeRuns.reduce(function(a,b){return a+(b==='X'||b=='x'?0:+(b||0));},0) : 0;
+  // Which row matches which title score?
+  var row0MatchesAway = Math.abs(row0Total - (result.away_score||0)) <= 1;
+  var row0MatchesHome = Math.abs(row0Total - (result.home_score||0)) <= 1;
+  var row1MatchesAway = Math.abs(row1Total - (result.away_score||0)) <= 1;
+  var row1MatchesHome = Math.abs(row1Total - (result.home_score||0)) <= 1;
+  var bottomIsHome;
+  if (row1MatchesHome && !row1MatchesAway) bottomIsHome = true;
+  else if (row0MatchesHome && !row0MatchesAway) bottomIsHome = false; // top is home → swap
+  else if (row1MatchesHome && row1MatchesAway)  bottomIsHome = true;  // ambiguous, trust bottom=row1=home
+  else if (row0MatchesHome && row0MatchesAway) bottomIsHome = false;
+  else bottomIsHome = true; // fallback: trust bottom=row1=home
+
+  if (bottomIsHome) {
+    console.log('[GC Parse] Innings: bottom=row1=Home, top=row0=Away  (score: row0='+row0Total+' row1='+row1Total+')');
+  } else {
+    // Top row is home (swap); re-assign: row1→Away, row0→Home
+    result.away_runs_by_inning = tmpHomeRuns;
+    result.home_runs_by_inning = tmpAwayRuns;
+    result.away_r = parseInt(foundInnings[1].nums[foundInnings[1].nums.length-3])||0;
+    result.home_r = parseInt(foundInnings[0].nums[foundInnings[0].nums.length-3])||0;
+    result.away_hits   = parseInt(foundInnings[1].nums[foundInnings[1].nums.length-2])||0;
+    result.home_hits   = parseInt(foundInnings[0].nums[foundInnings[0].nums.length-2])||0;
+    result.away_errors = parseInt(foundInnings[1].nums[foundInnings[1].nums.length-1])||0;
+    result.home_errors = parseInt(foundInnings[0].nums[foundInnings[0].nums.length-1])||0;
+    console.log('[GC Parse] Innings: top=row0=Home (SWAPPED), bottom=row1=Away  (score: row0='+row0Total+' row1='+row1Total+')');
+  }
   console.log('[GC Parse] Teams:', result.away_team, '(Away', result.away_score, ') vs', result.home_team, '(Home', result.home_score, ')');
 
   // ══ 4. Batting / Pitching sections ══════════════════════════════════════
@@ -1935,10 +1965,24 @@ function parseGCText(text) {
   }
   console.log('[GC Parse] Away (hk) rows before Totals:', preTotCount, '/ total:', batAll.length, '| Totals found:', totIdx >= 0);
 
-  // Assign to away_batting / home_batting (hk_batting set later by AutoMatch)
-  for (var ji = 0; ji < batAll.length; ji++) {
-    if (ji < preTotCount) result.away_batting.push(batAll[ji]);
-    else result.home_batting.push(batAll[ji]);
+  // ══ 4b. Correct batting split using innings team codes ══════════════════════
+  // The first "Totals" in battingBlock belongs to the team in foundInnings[0].
+  // Compare foundInnings[0].code against tmpCodes[0] (PDF left code) to determine
+  // whether the batting block order matches innings row 0 → away, or is reversed.
+  var firstTotalsLine = battingBlock.substring(0, battingBlock.indexOf('Totals') + 20);
+  var battingFirstTeamCode = null;
+  for (var ci = 0; ci < tmpCodes.length; ci++) {
+    if (firstTotalsLine.indexOf(tmpCodes[ci]) >= 0) { battingFirstTeamCode = tmpCodes[ci]; break; }
+  }
+  var battingFirstIsRow0 = battingFirstTeamCode === foundInnings[0].code;
+  var battingSwap = !battingFirstIsRow0;
+  if (battingSwap) {
+    console.log('[GC Parse] Batting: first Totals=' + battingFirstTeamCode + ' != innings[0]=' + foundInnings[0].code + ' → SWAP batting blocks');
+    var tmpBat = result.away_batting;
+    result.away_batting = result.home_batting;
+    result.home_batting = tmpBat;
+  } else {
+    console.log('[GC Parse] Batting: first Totals=' + battingFirstTeamCode + ' == innings[0]=' + foundInnings[0].code + ' → no swap needed');
   }
   console.log('[GC Parse] away_batting:', result.away_batting.length, 'home_batting:', result.home_batting.length);
 
@@ -2029,6 +2073,13 @@ function parseGCText(text) {
       result.home_pitching.push(pitAll[pki]);
     }
   }
+  // ══ 4c. Pitching split uses same swap as batting (same team order) ═══════════
+  if (battingSwap) {
+    console.log('[GC Parse] Pitching: applying SAME swap as batting');
+    var tmpPit = result.away_pitching;
+    result.away_pitching = result.home_pitching;
+    result.home_pitching = tmpPit;
+  }
   console.log('[GC Parse] away_pitching:', result.away_pitching.length, 'home_pitching:', result.home_pitching.length);
 
   // hk_batting / hk_pitching will be assigned by autoMatchAllGCPlayers()
@@ -2037,9 +2088,6 @@ function parseGCText(text) {
   result.hk_pitching = [];
   result.hk_team_key = null; // set by AutoMatch
 
-  // Determine HK team's position in this game: look at which batting block contains
-  // the most HK-registered players (hk_batting = pre-Totals rows, confirmed by user).
-  // Convention: battingBlock left column = Away, right column = Home.
   result.success = true;
   console.log('[GC Parse] Done');
   return result;
