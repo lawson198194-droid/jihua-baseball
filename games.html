@@ -1775,12 +1775,16 @@ function parseGCText(text) {
     }
   }
 
-  // Title line: "[Away Full] [Home Full] [Score] Away [Date]"
+  // Title line: "[Away Full] [Home Full] [Score] Away/Home [Date]"
   // Example: "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9 Away Sunday March 08, 2026"
   // Strategy: split title by score "X - Y", use innings codes to identify which part is home.
-  var awayKw2 = text.indexOf('Away ');
-  if (awayKw2 < 0) awayKw2 = text.indexOf('Home ');
-  var titleLine = text.substring(0, awayKw2).trim(); // "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9"
+  // FIX: Use regex word-boundary-aware search. text.indexOf('Away ') would incorrectly match
+  // "Dodgers" (contains "away"). Use \b (word boundary) equivalent: look for ' Away ' or ' Home '
+  // as standalone tokens surrounded by spaces (or start of line).
+  var kwMatch = text.match(/(?:^|\s)(Away|Home)\s+(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)/);
+  var awayKw2 = kwMatch ? (kwMatch.index + (kwMatch[0].startsWith(' ') ? 1 : 0)) : -1;
+  if (awayKw2 < 0) { awayKw2 = text.indexOf('Home '); if (awayKw2 < 0) awayKw2 = text.indexOf('Away '); }
+  var titleLine = text.substring(0, awayKw2).trim(); // "ABC Dodgers Majors Kaakiro Lions Majors 4 - 0" or "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9"
   // Remove score: strip "X - Y" (or "X - X") and trailing numbers at the end
   var cleanTitle = titleLine.replace(/[\d]+\s*-\s*[\d]+\s*$/, '').trim();
 

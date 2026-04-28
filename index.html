@@ -1,267 +1,132 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BaseAI · 香港棒垒球管理系统</title>
-<link rel="stylesheet" href="assets/design-system.css">
-<style>
-  body {
-    background: #0a0e1a;
-    min-height: 100vh;
-    display: flex; align-items: center; justify-content: center;
-    overflow: auto; padding: 20px;
-  }
-
-  .landing { max-width: 1100px; width: 100%; text-align: center; }
-
-  .brand-logo {
-    width: 80px; height: 80px;
-    background: linear-gradient(135deg, #f97316, #ea580c);
-    border-radius: 20px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 36px; font-weight: 800; color: white;
-    margin: 0 auto 20px;
-    box-shadow: 0 8px 32px rgba(249,115,22,0.35);
-    animation: float 3s ease-in-out infinite;
-  }
-
-  @keyframes float {
-    0%,100%{transform:translateY(0);}
-    50%{transform:translateY(-8px);}
-  }
-
-  .brand-title {
-    font-size: 52px; font-weight: 900;
-    background: linear-gradient(135deg, #fff 30%, #f97316);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    letter-spacing: 4px; margin-bottom: 8px;
-  }
-
-  .brand-subtitle {
-    font-size: 15px; color: #64748b; letter-spacing: 2px;
-  }
-
-  .brand-tagline {
-    display: inline-flex; align-items: center; gap: 8px;
-    margin-top: 16px; padding: 8px 20px;
-    background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2);
-    border-radius: 24px; font-size: 13px; color: #f97316; font-weight: 600;
-  }
-
-  .db-banner {
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    margin: 24px auto 40px;
-    padding: 10px 20px;
-    border-radius: 24px; font-size: 13px;
-    width: fit-content;
-    transition: all 0.3s;
-  }
-
-  .db-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #10b981; animation: pulse-dot 2s infinite;
-  }
-
-  @keyframes pulse-dot {
-    0%,100%{opacity:1;transform:scale(1);}
-    50%{opacity:0.5;transform:scale(0.8);}
-  }
-
-  .modules-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px; margin-bottom: 32px;
-  }
-
-  .module-card {
-    background: #1a2235; border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px; padding: 28px 20px;
-    cursor: pointer; transition: all 0.25s;
-    text-decoration: none; color: #f1f5f9;
-    position: relative; overflow: hidden; text-align: center;
-  }
-
-  .module-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, #f97316, transparent);
-    opacity: 0; transition: opacity 0.25s;
-  }
-
-  .module-card:hover {
-    transform: translateY(-6px);
-    border-color: rgba(249,115,22,0.4);
-    box-shadow: 0 12px 40px rgba(249,115,22,0.15);
-    background: #1f2a42;
-  }
-
-  .module-card:hover::before { opacity: 1; }
-
-  .module-icon { font-size: 40px; margin-bottom: 14px; display: block; }
-
-  .module-num {
-    font-size: 11px; font-weight: 700; color: #64748b;
-    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px;
-  }
-
-  .module-name { font-size: 15px; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
-
-  .module-desc { font-size: 12px; color: #64748b; line-height: 1.5; }
-
-  .module-arrow {
-    position: absolute; bottom: 16px; right: 16px;
-    width: 28px; height: 28px; border-radius: 50%;
-    background: rgba(255,255,255,0.05);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; transition: all 0.2s; opacity: 0;
-  }
-
-  .module-card:hover .module-arrow { opacity: 1; background: #f97316; color: white; }
-
-  .module-card.ai-module {
-    grid-column: span 3;
-    background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08));
-    border-color: rgba(59,130,246,0.2);
-    padding: 36px 40px;
-    display: flex; align-items: center; gap: 24px;
-    text-align: left;
-  }
-
-  .module-card.ai-module:hover {
-    border-color: rgba(59,130,246,0.5);
-    box-shadow: 0 12px 40px rgba(59,130,246,0.15);
-  }
-
-  .module-card.ai-module .module-icon { font-size: 56px; margin-bottom: 0; flex-shrink: 0; }
-
-  .module-card.ai-module .module-content { flex: 1; }
-
-  .ai-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-    color: white; padding: 5px 14px; border-radius: 20px;
-    font-size: 12px; font-weight: 700; margin-bottom: 10px;
-    animation: glow-badge 2s infinite;
-  }
-
-  @keyframes glow-badge {
-    0%,100%{box-shadow:0 0 8px rgba(59,130,246,0.3);}
-    50%{box-shadow:0 0 20px rgba(59,130,246,0.5);}
-  }
-
-  .module-card.ai-module .module-name { font-size: 20px; }
-
-  .module-features { display: flex; gap: 24px; margin-top: 12px; flex-wrap: wrap; }
-
-  .feature { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; }
-
-  .feature-dot { width: 6px; height: 6px; border-radius: 50%; background: #3b82f6; }
-
-  .footer-note { font-size: 12px; color: #334155; margin-top: 32px; }
-  .footer-note span { color: #f97316; font-weight: 600; }
-
-  .fade-in { animation: fadeIn 0.5s ease forwards; opacity: 0; }
-
-  @keyframes fadeIn {
-    from{opacity:0;transform:translateY(20px);}
-    to{opacity:1;transform:translateY(0);}
-  }
-
-  @media (max-width: 768px) {
-    .modules-grid { grid-template-columns: 1fr; }
-    .module-card.ai-module { grid-column: span 1; flex-direction: column; text-align: center; }
-    .module-card.ai-module .module-features { justify-content: center; }
-    .brand-title { font-size: 36px; }
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JIHUA 棒球管理系统</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { 
+      font-family: 'Segoe UI', 'PingFang SC', sans-serif; 
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh; color: #fff;
+    }
+    .header {
+      text-align: center; padding: 60px 20px 40px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 100%);
+    }
+    .logo { font-size: 56px; margin-bottom: 10px; }
+    .title { font-size: 42px; font-weight: 800; color: #e94560; text-shadow: 0 0 30px rgba(233,69,96,0.5); }
+    .subtitle { font-size: 18px; color: #a0aec0; margin-top: 8px; }
+    .modules {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px; max-width: 1200px; margin: 0 auto; padding: 20px 40px;
+    }
+    .module-card {
+      background: rgba(255,255,255,0.07); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 20px;
+      padding: 32px 28px; cursor: pointer; transition: all 0.3s ease;
+      position: relative; overflow: hidden;
+    }
+    .module-card:hover {
+      transform: translateY(-6px);
+      border-color: #e94560;
+      box-shadow: 0 20px 60px rgba(233,69,96,0.25);
+    }
+    .module-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, #e94560, #ff6b6b);
+    }
+    .module-icon { font-size: 42px; margin-bottom: 14px; }
+    .module-num { 
+      position: absolute; top: 16px; right: 20px; 
+      background: #e94560; color: #fff; 
+      font-size: 12px; font-weight: 700; 
+      padding: 4px 10px; border-radius: 20px;
+    }
+    .module-name { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #fff; }
+    .module-desc { font-size: 14px; color: #a0aec0; line-height: 1.6; }
+    .module-status {
+      display: inline-block; margin-top: 14px; font-size: 12px;
+      padding: 4px 12px; border-radius: 20px;
+    }
+    .status-active { background: rgba(72,199,116,0.2); color: #48c774; border: 1px solid rgba(72,199,116,0.3); }
+    .status-soon { background: rgba(255,165,0,0.15); color: #ffa500; border: 1px solid rgba(255,165,0,0.3); }
+    .footer { text-align: center; padding: 40px; color: #5a6578; font-size: 13px; }
+    .ai-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    }
+    @media (max-width: 768px) {
+      .modules { padding: 20px; grid-template-columns: 1fr; }
+      .title { font-size: 28px; }
+    }
+  </style>
 </head>
 <body>
-
-<div class="landing">
-  <div class="brand-logo">⚾</div>
-  <h1 class="brand-title">BaseAI</h1>
-  <p class="brand-subtitle">HONG KONG BASEBALL & SOFTBALL MANAGEMENT SYSTEM</p>
-  <div class="brand-tagline">🚀 AI 驱动 · 数据驱动 · 云端实时</div>
-
-  <div class="db-banner" id="db-banner">
-    <div class="db-dot"></div>
-    <span id="db-status">正在连接数据库...</span>
+  <div class="header">
+    <div class="logo">⚾</div>
+    <div class="title">JIHUA 棒球管理系统</div>
+    <div class="subtitle">香港棒垒球总会 · AI智能分析 · 数字化管理平台</div>
+    <div style="margin-top:16px;">
+      <span class="ai-badge">🤖 AI Powered</span>
+    </div>
   </div>
-
-  <div class="modules-grid">
-    <a href="players.html" class="module-card fade-in" style="animation-delay:0.1s">
-      <span class="module-num">Module 01</span>
-      <span class="module-icon">👥</span>
+  
+  <div class="modules">
+    <div class="module-card" onclick="location.href='01_球员资料库.html'">
+      <span class="module-num">M1</span>
+      <div class="module-icon">👥</div>
       <div class="module-name">球员资料库</div>
-      <div class="module-desc">注册球员信息管理<br>照片、年龄、位置</div>
-      <div class="module-arrow">→</div>
-    </a>
-
-    <a href="teams.html" class="module-card fade-in" style="animation-delay:0.15s">
-      <span class="module-num">Module 02</span>
-      <span class="module-icon">🏆</span>
-      <div class="module-name">球队 & 梯队</div>
-      <div class="module-desc">U10/U12/U15/U18<br>球队管理与梯队建设</div>
-      <div class="module-arrow">→</div>
-    </a>
-
-    <a href="games.html" class="module-card fade-in" style="animation-delay:0.2s">
-      <span class="module-num">Module 03</span>
-      <span class="module-icon">📊</span>
-      <div class="module-name">赛事与记分</div>
-      <div class="module-desc">联赛管理、实时记分<br>每局数据统计</div>
-      <div class="module-arrow">→</div>
-    </a>
-
-    <a href="profiles.html" class="module-card fade-in" style="animation-delay:0.25s">
-      <span class="module-num">Module 04</span>
-      <span class="module-icon">📈</span>
-      <div class="module-name">技术档案</div>
-      <div class="module-desc">雷达评分、成长曲线<br>历史数据分析</div>
-      <div class="module-arrow">→</div>
-    </a>
-
-    <a href="admin.html" class="module-card fade-in" style="animation-delay:0.3s">
-      <span class="module-num">Module 05</span>
-      <span class="module-icon">⚙️</span>
-      <div class="module-name">权限与后台</div>
-      <div class="module-desc">数据导入导出<br>角色权限管理</div>
-      <div class="module-arrow">→</div>
-    </a>
-
-    <a href="ai-coach-v2.html" class="module-card ai-module fade-in" style="animation-delay:0.35s">
-      <span class="module-icon">🤖</span>
-      <div class="module-content">
-        <div class="ai-badge">✨ AI POWERED</div>
-        <span class="module-num">Module 06 · 核心模块</span>
-        <div class="module-name">AI 专属教练</div>
-        <div class="module-desc" style="color:#94a3b8;margin-bottom:8px;">
-          挥棒分析 · 投手分析 · 个性化训练计划
-        </div>
-        <div class="module-features">
-          <div class="feature"><div class="feature-dot"></div>AI 挥棒速度分析</div>
-          <div class="feature"><div class="feature-dot"></div>投球轨迹追踪</div>
-          <div class="feature"><div class="feature-dot"></div>智能训练推荐</div>
-        </div>
-      </div>
-    </a>
+      <div class="module-desc">管理球员基本信息、注册状态、照片及联系方式。支持批量导入与导出。</div>
+      <span class="module-status status-active">已上线</span>
+    </div>
+    
+    <div class="module-card" onclick="location.href='02_球队梯队管理.html'">
+      <span class="module-num">M2</span>
+      <div class="module-icon">🏟️</div>
+      <div class="module-name">球队 & 梯队管理</div>
+      <div class="module-desc">球队组织架构、分组梯队、教练团队管理及训练计划安排。</div>
+      <span class="module-status status-active">已上线</span>
+    </div>
+    
+    <div class="module-card" onclick="location.href='03_赛事管理与记分.html'">
+      <span class="module-num">M3</span>
+      <div class="module-icon">🏆</div>
+      <div class="module-name">赛事管理与记分</div>
+      <div class="module-desc">赛事发布、赛程编排、实时记分板、数据统计与排名系统。</div>
+      <span class="module-status status-active">已上线</span>
+    </div>
+    
+    <div class="module-card" onclick="location.href='04_球员技术档案.html'">
+      <span class="module-num">M4</span>
+      <div class="module-icon">📊</div>
+      <div class="module-name">球员技术档案</div>
+      <div class="module-desc">投球/击球数据追踪、技术评估、雷达图分析与成长曲线。</div>
+      <span class="module-status status-active">已上线</span>
+    </div>
+    
+    <div class="module-card" onclick="location.href='05_权限与后台管理.html'">
+      <span class="module-num">M5</span>
+      <div class="module-icon">⚙️</div>
+      <div class="module-name">权限 & 后台管理</div>
+      <div class="module-desc">用户角色权限配置、系统设置、操作日志审计与数据备份。</div>
+      <span class="module-status status-active">已上线</span>
+    </div>
+    
+    <div class="module-card" onclick="location.href='demo_report.html'">
+      <span class="module-num">AI</span>
+      <div class="module-icon">🤖</div>
+      <div class="module-name">AI 击球分析 Demo</div>
+      <div class="module-desc">安安挥棒动作分析报告 · 挥棒速度/角度/力量曲线 · 技术雷达评分</div>
+      <span class="module-status status-soon">Demo</span>
+    </div>
   </div>
-
-  <div class="footer-note">
-    BaseAI 香港棒垒球管理系统 · <span>Powered by AI</span> · © 2026
+  
+  <div class="footer">
+    <p>© 2026 JIHUA Technology · 香港棒垒球AI分析平台</p>
+    <p style="margin-top:6px;">数据已同步至云端 · Powered by Supabase + GitHub Pages</p>
   </div>
-</div>
-
-<script>
-  setTimeout(() => {
-    const banner = document.getElementById('db-banner');
-    const status = document.getElementById('db-status');
-    banner.style.background = 'rgba(16,185,129,0.08)';
-    banner.style.borderColor = 'rgba(16,185,129,0.2)';
-    banner.style.color = '#10b981';
-    status.textContent = '🟢 内置演示数据已加载 · 完全离线可用';
-  }, 500);
-</script>
-
 </body>
 </html>
