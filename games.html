@@ -885,8 +885,7 @@ function onDrop(e){
 }
 function onDropClick(){
   ensureGCInput();
-  var inp = document.getElementById('_gc-pdf-input');
-  if(inp) inp.click();
+  // inp.click() 由全局委托处理，避免双重触发
 }
 function ensureGCInput() {
   var inp = document.getElementById('_gc-pdf-input');
