@@ -1970,66 +1970,48 @@ function parseGCText(text) {
   }
   console.log('[GC Parse] Away (hk) rows before Totals:', preTotCount, '/ total:', batAll.length, '| Totals found:', totIdx >= 0);
 
-  // ══ 4b. Correct batting split using innings team codes ══════════════════════
-  // The first "Totals" in battingBlock belongs to the first team in battingBlock.
-  // Determine whether this first team matches innings[0] or innings[1].
-  // battingSwap = true means: battingBlock's first team = innings[1] (Home),
-  //                           so preTotCount rows belong to Home.
-  var firstTotalsPos = battingBlock.indexOf('Totals');
-  var firstTotalsLine = firstTotalsPos >= 0 ? battingBlock.substring(0, firstTotalsPos + 20) : '(not found)';
-  var battingFirstTeamCode = null;
-  for (var ci = 0; ci < tmpCodes.length; ci++) {
-    if (firstTotalsLine.indexOf(tmpCodes[ci]) >= 0) { battingFirstTeamCode = tmpCodes[ci]; break; }
-  }
-  // DEBUG: inspect battingBlock content around Totals
-  console.log('[DEBUG BatSplit] battingBlock.length=' + battingBlock.length + ' firstTotalsPos=' + firstTotalsPos);
-  console.log('[DEBUG BatSplit] firstTotalsLine: "' + firstTotalsLine.substring(0, 100) + '"');
-  console.log('[DEBUG BatSplit] battingFirstTeamCode=' + battingFirstTeamCode + ' foundInnings[0]=' + foundInnings[0].code);
-  var preTotBlock = firstTotalsPos >= 0 ? battingBlock.substring(0, firstTotalsPos) : battingBlock;
-  console.log('[DEBUG BatSplit] preTotBlock.len=' + preTotBlock.length + ' contains "I Chan"? ' + (preTotBlock.indexOf('I Chan') >= 0));
-  if (preTotBlock.indexOf('I Chan') < 0) {
-    console.log('[DEBUG BatSplit] preTotBlock[0..120]: "' + preTotBlock.substring(0, 120) + '"');
-  }
-  // battingFirstTeamCode == null: first Totals found but doesn't match any known code.
-  // In HK GC PDFs, this means battingBlock starts with Home team data (bottom of PDF).
-  // battingFirstTeamCode == foundInnings[0]: battingBlock matches innings[0] → no swap needed.
-  // battingFirstTeamCode == foundInnings[1]: battingBlock starts with innings[1] → SWAP.
-  var battingSwap;
-  if (battingFirstTeamCode === null) {
-    battingSwap = true; // first Totals not a recognized code → treat as reversed → swap
-  } else if (battingFirstTeamCode === foundInnings[0].code) {
-    battingSwap = false; // matches innings[0] (Away) → battingBlock[0] = Away → no swap
-  } else {
-    battingSwap = true; // matches innings[1] (Home) or unexpected → battingBlock[0] = Home → swap
-  }
-  console.log('[GC Parse] Batting swap check: firstTotals=' + battingFirstTeamCode + ' innings[0]=' + foundInnings[0].code + ' → battingSwap=' + battingSwap);
-  // The actual batting data (batAll) will be split below using battingSwap.
-  // The batting swap above (swapping battingBlock[0]/[1]) is N/A for string.
+  // ══ 4b. Split batting by Totals (PDF top = away, bottom = home) ══════════════
+  // battingBlock = all text in BATTING section in PDF top→bottom order.
+  // First "Totals" marks end of first team's batting. Second "Totals" marks end of second team's.
+  // batAll rows are in same top→bottom order as battingBlock.
+  var firstTotPos  = battingBlock.indexOf('Totals');
+  var secondTotPos = firstTotPos >= 0 ? battingBlock.indexOf('Totals', firstTotPos + 1) : -1;
 
-  // FIX: batAll was never actually split into away/home arrays!
-  // batAll = all batting rows in PDF order (first team rows first).
-  // After the swap, battingBlock[0] points to the correct "away" side.
-  // battingSwap=false → battingBlock[0] already has first team (matches innings[0]) → away=preTotCount rows
-  // battingSwap=true  → battingBlock[0] has second team (opposite innings[0]) → home=preTotCount rows
-  result.away_batting = [];
-  result.home_batting = [];
-  if (battingSwap) {
-    // battingBlock[0] = original home side → these preTotCount rows belong to HOME
-    for (var bsi = 0; bsi < preTotCount && bsi < batAll.length; bsi++) {
-      result.home_batting.push(batAll[bsi]);
+  // Count how many batAll rows appear before firstTotPos vs between firstTotPos and secondTotPos
+  var awayBatCount = 0;
+  var homeBatCount = 0;
+  for (var bi = 0; bi < batAll.length; bi++) {
+    var entry = batAll[bi];
+    // Search for this player's full row text in battingBlock
+    var searchStr = ' ' + entry.name + ' #' + entry.number + ' (' + entry.pos + ')';
+    var posInBlock = battingBlock.indexOf(searchStr);
+    if (posInBlock < 0) {
+      // Try without leading space
+      searchStr = entry.name + ' #' + entry.number + ' (' + entry.pos + ')';
+      posInBlock = battingBlock.indexOf(searchStr);
     }
-    for (var bsi2 = preTotCount; bsi2 < batAll.length; bsi2++) {
-      result.away_batting.push(batAll[bsi2]);
-    }
-  } else {
-    // battingBlock[0] = first team = matches innings[0] → preTotCount rows = AWAY
-    for (var bsi3 = 0; bsi3 < preTotCount && bsi3 < batAll.length; bsi3++) {
-      result.away_batting.push(batAll[bsi3]);
-    }
-    for (var bsi4 = preTotCount; bsi4 < batAll.length; bsi4++) {
-      result.home_batting.push(batAll[bsi4]);
+    if (posInBlock < 0) continue; // skip if not found
+    if (firstTotPos >= 0 && posInBlock < firstTotPos) {
+      awayBatCount++;
+    } else if (firstTotPos >= 0 && secondTotPos >= 0 && posInBlock > firstTotPos && posInBlock < secondTotPos) {
+      homeBatCount++;
+    } else if (firstTotPos < 0) {
+      // No Totals: halve
+      if (bi < batAll.length / 2) awayBatCount++;
+      else homeBatCount++;
     }
   }
+  console.log('[DEBUG BatSplit] firstTotPos=' + firstTotPos + ' secondTotPos=' + secondTotPos);
+  console.log('[DEBUG BatSplit] awayBatCount=' + awayBatCount + ' homeBatCount=' + homeBatCount + ' batAll.len=' + batAll.length);
+  if (awayBatCount === 0 || (awayBatCount + homeBatCount !== batAll.length)) {
+    // Fallback: use preTotCount if our counting failed
+    console.log('[DEBUG BatSplit] WARNING: using preTotCount fallback. firstTotPos=' + firstTotPos);
+    awayBatCount = preTotCount;
+    homeBatCount = batAll.length - preTotCount;
+  }
+  result.away_batting = batAll.slice(0, awayBatCount);
+  result.home_batting = batAll.slice(awayBatCount, awayBatCount + homeBatCount);
+  console.log('[GC Parse] Batting: away=' + result.away_batting.length + ' home=' + result.home_batting.length);
   console.log('[GC Parse] away_batting:', result.away_batting.length, 'home_batting:', result.home_batting.length);
 
   // ── Pitching parse: split by '#' ──────────────────────────────────────────
