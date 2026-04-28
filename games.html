@@ -1211,8 +1211,16 @@ function wizardNext(isEdit) {
     _wizardStep = 2;
     renderAddModal();
   } else if (_wizardStep === 2) {
-    // Step 2 → Step 3: run auto-match
+    // Step 2 → Step 3: run auto-match (sets gc.hk_team_key), then update home/away/score
     autoMatchAllGCPlayers();
+    var gc = _gcResult;
+    if (gc && gc.hk_team_key) {
+      // hk_team_key only known after autoMatch: update fields so Step 3 form is correct
+      _wizardGame.home       = (gc.hk_team_key === 'away') ? gc.home_team : gc.away_team;
+      _wizardGame.away       = (gc.hk_team_key === 'away') ? gc.away_team : gc.home_team;
+      _wizardGame.home_score = (gc.hk_team_key === 'home') ? gc.home_score : gc.away_score;
+      _wizardGame.away_score = (gc.hk_team_key === 'home') ? gc.away_score : gc.home_score;
+    }
     _wizardStep = 3;
     renderAddModal();
   } else if (_wizardStep === 3) {
@@ -1597,7 +1605,10 @@ function renderAddModalLegacy(game, isEdit) {
     renderGCTables();
     // Auto-fill fields
     if (!game.home && _gcResult.home_team) {
-      var isHKHome = _gcResult.hk_team_key !== 'away'; // HK is home unless explicitly 'away'
+      // hk_team_key must be set by autoMatchAllGCPlayers before Step 3 renders
+      // If not set yet (undefined), default: TTBC Eagles=home, Kaakiro Lions=away
+      // (PDF's right side is the home team in HK baseball convention)
+      var isHKHome = (_gcResult.hk_team_key == null) || (_gcResult.hk_team_key === 'home');
       var ht = isHKHome ? _gcResult.home_team : _gcResult.away_team;
       var at = isHKHome ? _gcResult.away_team : _gcResult.home_team;
       document.getElementById('gf-home').value = ht||'';
@@ -2079,11 +2090,8 @@ function uploadGCFile(file) {
         _gcResult = data;
         showToast(data.success ? '✅ PDF 解析成功！' : '⚠️ 解析完成但数据不完整', data.success ? 'success' : 'warning');
         if (data.success) {
-          _wizardGame.home       = _wizardGame.home || (data.hk_team_key === 'away' ? data.away_team : data.home_team);
-          _wizardGame.away       = _wizardGame.away || (data.hk_team_key === 'away' ? data.home_team : data.away_team);
-          var isHome = data.hk_team_key === 'home';
-          _wizardGame.home_score = _wizardGame.home_score || (isHome ? data.home_score : data.away_score);
-          _wizardGame.away_score = _wizardGame.away_score || (isHome ? data.away_score : data.home_score);
+          // NOTE: home/away/score auto-fill deferred to wizardNext Step 2→3
+          // (hk_team_key is set by autoMatchAllGCPlayers there, not here)
           if (!_wizardGame.date)  _wizardGame.date  = data.date || '';
           if (!_wizardGame.venue) _wizardGame.venue = data.location || '';
         }
