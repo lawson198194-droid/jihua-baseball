@@ -1814,34 +1814,35 @@ function parseGCText(text) {
   //   Example: "Kaakiro Lions Majors 2 - 9 TTBC Majors Eagles"
   //     → Kaakiro Lions Majors = Away (score 2), TTBC Majors Eagles = Home (score 9)
   //
-  // Strategy: split cleanTitle at homeCode (TTBC — never embedded in team name).
-  // "Kaakiro Lions Majors TTBC Majors Eagles 2 - 9"
-  //                 ^^^^^  split here
-  //   → left of TTBC = Away team name (strip "MAJORS", clean spaces)
-  //   → right of TTBC = Home team name (keep "TTBC" prefix, strip "MAJORS", clean spaces)
+  // Strategy: split cleanTitle at the double-"Majors" boundary.
+  // GC PDF title always has "[Away] Majors [Home] Majors" — the "Majors Majors" in the
+  // middle is a safe unique delimiter. Unlike homeCode.indexOf (which fails when homeCode
+  // like "KKRL" is embedded in team name "Kaakiro"), this split works for ALL GC PDFs.
   //
-  // homeCode "TTBC" is safe: unlike "KKRL" (embedded in "Kaakiro"), TTBC never appears
-  // inside any team name, so a plain indexOf is sufficient.
-  //
-  var awayCode = tmpCodes.length >= 1 ? tmpCodes[0] : '';
-  var homeCode = tmpCodes.length >= 2 ? tmpCodes[1] : '';
+  // "Kaakiro Lions Majors TTBC Majors Eagles"  → away=Kaikiro Lions, home=TTBC Eagles
+  // "ABC Dodgers Majors Kaakiro Lions Majors"  → away=ABC Dodgers, home=Kaikiro Lions
   var awayTeam = '';
   var homeTeam = '';
-  if (homeCode && homeCode.length >= 4) {
-    var hIdx = cleanTitle.indexOf(homeCode);
-    if (hIdx > 0) {
-      // left of homeCode = away team
-      awayTeam = cleanTitle.substring(0, hIdx).trim()
-                   .replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim();
-      // right of homeCode = home team (keep homeCode itself, strip MAJORS suffix)
-      homeTeam = cleanTitle.substring(hIdx).trim()
-                   .replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim();
+  var parts = cleanTitle.split(/\s+MAJORS\s+MAJORS\s+/i);
+  if (parts.length >= 2) {
+    awayTeam = parts[0].trim();
+    homeTeam = parts[1].trim();
+  } else {
+    // Fallback: old homeCode.indexOf approach
+    var awayCode = tmpCodes.length >= 1 ? tmpCodes[0] : '';
+    var homeCode = tmpCodes.length >= 2 ? tmpCodes[1] : '';
+    if (homeCode && homeCode.length >= 4) {
+      var hIdx = cleanTitle.indexOf(homeCode);
+      if (hIdx > 0) {
+        awayTeam = cleanTitle.substring(0, hIdx).trim()
+                     .replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim();
+        homeTeam = cleanTitle.substring(hIdx).trim()
+                     .replace(/(^|\s)MAJORS($|\s)/gi, ' ').replace(/\s+/g, ' ').trim();
+      }
     }
   }
   result.away_team = awayTeam || '(Away)';
   result.home_team = homeTeam || '(Home)';
-  // NO swap needed: homeCode "TTBC" is never embedded in any team name,
-  // so cleanTitle.indexOf(homeCode) always gives a clean split → order is always correct.
   var monthMap = { January:1, February:2, March:3, April:4, May:5, June:6, July:7, August:8, September:9, October:10, November:11, December:12 };
   var month = monthMap[dateAnchorMatch[3]] || 1;
   var day = parseInt(dateAnchorMatch[4]);
