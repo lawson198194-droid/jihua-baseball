@@ -1989,6 +1989,31 @@ function parseGCText(text) {
   } else {
     console.log('[GC Parse] Batting: first Totals=' + battingFirstTeamCode + ' == innings[0]=' + foundInnings[0].code + ' → no swap needed');
   }
+
+  // FIX: batAll was never actually split into away/home arrays!
+  // batAll = all batting rows in PDF order (first team rows first).
+  // After the swap, battingBlock[0] points to the correct "away" side.
+  // battingSwap=false → battingBlock[0] already has first team (matches innings[0]) → away=preTotCount rows
+  // battingSwap=true  → battingBlock[0] has second team (opposite innings[0]) → home=preTotCount rows
+  result.away_batting = [];
+  result.home_batting = [];
+  if (battingSwap) {
+    // battingBlock[0] = original home side → these preTotCount rows belong to HOME
+    for (var bsi = 0; bsi < preTotCount && bsi < batAll.length; bsi++) {
+      result.home_batting.push(batAll[bsi]);
+    }
+    for (var bsi2 = preTotCount; bsi2 < batAll.length; bsi2++) {
+      result.away_batting.push(batAll[bsi2]);
+    }
+  } else {
+    // battingBlock[0] = first team = matches innings[0] → preTotCount rows = AWAY
+    for (var bsi3 = 0; bsi3 < preTotCount && bsi3 < batAll.length; bsi3++) {
+      result.away_batting.push(batAll[bsi3]);
+    }
+    for (var bsi4 = preTotCount; bsi4 < batAll.length; bsi4++) {
+      result.home_batting.push(batAll[bsi4]);
+    }
+  }
   console.log('[GC Parse] away_batting:', result.away_batting.length, 'home_batting:', result.home_batting.length);
 
   // ── Pitching parse: split by '#' ──────────────────────────────────────────
