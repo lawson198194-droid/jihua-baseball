@@ -1282,12 +1282,17 @@ function autoMatchAllGCPlayers() {
   var homeMatches = homeSide.filter(function(p){ return p.lib_id; }).length;
   console.log('[AutoMatch HK] awayMatches='+awayMatches+' homeMatches='+homeMatches);
 
-  // Prefer the side with MORE matches; tie → away (PDF convention: away listed first)
+  // HK 队 = 匹配人数多的那队（主客无关）
   var hkKey = homeMatches > awayMatches ? 'home' : 'away';
   gc.hk_team_key = hkKey;
-  gc.hk_batting  = hkKey === 'home' ? (gc.home_batting||[])  : (gc.away_batting||[]);
-  gc.hk_pitching = hkKey === 'home' ? (gc.home_pitching||[]) : (gc.away_pitching||[]);
-  console.log('[AutoMatch HK] hk_team_key='+hkKey+' → hk_batting='+gc.hk_batting.length+' hk_pitching='+gc.hk_pitching.length);
+
+  // 找 HK 球员在 PDF 哪一列（battingSwap 之后）：
+  // battingSwap=true → HK 在 PDF right 列 → parseGCText 里被换到了 "away" 变量
+  // battingSwap=false → HK 在 PDF left 列 → parseGCText 里在 "home" 变量
+  var hkPdfSide = gc._hkPdfSide || 'home';
+  gc.hk_batting  = hkPdfSide === 'away' ? (gc.away_batting||[])  : (gc.home_batting||[]);
+  gc.hk_pitching = hkPdfSide === 'away' ? (gc.away_pitching||[]) : (gc.home_pitching||[]);
+  console.log('[AutoMatch HK] hk_team_key='+hkKey+' hkPdfSide='+hkPdfSide+' → hk_batting='+gc.hk_batting.length+' hk_pitching='+gc.hk_pitching.length);
 
   // ── Build roster from matched HK players ────────────────────────────────
   _wizardGame.roster = _wizardGame.roster || [];
@@ -2082,11 +2087,12 @@ function parseGCText(text) {
   }
   console.log('[GC Parse] away_pitching:', result.away_pitching.length, 'home_pitching:', result.home_pitching.length);
 
-  // hk_batting / hk_pitching will be assigned by autoMatchAllGCPlayers()
-  // after determining which team is the HK team based on match count
-  result.hk_batting  = [];
-  result.hk_pitching = [];
+  // HK batting/pitching determination is deferred to autoMatchAllGCPlayers().
+  // Here we just track which side (PDF left/right) the HK team ended up on.
+  // After swap: if battingSwap happened → HK team is now in "away" side; else → HK is in "home" side.
+  // Store this so AutoMatch can correctly pick hk_batting/hk_pitching regardless of swap.
   result.hk_team_key = null; // set by AutoMatch
+  result._hkPdfSide  = battingSwap ? 'away' : 'home'; // which PDF column has HK players after swap
 
   result.success = true;
   console.log('[GC Parse] Done');
