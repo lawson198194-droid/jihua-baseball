@@ -511,7 +511,8 @@ function viewGameData(gameId) {
 
 function renderGameDataModal(game) {
   closeModal('gamedata-modal');
-  console.log('[Modal] game.hk_pitching count:', (game.hk_pitching||[]).length, 'hk_batting:', (game.hk_batting||[]).length);
+  console.log('[Modal] game.hk_pitching count:', (game.hk_pitching||[]).length, 'hk_batting:', (game.hk_batting||[]).length, 'roster length:', (game.roster||[]).length);
+  game.hk_pitching.forEach(function(p){ console.log('[Modal] hp:', p.name, 'ip=', p.ip); });
   // Innings: away_runs_by_inning = Away team (PDF row 1), home_runs_by_inning = Home team (PDF row 2)
   var awayR = game.away_runs_by_inning||[];
   var homeR = game.home_runs_by_inning||[];
