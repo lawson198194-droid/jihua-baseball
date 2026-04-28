@@ -1975,10 +1975,20 @@ function parseGCText(text) {
   // Determine whether this first team matches innings[0] or innings[1].
   // battingSwap = true means: battingBlock's first team = innings[1] (Home),
   //                           so preTotCount rows belong to Home.
-  var firstTotalsLine = battingBlock.substring(0, battingBlock.indexOf('Totals') + 20);
+  var firstTotalsPos = battingBlock.indexOf('Totals');
+  var firstTotalsLine = firstTotalsPos >= 0 ? battingBlock.substring(0, firstTotalsPos + 20) : '(not found)';
   var battingFirstTeamCode = null;
   for (var ci = 0; ci < tmpCodes.length; ci++) {
     if (firstTotalsLine.indexOf(tmpCodes[ci]) >= 0) { battingFirstTeamCode = tmpCodes[ci]; break; }
+  }
+  // DEBUG: inspect battingBlock content around Totals
+  console.log('[DEBUG BatSplit] battingBlock.length=' + battingBlock.length + ' firstTotalsPos=' + firstTotalsPos);
+  console.log('[DEBUG BatSplit] firstTotalsLine: "' + firstTotalsLine.substring(0, 100) + '"');
+  console.log('[DEBUG BatSplit] battingFirstTeamCode=' + battingFirstTeamCode + ' foundInnings[0]=' + foundInnings[0].code);
+  var preTotBlock = firstTotalsPos >= 0 ? battingBlock.substring(0, firstTotalsPos) : battingBlock;
+  console.log('[DEBUG BatSplit] preTotBlock.len=' + preTotBlock.length + ' contains "I Chan"? ' + (preTotBlock.indexOf('I Chan') >= 0));
+  if (preTotBlock.indexOf('I Chan') < 0) {
+    console.log('[DEBUG BatSplit] preTotBlock[0..120]: "' + preTotBlock.substring(0, 120) + '"');
   }
   // battingFirstTeamCode == null: first Totals found but doesn't match any known code.
   // In HK GC PDFs, this means battingBlock starts with Home team data (bottom of PDF).
