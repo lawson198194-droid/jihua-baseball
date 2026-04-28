@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- games.html version: 2026-04-28-fixed-v3 --><!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -1971,24 +1971,30 @@ function parseGCText(text) {
   console.log('[GC Parse] Away (hk) rows before Totals:', preTotCount, '/ total:', batAll.length, '| Totals found:', totIdx >= 0);
 
   // ══ 4b. Correct batting split using innings team codes ══════════════════════
-  // The first "Totals" in battingBlock belongs to the team in foundInnings[0].
-  // Compare foundInnings[0].code against tmpCodes[0] (PDF left code) to determine
-  // whether the batting block order matches innings row 0 → away, or is reversed.
+  // The first "Totals" in battingBlock belongs to the first team in battingBlock.
+  // Determine whether this first team matches innings[0] or innings[1].
+  // battingSwap = true means: battingBlock's first team = innings[1] (Home),
+  //                           so preTotCount rows belong to Home.
   var firstTotalsLine = battingBlock.substring(0, battingBlock.indexOf('Totals') + 20);
   var battingFirstTeamCode = null;
   for (var ci = 0; ci < tmpCodes.length; ci++) {
     if (firstTotalsLine.indexOf(tmpCodes[ci]) >= 0) { battingFirstTeamCode = tmpCodes[ci]; break; }
   }
-  var battingFirstIsRow0 = battingFirstTeamCode === foundInnings[0].code;
-  var battingSwap = !battingFirstIsRow0;
-  if (battingSwap) {
-    console.log('[GC Parse] Batting: first Totals=' + battingFirstTeamCode + ' != innings[0]=' + foundInnings[0].code + ' → SWAP batting blocks');
-    var tmpBat = result.away_batting;
-    result.away_batting = result.home_batting;
-    result.home_batting = tmpBat;
+  // battingFirstTeamCode == null: first Totals found but doesn't match any known code.
+  // In HK GC PDFs, this means battingBlock starts with Home team data (bottom of PDF).
+  // battingFirstTeamCode == foundInnings[0]: battingBlock matches innings[0] → no swap needed.
+  // battingFirstTeamCode == foundInnings[1]: battingBlock starts with innings[1] → SWAP.
+  var battingSwap;
+  if (battingFirstTeamCode === null) {
+    battingSwap = true; // first Totals not a recognized code → treat as reversed → swap
+  } else if (battingFirstTeamCode === foundInnings[0].code) {
+    battingSwap = false; // matches innings[0] (Away) → battingBlock[0] = Away → no swap
   } else {
-    console.log('[GC Parse] Batting: first Totals=' + battingFirstTeamCode + ' == innings[0]=' + foundInnings[0].code + ' → no swap needed');
+    battingSwap = true; // matches innings[1] (Home) or unexpected → battingBlock[0] = Home → swap
   }
+  console.log('[GC Parse] Batting swap check: firstTotals=' + battingFirstTeamCode + ' innings[0]=' + foundInnings[0].code + ' → battingSwap=' + battingSwap);
+  // The actual batting data (batAll) will be split below using battingSwap.
+  // The batting swap above (swapping battingBlock[0]/[1]) is N/A for string.
 
   // FIX: batAll was never actually split into away/home arrays!
   // batAll = all batting rows in PDF order (first team rows first).
