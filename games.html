@@ -1950,70 +1950,58 @@ function parseGCText(text) {
   console.log('[GC Parse] batAll (line-scan, count=' + batAll.length + '):');
   batAll.forEach(function(p, i){ console.log('  [' + i + '] ' + p.name + ' #' + p.number + ' (' + p.pos + ') ' + p.ab + ' ' + p.r + ' ' + p.h + ' ' + p.rbi + ' ' + p.bb + ' ' + p.so); });
 
-  // ── Determine team split: first "Totals" line marks end of away team batting ─
-  // Find first "Totals" in battingBlock (case-insensitive, may have spaces before it)
-  var totIdx = battingBlock.toUpperCase().indexOf('TOTALS');
-  var preTotCount = 0;
-  if (totIdx >= 0) {
-    var preTotBlock = battingBlock.substring(0, totIdx);
-    // Count batAll entries that appear before "Totals"
-    for (var pi = 0; pi < batAll.length; pi++) {
-      var p = batAll[pi];
-      var searchText = ' ' + p.name + ' #' + p.number + ' (' + p.pos + ')';
-      if (preTotBlock.indexOf(searchText) >= 0) preTotCount++;
-      else break;
+  // ══ 4b. Split batting by Totals lines (PDF top = away, bottom = home) ══════════
+  // Strategy: split battingBlock into lines. Find which line numbers contain "Totals".
+  // Each player row in batAll is in the same top→bottom order as battingBlock lines.
+  // Lines between header and first TOTALS = away batting rows.
+  // Lines between first and second TOTALS = home batting rows.
+  var lines = battingBlock.split('\n');
+  var firstTotLineIdx = -1;
+  var secondTotLineIdx = -1;
+  for (var li = 0; li < lines.length; li++) {
+    if (lines[li].toUpperCase().indexOf('TOTALS') >= 0) {
+      if (firstTotLineIdx < 0) firstTotLineIdx = li;
+      else if (secondTotLineIdx < 0) { secondTotLineIdx = li; break; }
     }
-  } else {
-    // No "Totals" found — use half split
-    preTotCount = Math.ceil(batAll.length / 2);
-    console.log('[GC Parse] No "Totals" in battingBlock — using half split:', preTotCount, '/', batAll.length);
   }
-  console.log('[GC Parse] Away (hk) rows before Totals:', preTotCount, '/ total:', batAll.length, '| Totals found:', totIdx >= 0);
+  console.log('[DEBUG BatSplit] lines.length=' + lines.length + ' firstTotLineIdx=' + firstTotLineIdx + ' secondTotLineIdx=' + secondTotLineIdx);
 
-  // ══ 4b. Split batting by Totals (PDF top = away, bottom = home) ══════════════
-  // battingBlock = all text in BATTING section in PDF top→bottom order.
-  // First "Totals" marks end of first team's batting. Second "Totals" marks end of second team's.
-  // batAll rows are in same top→bottom order as battingBlock.
-  console.log('[DEBUG BatSplit] ENTERED. batAll.length=' + batAll.length + ' battingBlock.length=' + battingBlock.length);
-  var firstTotPos  = battingBlock.indexOf('Totals');
-  var secondTotPos = firstTotPos >= 0 ? battingBlock.indexOf('Totals', firstTotPos + 1) : -1;
-  console.log('[DEBUG BatSplit] firstTotPos=' + firstTotPos + ' secondTotPos=' + secondTotPos);
-
-  // Count how many batAll rows appear before firstTotPos vs between firstTotPos and secondTotPos
+  // Count player rows before firstTotLineIdx and between the two Totals
   var awayBatCount = 0;
   var homeBatCount = 0;
   for (var bi = 0; bi < batAll.length; bi++) {
     var entry = batAll[bi];
-    // Search for this player's full row text in battingBlock
-    var searchStr = ' ' + entry.name + ' #' + entry.number + ' (' + entry.pos + ')';
-    var posInBlock = battingBlock.indexOf(searchStr);
-    if (posInBlock < 0) {
-      // Try without leading space
-      searchStr = entry.name + ' #' + entry.number + ' (' + entry.pos + ')';
-      posInBlock = battingBlock.indexOf(searchStr);
+    // Find which line this player appears in
+    var searchName = entry.name.replace(/\s+/g, ' ').trim();
+    // Try multiple formats to find the player in lines
+    var foundLine = -1;
+    for (var sli = 0; sli < lines.length; sli++) {
+      var line = lines[sli];
+      if (line.indexOf('#' + entry.number) >= 0 && line.indexOf('(' + entry.pos + ')') >= 0) {
+        foundLine = sli;
+        break;
+      }
     }
-    if (posInBlock < 0) continue; // skip if not found
-    if (firstTotPos >= 0 && posInBlock < firstTotPos) {
-      awayBatCount++;
-    } else if (firstTotPos >= 0 && secondTotPos >= 0 && posInBlock > firstTotPos && posInBlock < secondTotPos) {
-      homeBatCount++;
-    } else if (firstTotPos < 0) {
+    if (foundLine < 0) {
+      console.log('[DEBUG BatSplit] WARNING: player "' + entry.name + ' #" + ' + entry.number + ' not found in battingBlock lines');
+      continue;
+    }
+    if (firstTotLineIdx < 0) {
       // No Totals: halve
       if (bi < batAll.length / 2) awayBatCount++;
       else homeBatCount++;
+    } else if (foundLine < firstTotLineIdx) {
+      awayBatCount++;
+    } else if (foundLine > firstTotLineIdx && (secondTotLineIdx < 0 || foundLine < secondTotLineIdx)) {
+      homeBatCount++;
     }
+    // else: after second Totals (grand totals) — skip
   }
   console.log('[DEBUG BatSplit] awayBatCount=' + awayBatCount + ' homeBatCount=' + homeBatCount + ' batAll.len=' + batAll.length);
-  if (awayBatCount === 0 || (awayBatCount + homeBatCount !== batAll.length)) {
-    // Fallback: use preTotCount if our counting failed
-    console.log('[DEBUG BatSplit] WARNING: using preTotCount fallback. firstTotPos=' + firstTotPos);
-    awayBatCount = preTotCount;
-    homeBatCount = batAll.length - preTotCount;
-  }
+
   result.away_batting = batAll.slice(0, awayBatCount);
   result.home_batting = batAll.slice(awayBatCount, awayBatCount + homeBatCount);
   console.log('[GC Parse] Batting: away=' + result.away_batting.length + ' home=' + result.home_batting.length);
-  console.log('[GC Parse] away_batting:', result.away_batting.length, 'home_batting:', result.home_batting.length);
 
   // ── Pitching parse: split by '#' ──────────────────────────────────────────
   var pitSegments = pitchingBlock.split('#');
