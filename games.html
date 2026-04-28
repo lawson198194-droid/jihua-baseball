@@ -649,9 +649,8 @@ function renderGameDataModal(game) {
         '<table class="gamedata-table"><thead><tr>'+
           '<th>球员</th><th>#</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>SO</th>'+
         '</tr></thead><tbody>';
-    pitRows.forEach(function(b){
-      console.log('[Modal] Pitch row:', b.name, 'ip=', b.ip, 'fmtIP=', fmtIP(b.ip), 'h=', b.h, 'r=', b.r, 'er=', b.er, 'bb=', b.bb, 'so=', b.so);
-      h += '<tr>'+
+    pitRows.forEach(function(b, i){
+      var rowHtml = '<tr>'+
         '<td>'+escHtml(b.name||'')+'</td>'+
         '<td>'+escHtml(b.number||'')+'</td>'+
         '<td>'+fmtIP(b.ip)+'</td>'+
@@ -661,7 +660,10 @@ function renderGameDataModal(game) {
         '<td>'+(b.bb!=null?b.bb:'-')+'</td>'+
         '<td>'+(b.so!=null?b.so:'-')+'</td>'+
       '</tr>';
+      console.log('[Modal] Pitch tr['+i+'] html len='+rowHtml.length, rowHtml);
+      h += rowHtml;
     });
+    console.log('[Modal] tbody after forEach:', h.slice(-200));
     h += '</tbody></table></div></div>';
   }
 
