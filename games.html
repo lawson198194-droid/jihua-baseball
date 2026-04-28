@@ -2449,6 +2449,10 @@ function saveGameBasic(game, isEdit) {
   var away = src ? src.away : '';
   var gc = _gcResult;
   var csv = _csvResult;
+  console.log('[Save] _gcResult keys:', gc ? Object.keys(gc).join(',') : 'null');
+  console.log('[Save] gc.away_pitching:', gc&&gc.away_pitching ? gc.away_pitching.length : 'N/A');
+  console.log('[Save] gc.home_pitching:', gc&&gc.home_pitching ? gc.home_pitching.length : 'N/A');
+  console.log('[Save] gc.hk_pitching:', gc&&gc.hk_pitching ? gc.hk_pitching.length : 'N/A');
 
   // Merge GC and CSV data
   var batting = [];
@@ -2458,6 +2462,7 @@ function saveGameBasic(game, isEdit) {
     // Only include batting/pitching players that have been matched to a library player_id
     batting = batting.concat((gc.hk_batting||[]).filter(function(p){ return p.lib_id; }));
     pitching = pitching.concat((gc.hk_pitching||[]).filter(function(p){ return p.lib_id; }));
+    console.log('[Save] batting to save:', batting.length, 'pitching to save:', pitching.length);
   }
   if (csv && csv.success) {
     batting = batting.concat(csv.batting || []);
