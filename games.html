@@ -535,13 +535,13 @@ function renderGameDataModal(game) {
     '</div>'+
     '<div class="gamedata-score-wrap">'+
       '<div class="gamedata-team-block">'+
-        '<div class="gamedata-team-name">'+escHtml(game.home||'')+'</div>'+
-        '<div class="gamedata-total-score">'+(game.home_score||0)+'</div>'+
+        '<div class="gamedata-team-name">'+escHtml(game.away||'')+'</div>'+
+        '<div class="gamedata-total-score">'+(game.away_score||0)+'</div>'+
       '</div>'+
       '<div class="gamedata-vs">VS</div>'+
       '<div class="gamedata-team-block">'+
-        '<div class="gamedata-team-name">'+escHtml(game.away||'')+'</div>'+
-        '<div class="gamedata-total-score">'+(game.away_score||0)+'</div>'+
+        '<div class="gamedata-team-name">'+escHtml(game.home||'')+'</div>'+
+        '<div class="gamedata-total-score">'+(game.home_score||0)+'</div>'+
       '</div>'+
     '</div>'+
   '</div>';
@@ -606,16 +606,21 @@ function renderGameDataModal(game) {
         '暂无数据，请通过 GC PDF 导入或手动编辑添加</div></div>';
   }
 
-  // ── Section 3: 打击数据（仅 HK 队）────────────────────────────────────────
+  // ── Section 3: 打击数据（HK 队 → fallback 到 roster）────────────────────
   var hkBatting = game.hk_batting||[];
-  if (hkBatting.length) {
+  // Fallback: collect batting stats from roster if hk_batting is empty
+  var batRows = hkBatting.length ? hkBatting : [];
+  if (!batRows.length && game.roster && game.roster.length) {
+    batRows = game.roster.filter(function(r){ return (r.ab||0)>0||(r.h||0)>0||(r.r||0)>0||(r.rbi||0)>0||(r.bb||0)>0||(r.so||0)>0; });
+  }
+  if (batRows.length) {
     h += '<div class="gamedata-section">'+
       '<div class="gamedata-section-title">⚾ HK队 打击数据</div>'+
       '<div class="gamedata-table-wrap">'+
         '<table class="gamedata-table"><thead><tr>'+
           '<th>球员</th><th>#</th><th>AB</th><th>H</th><th>R</th><th>RBI</th><th>BB</th><th>SO</th>'+
         '</tr></thead><tbody>';
-    hkBatting.forEach(function(b){
+    batRows.forEach(function(b){
       h += '<tr>'+
         '<td>'+escHtml(b.name||'')+'</td>'+
         '<td>'+escHtml(b.number||'')+'</td>'+
@@ -630,16 +635,20 @@ function renderGameDataModal(game) {
     h += '</tbody></table></div></div>';
   }
 
-  // ── Section 4: 投手数据（仅 HK 队）────────────────────────────────────────
+  // ── Section 4: 投手数据（HK 队 → fallback 到 roster）──────────────────────
   var hkPitching = game.hk_pitching||[];
-  if (hkPitching.length) {
+  var pitRows = hkPitching.length ? hkPitching : [];
+  if (!pitRows.length && game.roster && game.roster.length) {
+    pitRows = game.roster.filter(function(r){ return (r.ip||0)>0||(r.er||0)>0||(r.so_p||0)>0; });
+  }
+  if (pitRows.length) {
     h += '<div class="gamedata-section">'+
       '<div class="gamedata-section-title">🎯 HK队 投手数据</div>'+
       '<div class="gamedata-table-wrap">'+
         '<table class="gamedata-table"><thead><tr>'+
           '<th>球员</th><th>#</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>SO</th>'+
         '</tr></thead><tbody>';
-    hkPitching.forEach(function(b){
+    pitRows.forEach(function(b){
       h += '<tr>'+
         '<td>'+escHtml(b.name||'')+'</td>'+
         '<td>'+escHtml(b.number||'')+'</td>'+
@@ -654,7 +663,7 @@ function renderGameDataModal(game) {
     h += '</tbody></table></div></div>';
   }
 
-  if (!hkBatting.length && !hkPitching.length) {
+  if (!batRows.length && !pitRows.length) {
     h += '<div class="gamedata-section">'+
       '<div style="text-align:center;padding:32px;color:var(--text-muted);">'+
         '📄 暂无 PDF 解析数据<br><span style="font-size:12px;">请通过 GC PDF 导入或手动编辑添加数据</span>'+
