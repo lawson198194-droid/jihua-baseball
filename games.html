@@ -615,14 +615,15 @@ function renderGameDataModal(game) {
     batRows = game.roster.filter(function(r){ return (r.ab||0)>0||(r.h||0)>0||(r.r||0)>0||(r.rbi||0)>0||(r.bb||0)>0||(r.so||0)>0; });
   }
   if (batRows.length) {
+    console.log('[Modal] Batting section START, batRows.length='+batRows.length);
     h += '<div class="gamedata-section">'+
       '<div class="gamedata-section-title">⚾ HK队 打击数据</div>'+
       '<div class="gamedata-table-wrap">'+
         '<table class="gamedata-table"><thead><tr>'+
           '<th>球员</th><th>#</th><th>AB</th><th>H</th><th>R</th><th>RBI</th><th>BB</th><th>SO</th>'+
         '</tr></thead><tbody>';
-    batRows.forEach(function(b){
-      h += '<tr>'+
+    batRows.forEach(function(b, i){
+      var rowHtml = '<tr>'+
         '<td>'+escHtml(b.name||'')+'</td>'+
         '<td>'+escHtml(b.number||'')+'</td>'+
         '<td>'+(b.ab||0)+'</td>'+
@@ -632,8 +633,14 @@ function renderGameDataModal(game) {
         '<td>'+(b.bb||0)+'</td>'+
         '<td>'+(b.so||0)+'</td>'+
       '</tr>';
+      console.log('[Modal] Bat tr['+i+']: '+rowHtml);
+      h += rowHtml;
     });
+    var after = h.slice(-300);
+    console.log('[Modal] Batting section END, last 300 chars: '+after);
     h += '</tbody></table></div></div>';
+  } else {
+    console.log('[Modal] Batting: no batRows, hkBatting='+(game.hk_batting||[]).length+' roster-filtered='+(game.roster||[]).filter(function(r){return (r.ab||0)>0||(r.h||0)>0||(r.r||0)>0||(r.rbi||0)>0||(r.bb||0)>0||(r.so||0)>0;}).length);
   }
 
   // ── Section 4: 投手数据（HK 队 → fallback 到 roster）──────────────────────
