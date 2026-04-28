@@ -606,130 +606,55 @@ function renderGameDataModal(game) {
         '暂无数据，请通过 GC PDF 导入或手动编辑添加</div></div>';
   }
 
-  // ── Section 3: 打击数据 ──
+  // ── Section 3: 打击数据（仅 HK 队）────────────────────────────────────────
   var hkBatting = game.hk_batting||[];
-  var awayBatting = game.away_batting||[];
-  var homeBatting = game.home_batting||[];
-  var anyBatting = hkBatting.length || awayBatting.length || homeBatting.length;
-  if (anyBatting) {
-    // HK team's batting
-    if (hkBatting.length) {
-      h += '<div class="gamedata-section">'+
-        '<div class="gamedata-section-title">⚾ HK队 打击数据</div>'+
-        '<div class="gamedata-table-wrap">'+
-          '<table class="gamedata-table"><thead><tr>'+
-            '<th>球员</th><th>#</th><th>AB</th><th>H</th><th>R</th><th>RBI</th><th>BB</th><th>SO</th>'+
-          '</tr></thead><tbody>';
-      hkBatting.forEach(function(b){
-        h += '<tr>'+
-          '<td>'+escHtml(b.name||'')+'</td>'+
-          '<td>'+escHtml(b.number||'')+'</td>'+
-          '<td>'+(b.ab||0)+'</td>'+
-          '<td>'+(b.h||0)+'</td>'+
-          '<td>'+(b.r||0)+'</td>'+
-          '<td>'+(b.rbi||0)+'</td>'+
-          '<td>'+(b.bb||0)+'</td>'+
-          '<td>'+(b.so||0)+'</td>'+
-        '</tr>';
-      });
-      h += '</tbody></table></div></div>';
-    }
-    // Home team batting
-    if (homeBatting.length) {
-      h += '<div class="gamedata-section">'+
-        '<div class="gamedata-section-title">⚾ '+escHtml(game.home||'Home')+' 打击数据</div>'+
-        '<div class="gamedata-table-wrap">'+
-          '<table class="gamedata-table"><thead><tr>'+
-            '<th>球员</th><th>#</th><th>AB</th><th>H</th><th>R</th><th>RBI</th><th>BB</th><th>SO</th>'+
-          '</tr></thead><tbody>';
-      homeBatting.forEach(function(b){
-        h += '<tr>'+
-          '<td>'+escHtml(b.name||'')+'</td>'+
-          '<td>'+escHtml(b.number||'')+'</td>'+
-          '<td>'+(b.ab||0)+'</td>'+
-          '<td>'+(b.h||0)+'</td>'+
-          '<td>'+(b.r||0)+'</td>'+
-          '<td>'+(b.rbi||0)+'</td>'+
-          '<td>'+(b.bb||0)+'</td>'+
-          '<td>'+(b.so||0)+'</td>'+
-        '</tr>';
-      });
-      h += '</tbody></table></div></div>';
-    }
-    // Away team batting
-    if (awayBatting.length) {
-      h += '<div class="gamedata-section">'+
-        '<div class="gamedata-section-title">⚾ '+escHtml(game.away||'Away')+' 打击数据</div>'+
-        '<div class="gamedata-table-wrap">'+
-          '<table class="gamedata-table"><thead><tr>'+
-            '<th>球员</th><th>#</th><th>AB</th><th>H</th><th>R</th><th>RBI</th><th>BB</th><th>SO</th>'+
-          '</tr></thead><tbody>';
-      awayBatting.forEach(function(b){
-        h += '<tr>'+
-          '<td>'+escHtml(b.name||'')+'</td>'+
-          '<td>'+escHtml(b.number||'')+'</td>'+
-          '<td>'+(b.ab||0)+'</td>'+
-          '<td>'+(b.h||0)+'</td>'+
-          '<td>'+(b.r||0)+'</td>'+
-          '<td>'+(b.rbi||0)+'</td>'+
-          '<td>'+(b.bb||0)+'</td>'+
-          '<td>'+(b.so||0)+'</td>'+
-        '</tr>';
-      });
-      h += '</tbody></table></div></div>';
-    }
+  if (hkBatting.length) {
+    h += '<div class="gamedata-section">'+
+      '<div class="gamedata-section-title">⚾ HK队 打击数据</div>'+
+      '<div class="gamedata-table-wrap">'+
+        '<table class="gamedata-table"><thead><tr>'+
+          '<th>球员</th><th>#</th><th>AB</th><th>H</th><th>R</th><th>RBI</th><th>BB</th><th>SO</th>'+
+        '</tr></thead><tbody>';
+    hkBatting.forEach(function(b){
+      h += '<tr>'+
+        '<td>'+escHtml(b.name||'')+'</td>'+
+        '<td>'+escHtml(b.number||'')+'</td>'+
+        '<td>'+(b.ab||0)+'</td>'+
+        '<td>'+(b.h||0)+'</td>'+
+        '<td>'+(b.r||0)+'</td>'+
+        '<td>'+(b.rbi||0)+'</td>'+
+        '<td>'+(b.bb||0)+'</td>'+
+        '<td>'+(b.so||0)+'</td>'+
+      '</tr>';
+    });
+    h += '</tbody></table></div></div>';
   }
 
-  // ── Section 4: 投手数据 ──
+  // ── Section 4: 投手数据（仅 HK 队）────────────────────────────────────────
   var hkPitching = game.hk_pitching||[];
-  var homePitching = game.home_pitching||[];
-  var anyPitching = hkPitching.length || homePitching.length;
-  if (anyPitching) {
-    if (hkPitching.length) {
-      h += '<div class="gamedata-section">'+
-        '<div class="gamedata-section-title">🎯 HK队 投手数据</div>'+
-        '<div class="gamedata-table-wrap">'+
-          '<table class="gamedata-table"><thead><tr>'+
-            '<th>球员</th><th>#</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>SO</th>'+
-          '</tr></thead><tbody>';
-      hkPitching.forEach(function(b){
-        h += '<tr>'+
-          '<td>'+escHtml(b.name||'')+'</td>'+
-          '<td>'+escHtml(b.number||'')+'</td>'+
-          '<td>'+fmtIP(b.ip)+'</td>'+
-          '<td>'+(b.h||0)+'</td>'+
-          '<td>'+(b.r||0)+'</td>'+
-          '<td>'+(b.er||0)+'</td>'+
-          '<td>'+(b.bb||0)+'</td>'+
-          '<td>'+(b.so||0)+'</td>'+
-        '</tr>';
-      });
-      h += '</tbody></table></div></div>';
-    }
-    if (homePitching.length) {
-      h += '<div class="gamedata-section">'+
-        '<div class="gamedata-section-title">🎯 '+escHtml(game.home||'Home')+' 投手数据</div>'+
-        '<div class="gamedata-table-wrap">'+
-          '<table class="gamedata-table"><thead><tr>'+
-            '<th>球员</th><th>#</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>SO</th>'+
-          '</tr></thead><tbody>';
-      homePitching.forEach(function(b){
-        h += '<tr>'+
-          '<td>'+escHtml(b.name||'')+'</td>'+
-          '<td>'+escHtml(b.number||'')+'</td>'+
-          '<td>'+fmtIP(b.ip)+'</td>'+
-          '<td>'+(b.h||0)+'</td>'+
-          '<td>'+(b.r||0)+'</td>'+
-          '<td>'+(b.er||0)+'</td>'+
-          '<td>'+(b.bb||0)+'</td>'+
-          '<td>'+(b.so||0)+'</td>'+
-        '</tr>';
-      });
-      h += '</tbody></table></div></div>';
-    }
+  if (hkPitching.length) {
+    h += '<div class="gamedata-section">'+
+      '<div class="gamedata-section-title">🎯 HK队 投手数据</div>'+
+      '<div class="gamedata-table-wrap">'+
+        '<table class="gamedata-table"><thead><tr>'+
+          '<th>球员</th><th>#</th><th>IP</th><th>H</th><th>R</th><th>ER</th><th>BB</th><th>SO</th>'+
+        '</tr></thead><tbody>';
+    hkPitching.forEach(function(b){
+      h += '<tr>'+
+        '<td>'+escHtml(b.name||'')+'</td>'+
+        '<td>'+escHtml(b.number||'')+'</td>'+
+        '<td>'+fmtIP(b.ip)+'</td>'+
+        '<td>'+(b.h!=null?b.h:'-')+'</td>'+
+        '<td>'+(b.r!=null?b.r:'-')+'</td>'+
+        '<td>'+(b.er!=null?b.er:'-')+'</td>'+
+        '<td>'+(b.bb!=null?b.bb:'-')+'</td>'+
+        '<td>'+(b.so!=null?b.so:'-')+'</td>'+
+      '</tr>';
+    });
+    h += '</tbody></table></div></div>';
   }
 
-  if (!anyBatting && !anyPitching) {
+  if (!hkBatting.length && !hkPitching.length) {
     h += '<div class="gamedata-section">'+
       '<div style="text-align:center;padding:32px;color:var(--text-muted);">'+
         '📄 暂无 PDF 解析数据<br><span style="font-size:12px;">请通过 GC PDF 导入或手动编辑添加数据</span>'+
@@ -1340,19 +1265,34 @@ function autoMatchAllGCPlayers() {
 
   gc.hk_batting.concat(gc.hk_pitching).forEach(function(gcp) {
     if (!gcp.lib_id) return;
-    if (existingIds.has(String(gcp.lib_id))) return; // already in roster
     var libP = allPlayers.find(function(p){ return String(p.id||p.player_id||'') === String(gcp.lib_id); });
     if (!libP) return;
-    _wizardGame.roster.push({
-      player_id: gcp.lib_id,
-      name: libP.name,
-      number: libP.number || gcp.number || '',
-      position: gcp.position || '',
-      ab: gcp.ab, r: gcp.r, h: gcp.h, rbi: gcp.rbi, bb: gcp.bb, so: gcp.so,
-      ip: gcp.ip, er: gcp.er, so_p: gcp.so_p,
-      lib_id: gcp.lib_id
-    });
-    existingIds.add(String(gcp.lib_id));
+    var existingIdx = _wizardGame.roster.findIndex(function(p){ return String(p.player_id||p.id||'') === String(gcp.lib_id); });
+    if (existingIdx >= 0) {
+      // Merge: batting+Pitching同一人时，后者补充投球数据（不覆盖已有的batting字段）
+      var ex = _wizardGame.roster[existingIdx];
+      if (gcp.ab != null)  ex.ab  = gcp.ab;
+      if (gcp.r  != null)  ex.r   = gcp.r;
+      if (gcp.h  != null)  ex.h   = gcp.h;
+      if (gcp.rbi!= null)  ex.rbi = gcp.rbi;
+      if (gcp.bb != null)  ex.bb  = gcp.bb;
+      if (gcp.so != null)  ex.so  = gcp.so;
+      // Pitching fields (only overwrite if not already set, or if coming from pitching block)
+      if (gcp.ip   != null && gcp.ip   !== 0) ex.ip   = gcp.ip;
+      if (gcp.er   != null && gcp.er   !== 0) ex.er   = gcp.er;
+      if (gcp.so_p != null && gcp.so_p !== 0) ex.so_p = gcp.so_p;
+      if (gcp.hr   != null && gcp.hr   !== 0) ex.hr   = gcp.hr;
+    } else {
+      _wizardGame.roster.push({
+        player_id: gcp.lib_id,
+        name: libP.name,
+        number: libP.number || gcp.number || '',
+        position: gcp.position || '',
+        ab: gcp.ab, r: gcp.r, h: gcp.h, rbi: gcp.rbi, bb: gcp.bb, so: gcp.so,
+        ip: gcp.ip, er: gcp.er, so_p: gcp.so_p,
+        lib_id: gcp.lib_id
+      });
+    }
   });
 }
 
