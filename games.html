@@ -1974,8 +1974,10 @@ function parseGCText(text) {
   // battingBlock = all text in BATTING section in PDF top→bottom order.
   // First "Totals" marks end of first team's batting. Second "Totals" marks end of second team's.
   // batAll rows are in same top→bottom order as battingBlock.
+  console.log('[DEBUG BatSplit] ENTERED. batAll.length=' + batAll.length + ' battingBlock.length=' + battingBlock.length);
   var firstTotPos  = battingBlock.indexOf('Totals');
   var secondTotPos = firstTotPos >= 0 ? battingBlock.indexOf('Totals', firstTotPos + 1) : -1;
+  console.log('[DEBUG BatSplit] firstTotPos=' + firstTotPos + ' secondTotPos=' + secondTotPos);
 
   // Count how many batAll rows appear before firstTotPos vs between firstTotPos and secondTotPos
   var awayBatCount = 0;
@@ -2001,7 +2003,6 @@ function parseGCText(text) {
       else homeBatCount++;
     }
   }
-  console.log('[DEBUG BatSplit] firstTotPos=' + firstTotPos + ' secondTotPos=' + secondTotPos);
   console.log('[DEBUG BatSplit] awayBatCount=' + awayBatCount + ' homeBatCount=' + homeBatCount + ' batAll.len=' + batAll.length);
   if (awayBatCount === 0 || (awayBatCount + homeBatCount !== batAll.length)) {
     // Fallback: use preTotCount if our counting failed
