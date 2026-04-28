@@ -549,12 +549,10 @@ function renderGameDataModal(game) {
   // ── Section 2: 逐局比分 ──
   var hasInnings = awayR.length > 0 || homeR.length > 0;
   if (hasInnings) {
-    // Normalize: convert "X" to null, find max innings
-    var normAway = awayR.map(function(v){ return v==='X'||v==='x' ? null : (parseInt(v)||0); });
-    var normHome = homeR.map(function(v){ return v==='X'||v==='x' ? null : (parseInt(v)||0); });
-    var awayReal = normAway.filter(function(v){ return v!==null; });
-    var homeReal = normHome.filter(function(v){ return v!==null; });
-    var maxInnings = Math.max(awayReal.length, homeReal.length);
+    // Normalize: 'X' stays as null (display as 'X'), numbers as int
+    var normAway = awayR.map(function(v){ return (v==='X'||v==='x') ? null : (typeof v === 'number' ? v : (parseInt(v)||0)); });
+    var normHome = homeR.map(function(v){ return (v==='X'||v==='x') ? null : (typeof v === 'number' ? v : (parseInt(v)||0)); });
+    var maxInnings = Math.max(normAway.length, normHome.length);
     if (maxInnings === 0) maxInnings = 1;
 
     // H/E: directly use stored away_hits/errors and home_hits/errors
@@ -577,7 +575,7 @@ function renderGameDataModal(game) {
          '<div class="ginn-inn" style="background:var(--text-muted);color:white;font-weight:700;">E</div></div>';
 
     // Away row (PDF row 1)
-    var awayTotal = 0; awayReal.forEach(function(v){ awayTotal += (v||0); });
+    var awayTotal = 0; normAway.forEach(function(v){ if(v!==null) awayTotal += v; });
     h += '<div class="gamedata-inning-row">';
     h += '<div class="ginn-team ginn-away">'+escHtml(game.away||'Away')+'</div>';
     for (var ai=0; ai<maxInnings; ai++) {
@@ -589,7 +587,7 @@ function renderGameDataModal(game) {
          '<div class="ginn-inn">'+awE+'</div></div>';
 
     // Home row (PDF row 2)
-    var homeTotal = 0; homeReal.forEach(function(v){ homeTotal += (v||0); });
+    var homeTotal = 0; normHome.forEach(function(v){ if(v!==null) homeTotal += v; });
     h += '<div class="gamedata-inning-row">';
     h += '<div class="ginn-team ginn-home">'+escHtml(game.home||'Home')+'</div>';
     for (var hi=0; hi<maxInnings; hi++) {
@@ -1868,14 +1866,16 @@ function parseGCText(text) {
 
   if (foundInnings.length >= 1) {
     var awayNums = foundInnings[0].nums;
-    result.away_runs_by_inning = awayNums.slice(0, awayNums.length - 3).map(function(v){ return v === 'X' ? 0 : parseInt(v) || 0; });
+    // Keep 'X' as string 'X' (home team last-inning walk-off); only convert real digits
+    result.away_runs_by_inning = awayNums.slice(0, awayNums.length - 3).map(function(v){ return (v==='X'||v==='x') ? 'X' : (parseInt(v)||0); });
     result.away_r      = parseInt(awayNums[awayNums.length - 3]) || 0;
     result.away_hits   = parseInt(awayNums[awayNums.length - 2]);
     result.away_errors = parseInt(awayNums[awayNums.length - 1]);
   }
   if (foundInnings.length >= 2) {
     var homeNums = foundInnings[1].nums;
-    result.home_runs_by_inning = homeNums.slice(0, homeNums.length - 3).map(function(v){ return v === 'X' ? 0 : parseInt(v) || 0; });
+    // Keep 'X' as string 'X'
+    result.home_runs_by_inning = homeNums.slice(0, homeNums.length - 3).map(function(v){ return (v==='X'||v==='x') ? 'X' : (parseInt(v)||0); });
     result.home_r      = parseInt(homeNums[homeNums.length - 3]) || 0;
     result.home_hits   = parseInt(homeNums[homeNums.length - 2]);
     result.home_errors = parseInt(homeNums[homeNums.length - 1]);
@@ -2037,16 +2037,23 @@ function parseGCText(text) {
   pitAll.forEach(function(p, i){ console.log('  [' + i + '] ' + p.name + ' #' + p.number + ' IP=' + p.ip + ' H=' + p.h + ' R=' + p.r + ' ER=' + p.er); });
 
   var pitTotIdx = pitchingBlock.indexOf('Totals');
-  var prePitBlock = pitTotIdx >= 0 ? pitchingBlock.substring(0, pitTotIdx) : pitchingBlock;
-  var prePitCount = 0;
-  for (var ppi = 0; ppi < pitAll.length; ppi++) {
-    var psearch = ' ' + pitAll[ppi].name + ' #' + pitAll[ppi].number;
-    if (prePitBlock.indexOf(psearch) >= 0) prePitCount++;
-    else break;
-  }
+  // Assign each pitcher to away or home based on where their name appears relative to 'Totals'
   for (var pki = 0; pki < pitAll.length; pki++) {
-    if (pki < prePitCount) result.away_pitching.push(pitAll[pki]);
-    else result.home_pitching.push(pitAll[pki]);
+    var pitName = pitAll[pki].name;
+    var pitNum  = String(pitAll[pki].number);
+    // Search for the pitcher's name in pitchingBlock
+    var pitPos = pitchingBlock.indexOf(pitName);
+    if (pitPos < 0) {
+      // Try just the last word of the name (handles "M Mai" vs full name)
+      var nameParts = pitName.split(/\s+/);
+      pitPos = pitchingBlock.indexOf(nameParts[nameParts.length - 1]);
+    }
+    // If position is before Totals (or no Totals found) → away; else → home
+    if (pitTotIdx < 0 || (pitPos >= 0 && pitPos < pitTotIdx)) {
+      result.away_pitching.push(pitAll[pki]);
+    } else {
+      result.home_pitching.push(pitAll[pki]);
+    }
   }
   console.log('[GC Parse] away_pitching:', result.away_pitching.length, 'home_pitching:', result.home_pitching.length);
 
