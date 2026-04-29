@@ -1821,15 +1821,16 @@ function parseGCText(text) {
   //
   // "Kaakiro Lions Majors TTBC Majors Eagles"  → away=Kaikiro Lions, home=TTBC Eagles
   // "ABC Dodgers Majors Kaakiro Lions Majors"  → away=ABC Dodgers, home=Kaikiro Lions
+  // GC PDF format: "[Away Team] Majors [Home Team] Majors SCORE"
+  // e.g. "ABC Dodgers Majors Kaakiro Lions Majors"
+  //       away=ABC Dodgers  /  home=Kaakiro Lions
+  // Split at the FIRST "Majors", then strip any remaining "Majors" from right part.
   var awayTeam = '';
   var homeTeam = '';
-  // "Majors Majors" is always surrounded by spaces. The trailing \s+ of our pattern
-  // would consume the space before "4 - 0", breaking the match. Fix: use MAJORS\b
-  // (word boundary) instead of \s+ after each MAJORS, so no trailing space is eaten.
-  var parts = cleanTitle.split(/\s+MAJORS\b\s+MAJORS\b\s*/i);
-  if (parts.length >= 2) {
-    awayTeam = parts[0].trim();
-    homeTeam = parts[1].trim();
+  var majorsSplit = cleanTitle.match(/^([\s\S]*?)\s+MAJORS\s+([\s\S]*)$/i);
+  if (majorsSplit) {
+    awayTeam = majorsSplit[1].trim();
+    homeTeam = majorsSplit[2].replace(/\bMAJORS\b/gi, '').replace(/\s+/g, ' ').trim();
   } else {
     // Fallback: old homeCode.indexOf approach
     var awayCode = tmpCodes.length >= 1 ? tmpCodes[0] : '';
