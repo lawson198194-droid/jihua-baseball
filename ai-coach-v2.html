@@ -1226,9 +1226,10 @@ function renderBattingResult(sugs, plans, d) {
       }, i * 150);
     });
 
-    // 雷达图标签
+    // 雷达图 + 标签
     setTimeout(function(){
       var map = { 'power': d.power, 'speed': d.speed, 'contact': d.contact, 'defense': d.defense, 'control': d.control };
+      drawRadar('result-radar', map);
       Object.keys(map).forEach(function(k){
         var el = document.getElementById('radar-v-'+k);
         if (el) el.textContent = map[k];
