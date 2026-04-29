@@ -489,7 +489,7 @@ function loadAllPlayersForSearch(cb) {
     return;
   }
   // 否则直接查Firebase REST
-  var dbUrl = 'https://baseball-games-91c8e-default-rtdb.asia-southeast1.firebasedatabase.app/players.json?limitToFirst=500';
+  var dbUrl = 'https://baseai-hk-default-rtdb.asia-southeast1.firebasedatabase.app/players.json?limitToFirst=500';
   var xhr = new XMLHttpRequest();
   xhr.open('GET', dbUrl, true);
   xhr.onreadystatechange = function() {
