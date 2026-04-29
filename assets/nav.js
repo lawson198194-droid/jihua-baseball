@@ -102,7 +102,18 @@
           label.textContent = '本地存储';
         }
       } else {
-        setTimeout(function retry() { checkDBStatus(); }, 300);
+        var retryCount = 0;
+        (function poll() {
+          retryCount++;
+          if (retryCount > 20) { label.textContent = '状态未知'; return; }
+          var m = (window.DB && window.FirebaseService) ? (FirebaseService.isConfigured ? 'Firebase' : 'localStorage') : null;
+          if (m) {
+            if (m === 'Firebase') { label.textContent = 'Firebase 云端'; }
+            else { dot.classList.add('offline'); label.textContent = '本地存储'; }
+          } else {
+            setTimeout(poll, 300);
+          }
+        })();
       }
     }, 300);
   };
