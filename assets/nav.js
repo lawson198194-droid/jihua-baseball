@@ -102,7 +102,7 @@
           label.textContent = '本地存储';
         }
       } else {
-        setTimeout(arguments.callee, 300);
+        setTimeout(function retry() { checkDBStatus(); }, 300);
       }
     }, 300);
   };
