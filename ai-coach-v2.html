@@ -108,6 +108,9 @@
   }
   .form-group select:focus, .form-group input:focus { border-color: #f97316; }
   .form-group select option { background: #1a2235; }
+  .pdi-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.1s; }
+  .pdi-item:last-child { border-bottom: none; }
+  .pdi-item:hover { background: rgba(249,115,22,0.15); }
 
   /* Video Type Selector */
   .type-cards {
@@ -432,12 +435,12 @@ function renderStep1() {
   </div>
   <div class="panel-body">
     <div class="setup-row">
-      <div class="form-group">
+      <div class="form-group" style="position:relative;">
         <label>选择球员</label>
-        <select id="sel-player" onchange="onPlayerChange()">
-          <option value="">— 请选择球员 —</option>
-          ${playerOpts}
-        </select>
+        <input type="text" id="player-search-input" placeholder="输入名字搜索…" autocomplete="off" style="width:100%;padding:12px 14px;font-size:14px;background:rgba(20,26,46,0.9);border:1px solid rgba(249,115,22,0.3);color:#f1f5f9;border-radius:10px;box-sizing:border-box;outline:none;transition:border-color 0.15s;" oninput="filterPlayerList(this.value)" onfocus="showPlayerDropdown()" />
+        <div id="player-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:260px;overflow-y:auto;background:#1a2235;border:1px solid rgba(249,115,22,0.4);border-radius:10px;margin-top:4px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.5);"></div>
+        <div id="sel-player-name" style="margin-top:8px;font-size:13px;color:#f97316;font-weight:600;min-height:18px;"></div>
+        <input type="hidden" id="sel-player" />
       </div>
     </div>
 
@@ -464,10 +467,58 @@ function renderStep1() {
 
 function onPlayerChange() {
   var sel = document.getElementById('sel-player');
-  var opt = sel.options[sel.selectedIndex];
-  selectedPlayer = opt && sel.value ? { id: sel.value, name: opt.dataset.name } : null;
+  selectedPlayer = sel && sel.value ? { id: sel.value, name: sel.dataset.name } : null;
+  var nameEl = document.getElementById('sel-player-name');
+  if (nameEl) nameEl.textContent = selectedPlayer ? '已选：' + selectedPlayer.name : '';
   updateStep1Btn();
 }
+
+function showPlayerDropdown() {
+  var inp = document.getElementById('player-search-input');
+  filterPlayerList(inp ? inp.value : '');
+}
+
+function filterPlayerList(query) {
+  var dropdown = document.getElementById('player-dropdown');
+  if (!dropdown) return;
+  var q = query.trim().toLowerCase();
+  var filtered = allPlayers.filter(function(p) {
+    return p.name && p.name.toLowerCase().includes(q);
+  }).slice(0, 50); // 最多显示50条
+  if (filtered.length === 0) {
+    dropdown.innerHTML = '<div style="padding:16px;color:#64748b;font-size:13px;text-align:center;">未找到匹配球员</div>';
+    dropdown.style.display = 'block';
+    return;
+  }
+  dropdown.innerHTML = filtered.map(function(p) {
+    return '<div class="pdi-item" data-id="'+(p.id||p.player_id)+'" data-name="'+esc(p.name)+'" onclick="selectPlayerItem(this)">'+
+           '<span style="font-weight:600;color:#f1f5f9">'+esc(p.name)+'</span>'+
+           (p.position ? '<span style="color:#64748b;font-size:12px;margin-left:8px">'+esc(p.position)+'</span>' : '')+
+           '</div>';
+  }).join('');
+  dropdown.style.display = 'block';
+}
+
+function selectPlayerItem(el) {
+  var id = el.dataset.id;
+  var name = el.dataset.name;
+  var inp = document.getElementById('player-search-input');
+  if (inp) inp.value = name;
+  var sel = document.getElementById('sel-player');
+  if (sel) { sel.value = id; sel.dataset.name = name; }
+  var dropdown = document.getElementById('player-dropdown');
+  if (dropdown) dropdown.style.display = 'none';
+  onPlayerChange();
+}
+
+// 点击空白关闭下拉
+document.addEventListener('click', function(e) {
+  var dropdown = document.getElementById('player-dropdown');
+  var input = document.getElementById('player-search-input');
+  if (dropdown && input && !dropdown.contains(e.target) && !input.contains(e.target)) {
+    dropdown.style.display = 'none';
+  }
+});
 
 function selectType(type) {
   selectedType = type;
