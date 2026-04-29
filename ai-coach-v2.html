@@ -474,15 +474,48 @@ function onPlayerChange() {
 }
 
 function showPlayerDropdown() {
-  var inp = document.getElementById('player-search-input');
-  filterPlayerList(inp ? inp.value : '');
+  // 每次点击时直接从Firebase REST实时拉取最新球员列表
+  loadAllPlayersForSearch(function(players) {
+    window._searchPlayers = players;
+    var inp = document.getElementById('player-search-input');
+    filterPlayerList(inp ? inp.value : '');
+  });
+}
+
+function loadAllPlayersForSearch(cb) {
+  // 优先使用已缓存的allPlayers
+  if (window.allPlayers && window.allPlayers.length > 10) {
+    cb(window.allPlayers);
+    return;
+  }
+  // 否则直接查Firebase REST
+  var dbUrl = 'https://baseball-games-91c8e-default-rtdb.asia-southeast1.firebasedatabase.app/players.json?limitToFirst=500';
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', dbUrl, true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4 && xhr.status === 200) {
+      try {
+        var raw = JSON.parse(xhr.responseText);
+        var players = [];
+        for (var k in raw) {
+          if (raw[k] && raw[k].name) players.push(raw[k]);
+        }
+        window.allPlayers = players;
+        cb(players);
+      } catch(e) { cb([]); }
+    } else if (xhr.readyState === 4) {
+      cb(window.allPlayers || []);
+    }
+  };
+  xhr.send();
 }
 
 function filterPlayerList(query) {
   var dropdown = document.getElementById('player-dropdown');
   if (!dropdown) return;
   var q = query.trim().toLowerCase();
-  var filtered = allPlayers.filter(function(p) {
+  var pool = window._searchPlayers || window.allPlayers || [];
+  var filtered = pool.filter(function(p) {
     return p.name && p.name.toLowerCase().includes(q);
   }).slice(0, 50); // 最多显示50条
   if (filtered.length === 0) {
