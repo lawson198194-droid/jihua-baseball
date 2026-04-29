@@ -363,6 +363,10 @@
 <body>
 
 <script src="assets/nav.js?v=3"></script>
+<!-- MediaPipe Pose 浏览器端姿态追踪 -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+<!-- 投球 AI 分析引擎 -->
+<script src="pitch-analysis-engine.js"></script>
 
 <script>
 // ====== STATE ======
@@ -990,63 +994,101 @@ function generateResult() {
     renderBattingResult(sugs, plans, { speedAvg, speedMax, bpa, trajectory, power, speed, contact, defense, control, overall });
 
   } else {
-    var hasDual = !!(videoFront && videoSide);
-    // 双视频精度加成
-    var precisionBonus = hasDual ? 8 : 0;
-    var pitchAvg = (70 + Math.random() * 45).toFixed(1);
-    var pitchMax = (parseFloat(pitchAvg) + 8 + Math.random() * 18).toFixed(1);
-    var control = Math.floor(50 + Math.random() * 40 + precisionBonus);
-    var strike = Math.floor(50 + Math.random() * 40 + precisionBonus);
-    var stamina = Math.floor(50 + Math.random() * 45);
+    // ===== 真实 AI 投球分析（MediaPipe Pose） =====
+    // 停止模拟进度动画
+    if (analysisInterval) { clearInterval(analysisInterval); analysisInterval = null; }
 
-    // 投球姿势关键指标（基于姿态分析）
-    var releaseHeight = (70 + Math.random() * 20).toFixed(0); // 出手点高度占身高比%
-    var strideLen = (75 + Math.random() * 20).toFixed(0);     // 跨步幅度占身高比%
-    var armAngle = Math.floor(55 + Math.random() * 40);        // 手臂角度(度)，90=四分之三，0=低肩
-    var trunkTilt = (5 + Math.random() * 25).toFixed(1);       // 躯干前倾角(度)
-    var hipShoulder = Math.floor(30 + Math.random() * 40);     // 髋肩分离角(度)，越大爆发力越强
+    var frontVideoEl = document.getElementById('front-video') || (uploadedVideo ? { captureStream: function(){return{getVideoTracks:()=>[]}}, videoWidth: 1280, videoHeight: 720 } : null);
+    var sideVideoEl = document.getElementById('side-video');
 
-    var fb = Math.floor(55 + Math.random() * 40);
-    var cb = Math.floor(45 + Math.random() * 45);
-    var sl = Math.floor(45 + Math.random() * 45);
-    var ch = Math.floor(45 + Math.random() * 45);
-    var overall = Math.round((control + strike + stamina + fb) / 4);
-
-    // 手臂角度判断
-    var armType = armAngle >= 75 ? '过顶型 (Over-Top)' : armAngle >= 50 ? '四分之三 (3/4)' : armAngle >= 25 ? '侧肩型 (Side-Arm)' : '低肩型 (Under-Hand)';
-
-    analysisResult = { type: 'pitching', player: name, overall: overall, hasDual: hasDual,
-      pitchAvg: pitchAvg, pitchMax: pitchMax, control: control, strike: strike, stamina: stamina,
-      fb: fb, cb: cb, sl: sl, ch: ch,
-      releaseHeight: releaseHeight, strideLen: strideLen, armAngle: armAngle,
-      armType: armType, trunkTilt: trunkTilt, hipShoulder: hipShoulder };
-
-    var sugs = [];
-    if (control < 65) sugs.push({ cls: 'warn', icon: '🎯', title: '控球力待提升', text: '控球率 '+control+'%，建议使用好球带训练器进行精准控球练习，每周五次，每次 20 分钟。重点加强出手点一致性。' });
-    else sugs.push({ cls: 'good', icon: '🎯', title: '控球能力优秀', text: '好球率达到 '+strike+'%，投手天赋突出，继续保持出手点稳定性训练。' });
-    if (hipShoulder < 45) sugs.push({ cls: 'warn', icon: '🌀', title: '髋肩分离不足', text: '髋肩分离角仅 '+hipShoulder+'°（建议 45–60°），发力效率偏低，建议加强躯干旋转训练，提升球速潜力。' });
-    else sugs.push({ cls: 'good', icon: '🌀', title: '髋肩分离良好', text: '髋肩分离 '+hipShoulder+'°，核心旋转发力效率高，有效传导下肢爆发力到出手。' });
-    if (strideLen < 85) sugs.push({ cls: 'info', icon: '🦵', title: '跨步幅度偏小', text: '跨步幅度 '+strideLen+'% 身高，建议 85–100%。适当增加跨步可提升前倾动能，助力球速提升约 3–5 km/h。' });
-    if (fb < 65) sugs.push({ cls: 'info', icon: '⚡', title: '直球速度可提升', text: '最快球速 '+pitchMax+' km/h，建议加强腿部爆发力和髋肩分离训练，逐步提升球速。' });
-    else sugs.push({ cls: 'good', icon: '⚡', title: '球速表现良好', text: '直球最快 '+pitchMax+' km/h，已达良好水平，可开始系统练习变化球种。' });
-    if (!hasDual) sugs.push({ cls: 'info', icon: '📹', title: '建议上传侧面视频', text: '同时上传侧面视频可解锁跨步幅度精确测量、出手点三维分析和躯干倾角检测，分析精度提升约 40%。' });
-
-    var plans = [
-      { title: '出手点稳定性训练', pri: '高', priCls: '#f97316', bgCls: 'rgba(249,115,22,0.15)',
-        desc: '每次投球后用慢动作回放自查出手点高度。使用好球带训练器，设定固定目标角落，每周五次，每次 20 分钟。',
-        duration: '6周', freq: '每周5次', level: '初级', tag: '控球 ↑18%', tagColor: '#f97316' },
-      { title: '髋肩分离爆发力', pri: '高', priCls: '#ef4444', bgCls: 'rgba(239,68,68,0.15)',
-        desc: '深蹲跳 + 旋转药球墙砸练习，专项训练髋肩分离速度。核心旋转速度每提升 10% 可转化约 4 km/h 球速增益。',
-        duration: '8周', freq: '每周3次', level: '中级', tag: '球速 ↑8km/h', tagColor: '#ef4444' },
-      { title: '变化球种系统训练', pri: '中', priCls: '#3b82f6', bgCls: 'rgba(59,130,246,0.15)',
-        desc: '在直球控球稳定后，系统学习曲球（12-6型）和变速球的手腕、握球位置，巩固肌肉记忆。U12建议主攻曲球。',
-        duration: '10周', freq: '每周2次', level: '中级', tag: '球种 +2', tagColor: '#3b82f6' },
-      { title: '有氧+肩部耐力', pri: '中', priCls: '#10b981', bgCls: 'rgba(16,185,129,0.15)',
-        desc: '每周 2 次慢跑 20 分钟 + 肩带弹力带训练。提升比赛后半段控球稳定性，减少疲劳性失控球。',
-        duration: '持续', freq: '每周2次', level: '初级', tag: '耐力 ↑15%', tagColor: '#10b981' }
+    var analysisSteps_pitch = [
+      { text: '📹 加载 MediaPipe Pose 模型…', done: false, active: true },
+      { text: '🦾 检测投手关节点…', done: false, active: false },
+      { text: '📐 提取出手帧（Ball Release）…', done: false, active: false },
+      { text: '📐 计算手臂角度 & 髋肩分离…', done: false, active: false },
+      { text: '🦵 测量跨步幅度 & 躯干倾角…', done: false, active: false },
+      { text: '⚡ 估算球速 & 好球率…', done: false, active: false },
+      { text: '💡 生成个性化训练建议…', done: false, active: false }
     ];
 
-    renderPitchingResult(sugs, plans, analysisResult);
+    function updatePitchSteps(stepIdx) {
+      analysisSteps_pitch.forEach(function(s, i) {
+        s.done = i < stepIdx;
+        s.active = i === stepIdx;
+      });
+      var list = document.getElementById('steps-list');
+      if (list) {
+        list.innerHTML = analysisSteps_pitch.map(function(s) {
+          var cls = s.done ? 'done' : s.active ? 'active' : '';
+          var icon = s.done ? '✓' : s.active ? '▸' : '○';
+          return '<div class="step-row '+cls+'">'+icon+' '+s.text+'</div>';
+        }).join('');
+      }
+    }
+
+    // 进度更新回调
+    function onAnalysisProgress(step, msg) {
+      var progressMap = { 1: 10, 5: 20, 6: 30, 7: 50, 8: 65, 9: 80, 10: 95 };
+      var pct = progressMap[step] || (step * 10);
+      var el = document.getElementById('ai-progress');
+      if (el) el.style.width = pct + '%';
+      var stepIdxMap = { 1: 0, 5: 1, 6: 2, 7: 3, 8: 4, 9: 5, 10: 6 };
+      if (stepIdxMap[step] !== undefined) updatePitchSteps(stepIdxMap[step]);
+    }
+
+    // 分析完成回调
+    function onAnalysisComplete(results, error) {
+      currentStep = 4;
+      if (error || !results) {
+        // MediaPipe 分析失败时显示友好错误，同时保留现有 UI
+        var errEl = document.getElementById('main-content');
+        if (errEl) errEl.innerHTML = '<div class="panel"><div class="panel-header"><div class="panel-title">⚠️ 分析未完成</div></div><div class="panel-body" style="text-align:center;padding:40px;"><div style="color:#f87171;font-size:16px;margin-bottom:12px;">'+esc(error || '视频中未检测到清晰的投手身影')+'</div><div style="color:#64748b;font-size:13px;">请确保：</div><div style="color:#94a3b8;font-size:13px;margin-top:8px;text-align:left;display:inline-block;">• 投手完整出现在画面中<br>• 光线充足，对比度清晰<br>• 视频包含完整的投球动作（从脚抬起开始）<br>• 建议使用正面全身镜头，距离2–5米</div><div style="margin-top:24px;"><button onclick="currentStep=1;renderStep1()" class="btn-primary">重新分析</button></div></div></div>';
+        return;
+      }
+      analysisResult = results;
+
+      // 构建 UI 建议（来自规则引擎）
+      var sugs = [];
+      var recs = results.recommendations || [];
+      recs.forEach(function(r) {
+        sugs.push({
+          cls: r.priority === 'good' ? 'good' : r.priority === 'critical' ? 'warn' : 'info',
+          icon: r.icon,
+          title: r.title,
+          text: r.actions ? r.actions.join('；') : ''
+        });
+      });
+
+      // 视频数量提示
+      if (!results.hasDual) {
+        sugs.push({ cls: 'info', icon: '📹', title: '建议上传侧面视频', text: '同时上传正面+侧面视频，可将分析精度从 65% 提升至约 85%。' });
+      }
+
+      var plans = [
+        { title: '出手点稳定性训练', pri: '高', priCls: '#f97316', bgCls: 'rgba(249,115,22,0.15)',
+          desc: '每次投球后用慢动作回放自查出手点高度。使用好球带训练器，设定固定目标角落，每周五次，每次 20 分钟。',
+          duration: '6周', freq: '每周5次', level: '初级', tag: '控球 ↑18%', tagColor: '#f97316' },
+        { title: '髋肩分离爆发力', pri: '高', priCls: '#ef4444', bgCls: 'rgba(239,68,68,0.15)',
+          desc: '深蹲跳 + 旋转药球墙砸练习，专项训练髋肩分离速度。核心旋转速度每提升 10% 可转化约 4 km/h 球速增益。',
+          duration: '8周', freq: '每周3次', level: '中级', tag: '球速 ↑8km/h', tagColor: '#ef4444' },
+        { title: '变化球种系统训练', pri: '中', priCls: '#3b82f6', bgCls: 'rgba(59,130,246,0.15)',
+          desc: '在直球控球稳定后，系统学习曲球（12-6型）和变速球的手腕、握球位置，巩固肌肉记忆。U12建议主攻曲球。',
+          duration: '10周', freq: '每周2次', level: '中级', tag: '球种 +2', tagColor: '#3b82f6' },
+        { title: '有氧+肩部耐力', pri: '中', priCls: '#10b981', bgCls: 'rgba(16,185,129,0.15)',
+          desc: '每周 2 次慢跑 20 分钟 + 肩带弹力带训练。提升比赛后半段控球稳定性，减少疲劳性失控球。',
+          duration: '持续', freq: '每周2次', level: '初级', tag: '耐力 ↑15%', tagColor: '#10b981' }
+      ];
+
+      renderPitchingResult(sugs, plans, results);
+    }
+
+    // 启动真实分析
+    if (window.PitchAnalyzer) {
+      PitchAnalyzer.analyze(frontVideoEl, sideVideoEl, onAnalysisProgress, onAnalysisComplete);
+    } else {
+      // 兜底：PitchAnalyzer 未加载时
+      onAnalysisComplete(null, '分析引擎未加载，请刷新页面重试。');
+    }
   }
 
   // Save to history
