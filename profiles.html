@@ -373,6 +373,7 @@ input,select,textarea{font-family:inherit}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <script src="firebase-service.js"></script>
 <script src="db.js"></script>
+<script src="zhconv.js"></script>
 <script>
 /* ── State ──────────────────────────────────────────────────── */
 var allPlayers = [];
@@ -454,7 +455,7 @@ function renderNameList(){
   var gender=document.getElementById('filter-gender').value;
   var list=document.getElementById('name-list');
   var filtered=allPlayers.filter(function(p){
-    if(q&&!(p.name||'').toLowerCase().includes(q))return false;
+    if(q&&!toSimplified(p.name||'').includes(toSimplified(q)))return false;
     if(age&&(p.age_group||'').toUpperCase()!==age.toUpperCase())return false;
     if(gender&&p.gender!==gender)return false;
     return true;
