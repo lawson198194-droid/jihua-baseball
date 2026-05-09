@@ -697,8 +697,8 @@ function renderStep2() {
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
             <span style="font-size:20px;">🎯</span>
             <div>
-              <div style="font-size:13px;font-weight:700;color:#a78bfa;">PitchCom</div>
-              <div style="font-size:10px;color:#64748b;">球速 / 球种 / 出手时间</div>
+              <div style="font-size:13px;font-weight:700;color:#a78bfa;">Rapsodo 投球数据</div>
+              <div style="font-size:10px;color:#64748b;">球速 / 球种 / 旋转轴 / 旋转量 / 出手点</div>
             </div>
           </div>
           <div id="pitchcom-status" style="font-size:11px;color:#475569;margin-bottom:10px;">未导入</div>
@@ -727,8 +727,8 @@ function renderStep2() {
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
             <span style="font-size:20px;">🏏</span>
             <div>
-              <div style="font-size:13px;font-weight:700;color:#10b981;">打击装置</div>
-              <div style="font-size:10px;color:#64748b;">挥棒速度 / 击球角度 / 接触点</div>
+              <div style="font-size:13px;font-weight:700;color:#10b981;">Blast Motion 打击数据</div>
+              <div style="font-size:10px;color:#64748b;">挥棒速度 / 攻击角 / 手速 / Blast评分</div>
             </div>
           </div>
           <div id="batting-status" style="font-size:11px;color:#475569;margin-bottom:10px;">未导入</div>
@@ -738,7 +738,7 @@ function renderStep2() {
         </div>
       </div>
       <div id="hardware-import-hint" style="font-size:11px;color:#334155;margin-top:10px;text-align:center;">
-        未来版本将支持硬件实时蓝牙连接 · 当前可通过 CSV/JSON 导入历史数据
+        未来版本将支持硬件实时蓝牙连接 · 当前可通过 CSV/JSON 导入历史数据（Blast Motion · Rapsodo · SmartPitch Mat）
       </div>
     </div>
 
@@ -1022,20 +1022,20 @@ function validateHardwareData(type, data) {
   if (!data) return false;
   if (Array.isArray(data)) return data.length > 0;
   if (data.records && Array.isArray(data.records)) return data.records.length > 0;
-  // PitchCom: 需要 pitch_speed 或 speed 字段
+  var first = data.records ? data.records[0] : (Array.isArray(data) ? data[0] : null);
+  if (!first) return false;
+
+  // Rapsodo: 需要 pitch_speed 或 speed_mph
   if (type === 'pitchcom') {
-    var first = data.records ? data.records[0] : data[0];
-    return first && (first.pitch_speed || first.speed || first.velocity);
+    return !!(first.pitch_speed || first.speed_mph || first.velocity || first['Pitch Speed (mph)']);
   }
-  // SmartPitch: 需要 stride_length 或 stride 字段
+  // SmartPitch: 需要 stride_length 或 stride 或 force
   if (type === 'smartpitch') {
-    var first = data.records ? data.records[0] : data[0];
-    return first && (first.stride_length || first.stride || first.force);
+    return !!(first.stride_length || first.stride || first.force || first['Stride Length (cm)'] || first['Ground Force (N)']);
   }
-  // Batting: 需要 bat_speed 或 speed 字段
+  // Blast Motion: 需要 bat_speed 或 bat_speed_mph
   if (type === 'batting') {
-    var first = data.records ? data.records[0] : data[0];
-    return first && (first.bat_speed || first.speed || first.swing_speed);
+    return !!(first.bat_speed || first['Bat Speed (mph)'] || first.blast_factor || first['Blast Factor']);
   }
   return false;
 }
@@ -1052,23 +1052,72 @@ function updateHardwareStatus(type, count) {
 }
 
 function getHardwareName(type) {
-  return {pitchcom:'PitchCom', smartpitch:'SmartPitch Mat', batting:'打击装置'}[type] || type;
+  return {pitchcom:'Rapsodo', smartpitch:'SmartPitch Mat', batting:'Blast Motion'}[type] || type;
 }
 
 function downloadHardwareTemplate(type) {
   var templates = {
-    pitchcom: { description: 'PitchCom 数据格式', fields: ['pitch_speed(km/h)', 'pitch_type(球种)', 'release_time(s)', 'spin_rate(rpm)'], sample: [
-      { pitch_speed: '95', pitch_type: 'Fastball', release_time: '0.42', spin_rate: '2100' },
-      { pitch_speed: '87', pitch_type: 'Curveball', release_time: '0.51', spin_rate: '1800' }
-    ]},
-    smartpitch: { description: 'SmartPitch Mat 数据格式', fields: ['stride_length(cm)', 'ground_force(N)', 'landing_angle(°)', 'weight_transfer(%)'], sample: [
-      { stride_length: '165', ground_force: '2800', landing_angle: '68', weight_transfer: '85' },
-      { stride_length: '162', ground_force: '2650', landing_angle: '65', weight_transfer: '82' }
-    ]},
-    batting: { description: '打击装置数据格式', fields: ['bat_speed(km/h)', 'swing_angle(°)', 'contact_point', 'launch_angle(°)'], sample: [
-      { bat_speed: '105', swing_angle: '42', contact_point: 'sweet_spot', launch_angle: '22' },
-      { bat_speed: '98', swing_angle: '38', contact_point: 'toe', launch_angle: '15' }
-    ]}
+    // ── Rapsodo 投球数据 ──────────────────────────────────────────────
+    // 导出 CSV 列名参考：Pitch Speed(mph), Pitch Type, Spin Rate(rpm),
+    //   True Spin(%), Spin Axis(°), Horizontal Break(in), Vertical Break(in),
+    //   Pitch Location (px), Pitch Location (py)
+    pitchcom: {
+      description: 'Rapsodo 投球数据格式（Rapsodo 导出 CSV 列名）',
+      fields: ['Pitch Speed (mph)', 'Pitch Type', 'Spin Rate (rpm)', 'True Spin (%)',
+               'Spin Axis (deg)', 'Horizontal Break (in)', 'Vertical Break (in)',
+               'Pitch Location Side', 'Pitch Location Height'],
+      sample: [
+        { 'Pitch Speed (mph)': '72.1', 'Pitch Type': 'Fastball', 'Spin Rate (rpm)': '1850',
+          'True Spin (%)': '48', 'Spin Axis (deg)': '12', 'Horizontal Break (in)': '0.8',
+          'Vertical Break (in)': '10.2', 'Pitch Location Side': '0.2', 'Pitch Location Height': '2.4' },
+        { 'Pitch Speed (mph)': '63.4', 'Pitch Type': 'Curveball', 'Spin Rate (rpm)': '1650',
+          'True Spin (%)': '52', 'Spin Axis (deg)': '215', 'Horizontal Break (in)': '-6.1',
+          'Vertical Break (in)': '-5.3', 'Pitch Location Side': '-0.3', 'Pitch Location Height': '2.1' }
+      ]
+    },
+    // ── SmartPitch Mat 步态数据 ───────────────────────────────────────
+    // 常见字段：Stride Length (cm), Ground Force (N), Landing Angle (deg),
+    //   Weight Transfer (%), Peak Force (N), Time to Lead Foot (s)
+    smartpitch: {
+      description: 'SmartPitch Mat 数据格式（地垫步态测量仪 CSV 导出）',
+      fields: ['Stride Length (cm)', 'Ground Force (N)', 'Landing Angle (deg)',
+               'Weight Transfer (%)', 'Peak Force (N)', 'Time to Lead Foot (s)',
+               'Center of Mass Angle (deg)'],
+      sample: [
+        { 'Stride Length (cm)': '163', 'Ground Force (N)': '2750', 'Landing Angle (deg)': '66',
+          'Weight Transfer (%)': '83', 'Peak Force (N)': '3100', 'Time to Lead Foot (s)': '0.31',
+          'Center of Mass Angle (deg)': '18' },
+        { 'Stride Length (cm)': '158', 'Ground Force (N)': '2610', 'Landing Angle (deg)': '62',
+          'Weight Transfer (%)': '79', 'Peak Force (N)': '2950', 'Time to Lead Foot (s)': '0.33',
+          'Center of Mass Angle (deg)': '21' }
+      ]
+    },
+    // ── Blast Motion 打击数据 ────────────────────────────────────────
+    // 导出 CSV 列名参考（真实格式）：
+    //   Player, Swing #, Bat Speed (mph), Attack Angle (deg), Time to Contact (sec),
+    //   Peak Hand Speed (mph), Blast Factor, On Plane (%), Power (kW),
+    //   Peak Bat Speed (mph), Body Rotation (%), Vertical Bat Angle (deg)
+    batting: {
+      description: 'Blast Motion 打击传感器数据格式（Blast 导出 CSV 列名，完全匹配）',
+      fields: ['Player', 'Swing #', 'Bat Speed (mph)', 'Attack Angle (deg)',
+               'Time to Contact (sec)', 'Peak Hand Speed (mph)', 'Blast Factor',
+               'On Plane (%)', 'Power (kW)', 'Peak Bat Speed (mph)',
+               'Body Rotation (%)', 'Vertical Bat Angle (deg)'],
+      sample: [
+        { 'Player': '安安 (Luo Ann)', 'Swing #': '1', 'Bat Speed (mph)': '68.5',
+          'Attack Angle (deg)': '3', 'Time to Contact (sec)': '0.17',
+          'Peak Hand Speed (mph)': '20.1', 'Blast Factor': '79',
+          'On Plane (%)': '0.72', 'Power (kW)': '3.8',
+          'Peak Bat Speed (mph)': '68.5', 'Body Rotation (%)': '0.51',
+          'Vertical Bat Angle (deg)': '-24' },
+        { 'Player': '安安 (Luo Ann)', 'Swing #': '2', 'Bat Speed (mph)': '71.2',
+          'Attack Angle (deg)': '6', 'Time to Contact (sec)': '0.15',
+          'Peak Hand Speed (mph)': '21.8', 'Blast Factor': '85',
+          'On Plane (%)': '0.78', 'Power (kW)': '4.2',
+          'Peak Bat Speed (mph)': '71.2', 'Body Rotation (%)': '0.54',
+          'Vertical Bat Angle (deg)': '-19' }
+      ]
+    }
   };
   var t = templates[type];
   if (!t) return;
@@ -1077,7 +1126,7 @@ function downloadHardwareTemplate(type) {
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = type + '_template.json';
+  a.download = {pitchcom:'rapsodo_template', smartpitch:'smartpitch_mat_template', batting:'blast_motion_template'}[type] + '.json';
   a.click();
   URL.revokeObjectURL(url);
   showToast('示例文件已下载', 'success');
