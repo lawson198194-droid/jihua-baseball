@@ -455,7 +455,13 @@ function renderNameList(){
   var gender=document.getElementById('filter-gender').value;
   var list=document.getElementById('name-list');
   var filtered=allPlayers.filter(function(p){
-    if(q&&!toSimplified(p.name||'').includes(toSimplified(q)))return false;
+    if(q){
+      var qs=toSimplified(q);
+      var nameMatch=toSimplified(p.name||'').includes(qs);
+      var cnMatch=toSimplified(p.chinese_name||'').includes(qs);
+      var enMatch=(p.english_name||'').toUpperCase().includes(q.toUpperCase());
+      if(!nameMatch&&!cnMatch&&!enMatch)return false;
+    }
     if(age&&(p.age_group||'').toUpperCase()!==age.toUpperCase())return false;
     if(gender&&p.gender!==gender)return false;
     return true;
