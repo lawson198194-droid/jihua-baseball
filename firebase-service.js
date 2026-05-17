@@ -107,7 +107,7 @@
       if (!this.isConfigured) {
         var players = JSON.parse(localStorage.getItem('baseai_players') || '[]');
         var found = players.find(function(p){ return p.id === id; });
-        setTimeout(function(){ callback({ data: found || null }); }, 0);
+        if (callback) callback({ data: found || null });
         return;
       }
       this.db.ref('players/' + id).once('value').then(function(snapshot) {
@@ -229,7 +229,7 @@
     getPendingRegistrations: function(callback) {
       if (!this.isConfigured) {
         var data = JSON.parse(localStorage.getItem('baseai_pending_players') || '[]');
-        setTimeout(function(){ callback({ data: data }); }, 0);
+        if (callback) callback({ data: data });
         return;
       }
       this.db.ref('pending_players').once('value').then(function(snapshot) {
@@ -367,7 +367,7 @@
     getTeams: function(callback) {
       if (!this.isConfigured) {
         var data = JSON.parse(localStorage.getItem('baseai_teams') || '[]');
-        setTimeout(function(){ callback({ data: data }); }, 0);
+        if (callback) callback({ data: data });
         return;
       }
       this.db.ref('teams').once('value').then(function(snapshot) {
@@ -490,7 +490,7 @@
       if (!this.isConfigured) {
         var games = JSON.parse(localStorage.getItem('baseai_games') || '[]');
         var found = games.find(function(g){ return g.id === id; });
-        setTimeout(function(){ callback({ data: found || null }); }, 0);
+        if (callback) callback({ data: found || null });
         return;
       }
       this.db.ref('games/' + id).once('value').then(function(snapshot) {
@@ -569,7 +569,7 @@
       if (!this.isConfigured) {
         var data = JSON.parse(localStorage.getItem('baseai_roster_' + gameId) || '{}');
         var list = Object.keys(data).map(function(k){ var p = data[k]; p.id = k; return p; });
-        setTimeout(function(){ callback({ data: list }); }, 0);
+        if (callback) callback({ data: list });
         return;
       }
       this.db.ref('game_rosters/' + gameId).once('value').then(function(snapshot) {
@@ -665,7 +665,7 @@
     getCoachReviews: function(callback) {
       if (!this.isConfigured) {
         var data = JSON.parse(localStorage.getItem('baseai_coach_reviews_fb') || '[]');
-        setTimeout(function(){ callback({ data: data }); }, 0);
+        if (callback) callback({ data: data });
         return;
       }
       this.db.ref('coach_reviews').orderByChild('savedAt').once('value').then(function(snapshot) {
