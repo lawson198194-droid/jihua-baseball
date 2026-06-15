@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>本周训练出席 · 港队</title>
+  <link rel="icon" href="icon-192.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#0f172a">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 480px; margin: 0 auto; }
+
+    .hero {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border-radius: 16px;
+      padding: 24px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px rgba(249,115,22,0.3);
+    }
+    .hero h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .hero p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.9);
+      line-height: 1.5;
+    }
+    .hero .meta {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.2);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.95);
+    }
+    .hero .meta span {
+      background: rgba(0,0,0,0.2);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    .week-cal {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .week-cal h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #94a3b8;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .day-row {
+      display: flex;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #334155;
+      font-size: 14px;
+    }
+    .day-row:last-child { border-bottom: none; }
+    .day-row .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      margin-right: 12px;
+      background: #475569;
+      flex-shrink: 0;
+    }
+    .day-row.training .dot { background: #3b82f6; box-shadow: 0 0 8px rgba(59,130,246,0.6); }
+    .day-row.training { color: #fff; font-weight: 600; }
+    .day-row .day-label { flex: 1; }
+    .day-row .day-tag {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #334155;
+      color: #94a3b8;
+    }
+    .day-row.training .day-tag {
+      background: rgba(59,130,246,0.2);
+      color: #93c5fd;
+    }
+
+    .player-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 12px;
+    }
+    .player-card.training-day {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px rgba(59,130,246,0.2);
+    }
+    .player-card.no-training {
+      opacity: 0.6;
+    }
+    .player-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .player-avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .player-info { flex: 1; min-width: 0; }
+    .player-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .player-id {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .player-date {
+      font-size: 12px;
+      color: #94a3b8;
+      background: #0f172a;
+      padding: 4px 10px;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+    .no-training-note {
+      font-size: 13px;
+      color: #64748b;
+      padding: 8px 0;
+    }
+    .choice-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .choice-btn {
+      flex: 1;
+      padding: 14px 12px;
+      background: #0f172a;
+      border: 2px solid #334155;
+      border-radius: 10px;
+      color: #94a3b8;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .choice-btn.active.present {
+      background: rgba(16,185,129,0.15);
+      border-color: #10b981;
+      color: #34d399;
+    }
+    .choice-btn.active.absent {
+      background: rgba(239,68,68,0.15);
+      border-color: #ef4444;
+      color: #f87171;
+    }
+    .choice-btn:active { transform: scale(0.98); }
+
+    .absent-detail {
+      display: none;
+      padding-top: 8px;
+      border-top: 1px dashed #334155;
+    }
+    .absent-detail.show { display: block; }
+    .absent-detail label {
+      display: block;
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .absent-detail select,
+    .absent-detail input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 14px;
+      margin-bottom: 10px;
+      font-family: inherit;
+    }
+    .absent-detail input { margin-bottom: 0; }
+
+    .submit-bar {
+      position: sticky;
+      bottom: 0;
+      background: linear-gradient(to top, #0f172a 80%, rgba(15,23,42,0));
+      padding: 20px 0 12px;
+      margin-top: 16px;
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(249,115,22,0.4);
+      transition: transform 0.1s;
+    }
+    .submit-btn:active { transform: scale(0.98); }
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .submit-hint {
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 8px;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #64748b;
+    }
+    .empty .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+    .empty h3 { font-size: 18px; color: #94a3b8; margin-bottom: 8px; }
+    .empty p { font-size: 13px; line-height: 1.6; }
+
+    .link-status {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      color: #94a3b8;
+    }
+    .link-status.error {
+      border-color: #ef4444;
+      background: rgba(239,68,68,0.1);
+    }
+    .link-status .big-icon { font-size: 48px; margin-bottom: 12px; }
+
+    .submitted-marker {
+      display: inline-block;
+      background: rgba(16,185,129,0.2);
+      color: #34d399;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+
+    /* 表单完成度提示 */
+    .progress {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .progress-bar {
+      flex: 1;
+      height: 6px;
+      background: #0f172a;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      transition: width 0.3s;
+    }
+    .progress-text {
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="app">
+      <div class="empty">
+        <div class="icon">⏳</div>
+        <p>加载中...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="firebase-service.js"></script>
+  <script src="attendance.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var params = AttendanceModule.getUrlParams();
+      var teamCode = params.team;
+      var weekKey = params.week;
+      var team = AttendanceModule.getTeam(teamCode);
+
+      if (!team) {
+        document.getElementById('app').innerHTML =
+          '<div class="link-status error">' +
+            '<div class="big-icon">⚠️</div>' +
+            '<h3>链接无效</h3>' +
+            '<p>梯队代码 "' + (teamCode || '空') + '" 不存在</p>' +
+          '</div>';
+        return;
+      }
+
+      if (!weekKey) {
+        // 家长点击了但没指定 week，自动用本周
+        weekKey = AttendanceModule.getCurrentWeekKey(new Date());
+      }
+
+      if (!AttendanceModule.isLinkValid(weekKey)) {
+        document.getElementById('app').innerHTML =
+          '<div class="link-status error">' +
+            '<div class="big-icon">⏰</div>' +
+            '<h3>链接已过期</h3>' +
+            '<p>本链接仅本周有效，<br>请等待教练发新的链接。</p>' +
+          '</div>';
+        return;
+      }
+
+      // 加载
+      loadAndRender(team, weekKey);
+    });
+
+    function loadAndRender(team, weekKey) {
+      var monday = AttendanceModule.getMondayOfWeek(new Date());
+      var weekDates = AttendanceModule.getWeekDates(monday);
+
+      // 并行拉数据
+      Promise.all([
+        AttendanceModule.getTeamPlayers(team.code),
+        AttendanceModule.getWeekAttendance(team.code, weekKey)
+      ]).then(function(results) {
+        var players = results[0];
+        var records = results[1];
+        render(team, weekKey, monday, weekDates, players, records);
+      }).catch(function(err) {
+        document.getElementById('app').innerHTML =
+          '<div class="link-status error">' +
+            '<div class="big-icon">❌</div>' +
+            '<h3>加载失败</h3>' +
+            '<p>' + (err.message || '请稍后重试') + '</p>' +
+          '</div>';
+      });
+    }
+
+    function render(team, weekKey, monday, weekDates, players, records) {
+      // 找出本梯队本周的训练日
+      var trainingDays = weekDates.filter(function(d) {
+        return AttendanceModule.isTrainingDay(team, d);
+      });
+
+      // 梯队本周的训练日（可能有 1-2 个，比如女棒周二/四）
+      // 取最近的训练日作为今天要填的那次
+      var targetDate = null;
+      var today = new Date();
+      today.setHours(0,0,0,0);
+
+      // 优先选今天
+      if (trainingDays.some(function(d) { return d.getTime() === today.getTime(); })) {
+        targetDate = today;
+      } else {
+        // 否则选本梯队本周内最近的一天（已过或未到）
+        var past = trainingDays.filter(function(d) { return d <= today; });
+        if (past.length > 0) {
+          targetDate = past[past.length - 1];
+        } else if (trainingDays.length > 0) {
+          targetDate = trainingDays[0];
+        }
+      }
+
+      // 周历渲染
+      var weekCalHtml = '<div class="week-cal"><h2>本周课表（' + AttendanceModule.fmtDate(monday,'cn') + ' 起）</h2>';
+      weekDates.forEach(function(d, i) {
+        var isTrain = AttendanceModule.isTrainingDay(team, d);
+        var label = d.getDate() + '日 · ' + AttendanceModule.WEEKDAYS_CN[d.getDay()];
+        weekCalHtml +=
+          '<div class="day-row' + (isTrain ? ' training' : '') + '">' +
+            '<div class="dot"></div>' +
+            '<div class="day-label">' + label + '</div>' +
+            '<div class="day-tag">' + (isTrain ? '● 训练日' : '— 无训练') + '</div>' +
+          '</div>';
+      });
+      weekCalHtml += '</div>';
+
+      // 球员卡片
+      var cardsHtml = '';
+      var targetDateStr = targetDate ? AttendanceModule.fmtDate(targetDate,'ymd') : '';
+      var targetDateLabel = targetDate ? (AttendanceModule.WEEKDAYS_CN[targetDate.getDay()] + ' ' + AttendanceModule.fmtDate(targetDate,'md')) : '本周';
+
+      if (players.length === 0) {
+        cardsHtml = '<div class="empty"><div class="icon">👥</div><h3>该梯队暂无球员</h3><p>请联系教练在后台添加球员</p></div>';
+      } else {
+        if (targetDate) {
+          cardsHtml += '<div class="progress" id="progress-bar"><div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div><div class="progress-text" id="progress-text">0 / ' + players.length + '</div></div>';
+        }
+        players.forEach(function(p) {
+          var r = records[p.id] || {};
+          var submitted = !!r.status;
+          var isTraining = targetDate !== null;
+          cardsHtml += renderPlayerCard(p, team, targetDateStr, targetDateLabel, r, submitted, isTraining);
+        });
+      }
+
+      // 提交按钮
+      var submitHtml = '';
+      if (players.length > 0 && targetDate) {
+        submitHtml =
+          '<div class="submit-bar">' +
+            '<button class="submit-btn" id="submit-btn">提交本周出席</button>' +
+            '<div class="submit-hint">本周提交后可随时回来修改</div>' +
+          '</div>';
+      }
+
+      var app = document.getElementById('app');
+      app.innerHTML =
+        // 头部
+        '<div class="hero">' +
+          '<h1>🥎 ' + team.name + '</h1>' +
+          '<p>请勾选 ' + targetDateLabel + ' 的训练出席情况</p>' +
+          '<div class="meta">' +
+            '<span>📅 ' + weekKey + '</span>' +
+            '<span>🕐 ' + team.weekdayLabel + '</span>' +
+            '<span>📍 ' + team.venue + '</span>' +
+          '</div>' +
+        '</div>' +
+        weekCalHtml +
+        cardsHtml +
+        submitHtml;
+
+      bindEvents(team, weekKey, targetDateStr);
+      updateProgress();
+    }
+
+    function renderPlayerCard(player, team, dateStr, dateLabel, record, submitted, isTraining) {
+      var isAbsent = record.status === 'absent';
+      var isPresent = record.status === 'present';
+      var status = record.status || '';
+
+      if (!isTraining) {
+        return '<div class="player-card no-training">' +
+          '<div class="player-header">' +
+            '<div class="player-avatar">' + (player.name || '?').charAt(0) + '</div>' +
+            '<div class="player-info">' +
+              '<div class="player-name">' + (player.name || '未命名') + (submitted ? '<span class="submitted-marker">已填</span>' : '') + '</div>' +
+              '<div class="player-id">ID: ' + player.id + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="no-training-note">本周本梯队无训练日，无需填写</div>' +
+        '</div>';
+      }
+
+      var reasonOptions = '<option value="">请选择原因</option>';
+      AttendanceModule.ABSENT_REASONS.forEach(function(r) {
+        var sel = record.reason === r.code ? ' selected' : '';
+        reasonOptions += '<option value="' + r.code + '"' + sel + '>' + r.label + '</option>';
+      });
+
+      return '<div class="player-card training-day" data-player-id="' + player.id + '">' +
+        '<div class="player-header">' +
+          '<div class="player-avatar">' + (player.name || '?').charAt(0) + '</div>' +
+          '<div class="player-info">' +
+            '<div class="player-name">' + (player.name || '未命名') + (submitted ? '<span class="submitted-marker">已填</span>' : '') + '</div>' +
+            '<div class="player-id">ID: ' + player.id + ' · ' + (player.school || '') + '</div>' +
+          '</div>' +
+          '<div class="player-date">' + dateLabel + '</div>' +
+        '</div>' +
+        '<div class="choice-row">' +
+          '<div class="choice-btn present' + (isPresent ? ' active' : '') + '" data-status="present">✓ 出席</div>' +
+          '<div class="choice-btn absent' + (isAbsent ? ' active' : '') + '" data-status="absent">✕ 缺席</div>' +
+        '</div>' +
+        '<div class="absent-detail' + (isAbsent ? ' show' : '') + '">' +
+          '<label>缺勤原因</label>' +
+          '<select class="absent-reason">' + reasonOptions + '</select>' +
+          '<input class="absent-note" type="text" placeholder="备注（选填）" value="' + (record.note || '').replace(/"/g, '&quot;') + '">' +
+        '</div>' +
+      '</div>';
+    }
+
+    function bindEvents(team, weekKey, dateStr) {
+      // 选出席/缺席
+      document.querySelectorAll('.player-card').forEach(function(card) {
+        var btns = card.querySelectorAll('.choice-btn');
+        btns.forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            btns.forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            var status = btn.getAttribute('data-status');
+            var detail = card.querySelector('.absent-detail');
+            if (status === 'absent') {
+              detail.classList.add('show');
+            } else {
+              detail.classList.remove('show');
+            }
+            updateProgress();
+          });
+        });
+      });
+
+      // 提交
+      var submitBtn = document.getElementById('submit-btn');
+      if (submitBtn) {
+        submitBtn.addEventListener('click', function() {
+          submitBtn.disabled = true;
+          submitBtn.textContent = '提交中...';
+
+          var promises = [];
+          var cards = document.querySelectorAll('.player-card.training-day');
+          cards.forEach(function(card) {
+            var playerId = card.getAttribute('data-player-id');
+            var active = card.querySelector('.choice-btn.active');
+            if (!active) return; // 跳过未填的
+            var status = active.getAttribute('data-status');
+            var data = { status: status, submittedBy: '家长' };
+            if (status === 'absent') {
+              var reason = card.querySelector('.absent-reason').value;
+              var note = card.querySelector('.absent-note').value;
+              data.reason = reason;
+              data.note = note;
+            }
+            promises.push(AttendanceModule.submitAttendance(team.code, weekKey, playerId, data));
+          });
+
+          if (promises.length === 0) {
+            AttendanceModule.toast('请至少勾选一位球员', 'warning');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '提交本周出席';
+            return;
+          }
+
+          Promise.all(promises).then(function() {
+            AttendanceModule.toast('提交成功！共提交 ' + promises.length + ' 位球员', 'success');
+            submitBtn.textContent = '✓ 已提交';
+            submitBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+            // 标记每张卡为已填
+            cards.forEach(function(card) {
+              var active = card.querySelector('.choice-btn.active');
+              if (active) {
+                var name = card.querySelector('.player-name');
+                if (name && !name.querySelector('.submitted-marker')) {
+                  name.insertAdjacentHTML('beforeend', '<span class="submitted-marker">已填</span>');
+                }
+              }
+            });
+          }).catch(function(err) {
+            AttendanceModule.toast('提交失败：' + err.message, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '提交本周出席';
+          });
+        });
+      }
+    }
+
+    function updateProgress() {
+      var fill = document.getElementById('progress-fill');
+      var text = document.getElementById('progress-text');
+      if (!fill) return;
+      var cards = document.querySelectorAll('.player-card.training-day');
+      var total = cards.length;
+      var done = 0;
+      cards.forEach(function(card) {
+        if (card.querySelector('.choice-btn.active')) done++;
+      });
+      var pct = total === 0 ? 0 : Math.round(done / total * 100);
+      fill.style.width = pct + '%';
+      text.textContent = done + ' / ' + total;
+    }
+  </script>
+</body>
+</html>
