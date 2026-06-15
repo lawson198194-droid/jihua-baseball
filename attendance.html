@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>模块6 · 训练出勤 — BaseAI</title>
+  <link rel="icon" href="icon-192.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/design-system.css">
+  <style>
+    .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+    .page-header h2 { font-size:22px; font-weight:800; }
+    .page-header p { font-size:13px; color:var(--text-muted); margin-top:2px; }
+    .page-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+    }
+    .stat-card .label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .stat-card .value {
+      font-size: 28px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+    .stat-card .sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .stat-card.green .value { color: #10b981; }
+    .stat-card.yellow .value { color: #f59e0b; }
+    .stat-card.red .value { color: #ef4444; }
+    .stat-card.blue .value { color: #3b82f6; }
+
+    .section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .section h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section h3 .badge {
+      font-size: 11px;
+      background: var(--orange);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    /* 梯队课表 */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .team-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+    }
+    .team-card .name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .team-card .meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+    .team-card .meta span {
+      display: inline-block;
+      margin-right: 4px;
+    }
+
+    /* 链接生成 */
+    .link-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .link-row .team-tag {
+      background: var(--orange);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .link-row .url {
+      flex: 1;
+      min-width: 0;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      background: var(--bg-card);
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .btn-icon {
+      padding: 6px 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .btn-icon:hover { background: var(--orange); color: #fff; border-color: var(--orange); }
+
+    /* 周历视图 */
+    .week-grid {
+      overflow-x: auto;
+    }
+    table.week-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 700px;
+    }
+    table.week-table th,
+    table.week-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-light);
+    }
+    table.week-table th {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      background: var(--bg-secondary);
+    }
+    table.week-table td.team-cell {
+      font-weight: 700;
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
+    table.week-table td.training-day {
+      background: rgba(59,130,246,0.08);
+    }
+    .status-pill {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .status-pill.green { background: rgba(16,185,129,0.15); color: #34d399; }
+    .status-pill.yellow { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .status-pill.red { background: rgba(239,68,68,0.15); color: #f87171; }
+    .status-pill.gray { background: rgba(100,116,139,0.15); color: #94a3b8; }
+
+    /* 球员统计表 */
+    table.player-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    table.player-table th,
+    table.player-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-light);
+    }
+    table.player-table th {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      background: var(--bg-secondary);
+      position: sticky;
+      top: 0;
+    }
+    table.player-table tr:hover { background: var(--bg-secondary); }
+    .rate-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .rate-bar-bg {
+      flex: 1;
+      max-width: 100px;
+      height: 6px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .rate-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+    .rate-bar-fill.green { background: #10b981; }
+    .rate-bar-fill.yellow { background: #f59e0b; }
+    .rate-bar-fill.red { background: #ef4444; }
+    .rate-text {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .filter-bar select, .filter-bar input {
+      padding: 7px 12px;
+      font-size: 13px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-radius: var(--radius-md);
+      min-width: 140px;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty .icon { font-size: 56px; margin-bottom: 12px; opacity: 0.3; }
+  </style>
+</head>
+<body>
+  <script src="assets/nav.js"></script>
+  <div class="main">
+    <div id="app">
+      <div class="page-header">
+        <div>
+          <h2>训练出勤</h2>
+          <p>Module 06 · Attendance Tracking · 港队日常训练签到与统计</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-secondary" id="btn-refresh">🔄 刷新</button>
+          <button class="btn btn-primary" id="btn-export">📤 导出本月</button>
+        </div>
+      </div>
+
+      <!-- 统计卡片 -->
+      <div class="stat-grid">
+        <div class="stat-card blue">
+          <div class="label">本周统计</div>
+          <div class="value" id="stat-week">—</div>
+          <div class="sub" id="stat-week-sub">加载中...</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">本月全员到勤率</div>
+          <div class="value" id="stat-month-rate">—%</div>
+          <div class="sub" id="stat-month-sub">—</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="label">待家长填写</div>
+          <div class="value" id="stat-pending">—</div>
+          <div class="sub" id="stat-pending-sub">—</div>
+        </div>
+        <div class="stat-card red">
+          <div class="label">异常预警</div>
+          <div class="value" id="stat-warn">—</div>
+          <div class="sub" id="stat-warn-sub">—</div>
+        </div>
+      </div>
+
+      <!-- 梯队课表 -->
+      <div class="section">
+        <h3>🏟️ 梯队课表 <span class="badge">配置</span></h3>
+        <div class="team-grid" id="team-grid"></div>
+      </div>
+
+      <!-- 家长链接生成 -->
+      <div class="section">
+        <h3>🔗 家长周报链接 <span class="badge">当周有效</span></h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
+          点"复制链接"后发到对应梯队家长群。每周一 00:00 自动失效。
+        </p>
+        <div id="link-list"></div>
+      </div>
+
+      <!-- 周历视图 -->
+      <div class="section">
+        <h3>📅 本周周历 <span class="badge" id="week-tag">—</span></h3>
+        <div class="week-grid">
+          <table class="week-table" id="week-table">
+            <thead>
+              <tr>
+                <th>梯队</th>
+                <th>训练日</th>
+                <th>应到</th>
+                <th>实到</th>
+                <th>未填</th>
+                <th>到勤率</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody id="week-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 球员统计 -->
+      <div class="section">
+        <h3>📊 球员月度出勤统计</h3>
+        <div class="filter-bar">
+          <select id="filter-team">
+            <option value="">全部梯队</option>
+            <option value="U15">U15</option>
+            <option value="U12">U12</option>
+            <option value="U10">U10</option>
+            <option value="female">女棒</option>
+          </select>
+          <input type="text" id="filter-search" placeholder="搜索球员姓名/ID" />
+          <select id="filter-rate">
+            <option value="">全部状态</option>
+            <option value="0">正常 (≥70%)</option>
+            <option value="1">预警 (<70%)</option>
+            <option value="2">严重 (<60%)</option>
+          </select>
+        </div>
+        <div style="max-height:500px;overflow-y:auto;">
+          <table class="player-table" id="player-table">
+            <thead>
+              <tr>
+                <th>球员</th>
+                <th>梯队</th>
+                <th>应到</th>
+                <th>实到</th>
+                <th>缺勤</th>
+                <th>到勤率</th>
+                <th>连续缺勤</th>
+              </tr>
+            </thead>
+            <tbody id="player-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="firebase-service.js"></script>
+  <script src="db.js"></script>
+  <script src="attendance.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+      initNav({ title:'训练出勤', subtitle:'Module 06 · Attendance Tracking' });
+
+      // 渲染梯队课表
+      renderTeamGrid();
+      renderLinkList();
+
+      // 加载数据
+      await loadData();
+
+      // 事件绑定
+      document.getElementById('btn-refresh').addEventListener('click', async function() {
+        AttendanceModule.toast('正在刷新...', 'info');
+        await loadData();
+      });
+
+      document.getElementById('btn-export').addEventListener('click', exportMonth);
+
+      document.getElementById('filter-team').addEventListener('change', renderPlayerTable);
+      document.getElementById('filter-search').addEventListener('input', renderPlayerTable);
+      document.getElementById('filter-rate').addEventListener('change', renderPlayerTable);
+    });
+
+    function renderTeamGrid() {
+      var html = '';
+      AttendanceModule.TEAMS.forEach(function(t) {
+        var days = t.days.map(function(d) {
+          var map = {sun:'周日',mon:'周一',tue:'周二',wed:'周三',thu:'周四',fri:'周五',sat:'周六'};
+          return map[d];
+        }).join('、');
+        html +=
+          '<div class="team-card">' +
+            '<div class="name">' + t.name + '</div>' +
+            '<div class="meta">' +
+              '<span>📅 ' + days + '</span><br>' +
+              '<span>🕐 ' + t.period + '</span><br>' +
+              '<span>📍 ' + t.venue + '</span>' +
+            '</div>' +
+          '</div>';
+      });
+      document.getElementById('team-grid').innerHTML = html;
+    }
+
+    function renderLinkList() {
+      var now = new Date();
+      var weekKey = AttendanceModule.getCurrentWeekKey(now);
+      document.getElementById('week-tag').textContent = weekKey;
+
+      var html = '';
+      AttendanceModule.TEAMS.forEach(function(t) {
+        var link = AttendanceModule.generateParentLink(t.code, weekKey);
+        html +=
+          '<div class="link-row">' +
+            '<span class="team-tag">' + t.short + '</span>' +
+            '<span style="font-size:12px;color:var(--text-muted);">' + t.weekdayLabel + ' · ' + t.venue + '</span>' +
+            '<div class="url">' + link + '</div>' +
+            '<button class="btn-icon" onclick="copyLink(\'' + t.code + '\',\'' + weekKey + '\')">📋 复制</button>' +
+            '<button class="btn-icon" onclick="previewLink(\'' + t.code + '\',\'' + weekKey + '\')">👁 预览</button>' +
+          '</div>';
+      });
+      document.getElementById('link-list').innerHTML = html;
+    }
+
+    function copyLink(teamCode, weekKey) {
+      var link = AttendanceModule.generateParentLink(teamCode, weekKey);
+      AttendanceModule.copyToClipboard(link).then(function() {
+        AttendanceModule.toast('链接已复制到剪贴板', 'success');
+      });
+    }
+
+    function previewLink(teamCode, weekKey) {
+      var link = AttendanceModule.generateParentLink(teamCode, weekKey);
+      window.open(link, '_blank');
+    }
+
+    var allData = {
+      players: {},   // {teamCode: [players]}
+      records: {}    // {teamCode: {weekKey: {playerId: record}}}
+    };
+
+    async function loadData() {
+      var now = new Date();
+      var weekKey = AttendanceModule.getCurrentWeekKey(now);
+
+      // 加载最近 5 周的记录（用于月度统计）
+      var recentWeeks = getRecentWeekKeys(now, 5);
+
+      // 每个梯队的球员 + 各周记录
+      var promises = AttendanceModule.TEAMS.map(async function(team) {
+        var players = await AttendanceModule.getTeamPlayers(team.code);
+        var weekRecords = {};
+        for (var i = 0; i < recentWeeks.length; i++) {
+          var wk = recentWeeks[i];
+          weekRecords[wk] = await AttendanceModule.getWeekAttendance(team.code, wk);
+        }
+        return { team: team, players: players, weekRecords: weekRecords };
+      });
+
+      var results = await Promise.all(promises);
+      allData = { results: results, weekKey: weekKey, recentWeeks: recentWeeks };
+
+      renderWeekTable();
+      renderPlayerTable();
+      renderStats();
+    }
+
+    function getRecentWeekKeys(now, n) {
+      var arr = [];
+      for (var i = n - 1; i >= 0; i--) {
+        var d = new Date(now);
+        d.setDate(d.getDate() - i * 7);
+        arr.push(AttendanceModule.getCurrentWeekKey(d));
+      }
+      return arr;
+    }
+
+    function renderWeekTable() {
+      var html = '';
+      var totals = {should: 0, actual: 0, pending: 0, teamCount: 0};
+      allData.results.forEach(function(r) {
+        var team = r.team;
+        var players = r.players;
+        var records = r.weekRecords[allData.weekKey] || {};
+        var should = players.length;
+        var actual = 0;
+        var pending = 0;
+        players.forEach(function(p) {
+          var rec = records[p.id];
+          if (rec && rec.status === 'present') actual++;
+          else if (!rec) pending++;
+        });
+        var rate = should === 0 ? 0 : Math.round(actual / should * 100);
+        var statusClass = 'gray', statusText = '—';
+        if (should === 0) { statusClass = 'gray'; statusText = '无球员'; }
+        else if (pending === 0 && rate === 100) { statusClass = 'green'; statusText = '✓ 全员到'; }
+        else if (pending === 0) { statusClass = 'yellow'; statusText = '已收齐'; }
+        else if (actual + pending === should) { statusClass = 'red'; statusText = '⚠ 待填'; }
+        else { statusClass = 'red'; statusText = '⚠ 收集中'; }
+
+        totals.should += should;
+        totals.actual += actual;
+        totals.pending += pending;
+        totals.teamCount++;
+
+        html += '<tr>' +
+          '<td class="team-cell">' + team.short + '</td>' +
+          '<td>' + team.weekdayLabel + '<br><span style="font-size:11px;color:var(--text-muted);">📍 ' + team.venue + '</span></td>' +
+          '<td>' + should + '</td>' +
+          '<td style="color:#10b981;font-weight:700;">' + actual + '</td>' +
+          '<td style="color:#f59e0b;font-weight:700;">' + pending + '</td>' +
+          '<td><div class="rate-bar"><div class="rate-bar-bg"><div class="rate-bar-fill ' + (rate >= 80 ? 'green' : (rate >= 60 ? 'yellow' : 'red')) + '" style="width:' + rate + '%"></div></div><span class="rate-text">' + rate + '%</span></div></td>' +
+          '<td><span class="status-pill ' + statusClass + '">' + statusText + '</span></td>' +
+        '</tr>';
+      });
+      document.getElementById('week-tbody').innerHTML = html;
+
+      // 顶部统计
+      var weekRate = totals.should === 0 ? 0 : Math.round(totals.actual / totals.should * 100);
+      document.getElementById('stat-week').textContent = weekRate + '%';
+      document.getElementById('stat-week-sub').textContent = totals.actual + ' / ' + totals.should + ' 人次本周出席';
+    }
+
+    function renderPlayerTable() {
+      var filterTeam = document.getElementById('filter-team').value;
+      var filterSearch = (document.getElementById('filter-search').value || '').toLowerCase();
+      var filterRate = document.getElementById('filter-rate').value;
+
+      var rows = [];
+      allData.results.forEach(function(r) {
+        if (filterTeam && r.team.code !== filterTeam) return;
+        r.players.forEach(function(p) {
+          if (filterSearch) {
+            var s = (p.name + ' ' + p.id).toLowerCase();
+            if (s.indexOf(filterSearch) === -1) return;
+          }
+          var stats = { should: 0, actual: 0, weekRecords: [] };
+          allData.recentWeeks.forEach(function(wk) {
+            var rec = (r.weekRecords[wk] || {})[p.id];
+            stats.weekRecords.push(rec);
+            if (rec && rec.status === 'present') { stats.should++; stats.actual++; }
+            else if (rec && rec.status === 'absent') { stats.should++; }
+            else if (!rec) { stats.should++; }  // 未填算应到
+          });
+          stats.rate = stats.should === 0 ? 0 : Math.round(stats.actual / stats.should * 100);
+          // 连续缺勤
+          var consecutive = 0;
+          for (var i = stats.weekRecords.length - 1; i >= 0; i--) {
+            var rec = stats.weekRecords[i];
+            if (rec && rec.status === 'absent') consecutive++;
+            else if (rec && rec.status === 'present') break;
+            // 未填不算缺勤
+          }
+          if (filterRate === '0' && stats.rate < 70) return;
+          if (filterRate === '1' && (stats.rate >= 70 || stats.rate < 60)) return;
+          if (filterRate === '2' && stats.rate >= 60) return;
+          rows.push({ player: p, team: r.team, stats: stats, consecutive: consecutive });
+        });
+      });
+
+      rows.sort(function(a, b) { return a.stats.rate - b.stats.rate; });
+
+      var html = '';
+      if (rows.length === 0) {
+        html = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">暂无数据</td></tr>';
+      } else {
+        rows.forEach(function(row) {
+          var p = row.player;
+          var t = row.team;
+          var s = row.stats;
+          var rateColor = s.rate >= 80 ? 'green' : (s.rate >= 60 ? 'yellow' : 'red');
+          var consecColor = row.consecutive >= 2 ? 'red' : (row.consecutive === 1 ? 'yellow' : 'gray');
+          html += '<tr>' +
+            '<td><div style="display:flex;align-items:center;gap:8px;"><div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">' + (p.name||'?').charAt(0) + '</div><div><div style="font-weight:700;">' + (p.name||'未命名') + '</div><div style="font-size:11px;color:var(--text-muted);">' + p.id + '</div></div></div></td>' +
+            '<td>' + t.short + '</td>' +
+            '<td>' + s.should + '</td>' +
+            '<td style="color:#10b981;font-weight:700;">' + s.actual + '</td>' +
+            '<td style="color:#ef4444;font-weight:700;">' + (s.should - s.actual) + '</td>' +
+            '<td><div class="rate-bar"><div class="rate-bar-bg"><div class="rate-bar-fill ' + rateColor + '" style="width:' + s.rate + '%"></div></div><span class="rate-text">' + s.rate + '%</span></div></td>' +
+            '<td><span class="status-pill ' + consecColor + '">' + (row.consecutive > 0 ? row.consecutive + ' 周' : '—') + '</span></td>' +
+          '</tr>';
+        });
+      }
+      document.getElementById('player-tbody').innerHTML = html;
+    }
+
+    function renderStats() {
+      var totalShould = 0, totalActual = 0, totalPending = 0, warnCount = 0;
+      allData.results.forEach(function(r) {
+        var players = r.players;
+        var records = r.weekRecords[allData.weekKey] || {};
+        players.forEach(function(p) {
+          totalShould++;
+          var rec = records[p.id];
+          if (rec && rec.status === 'present') totalActual++;
+          else if (!rec) totalPending++;
+        });
+        // 月度预警
+        r.players.forEach(function(p) {
+          var stats = { should: 0, actual: 0 };
+          allData.recentWeeks.forEach(function(wk) {
+            var rec = (r.weekRecords[wk] || {})[p.id];
+            if (rec && rec.status === 'present') { stats.should++; stats.actual++; }
+            else if (rec && rec.status === 'absent') { stats.should++; }
+            else if (!rec) { stats.should++; }
+          });
+          var rate = stats.should === 0 ? 0 : stats.actual / stats.should;
+          if (rate < 0.6 && stats.should >= 2) warnCount++;
+        });
+      });
+      var monthRate = totalShould === 0 ? 0 : Math.round(totalActual / totalShould * 100);
+      document.getElementById('stat-month-rate').textContent = monthRate + '%';
+      document.getElementById('stat-month-sub').textContent = '近 5 周 ' + totalActual + ' / ' + totalShould + ' 人次';
+      document.getElementById('stat-pending').textContent = totalPending;
+      document.getElementById('stat-pending-sub').textContent = '本周家长还未填的';
+      document.getElementById('stat-warn').textContent = warnCount;
+      document.getElementById('stat-warn-sub').textContent = '连续 2+ 周缺勤或月度<60%';
+    }
+
+    function exportMonth() {
+      AttendanceModule.toast('导出功能开发中', 'info');
+    }
+  </script>
+</body>
+</html>
