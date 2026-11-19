@@ -12,7 +12,7 @@
     { id: 'm4', name: '技术档案', icon: '📈', href: 'profiles.html' },
     { id: 'm5', name: '权限后台', icon: '⚙️', href: 'admin.html' },
     { id: 'm6', name: '训练出勤', icon: '📅', href: 'attendance.html' },
-    { id: 'm7', name: 'AI 专属教练', icon: '🤖', href: 'ai-coach-v2.html', isAI: true },
+    { id: 'm7', name: 'AI 专属教练', icon: '🤖', href: 'ai-coach.html', isAI: true },
   ];
 
   function getCurrentModule() {
